@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartPantry - Modal Fix v5.6</title>
+    <title>SmartPantry - Fully Integrated v5.7</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
@@ -51,13 +51,13 @@
                     <div>
                         <label class="text-[10px] font-black text-gray-400 uppercase">Qty & Unit</label>
                         <div class="flex">
-                            <input type="number" x-model.number="forms.pantry.qty" class="w-1/2 border p-2 rounded-l-xl">
+                            <input type="number" step="0.1" x-model.number="forms.pantry.qty" class="w-1/2 border p-2 rounded-l-xl">
                             <input type="text" x-model="forms.pantry.unit" placeholder="lb/oz" class="w-1/2 border p-2 rounded-r-xl border-l-0">
                         </div>
                     </div>
                     <div>
                         <label class="text-[10px] font-black text-orange-500 uppercase">Min Stock</label>
-                        <input type="number" x-model.number="forms.pantry.min_threshold" class="w-full border p-2 rounded-xl">
+                        <input type="number" step="0.1" x-model.number="forms.pantry.min_threshold" class="w-full border p-2 rounded-xl">
                     </div>
                     <div>
                         <label class="text-[10px] font-black text-gray-400 uppercase">Store In</label>
@@ -103,12 +103,10 @@
                                         </div>
                                         <span class="text-xs font-bold text-gray-400" x-text="batch.expiry ? formatDate(batch.expiry) : 'Shelf Stable'"></span>
                                     </div>
-                                    
                                     <div class="flex items-center space-x-2">
-                                        <button @click="openTransferModal(item, batch)" class="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg transition" title="Move some to another location">
+                                        <button @click="openTransferModal(item, batch)" class="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg transition">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
                                         </button>
-                                        
                                         <div class="flex items-center bg-gray-50 rounded-xl p-1 border">
                                             <button @click="adjustBatch(item, batch, -0.1)" class="w-8 h-8 font-black text-gray-400 hover:text-red-500">-</button>
                                             <input type="number" step="0.1" x-model.number="batch.qty" @change="save()" class="w-12 bg-transparent text-center font-black text-sm outline-none">
@@ -130,7 +128,7 @@
                 <input type="text" x-model="forms.recipe.title" placeholder="Recipe Title" class="w-full text-xl font-black border-b pb-2 outline-none">
                 <div class="flex gap-2">
                     <input type="text" x-model="forms.recipe.ingName" placeholder="Ingredient Name" class="border p-2 flex-1 rounded-xl text-sm">
-                    <input type="number" x-model.number="forms.recipe.ingQty" class="border p-2 w-20 rounded-xl text-sm" placeholder="Qty">
+                    <input type="number" step="0.1" x-model.number="forms.recipe.ingQty" class="border p-2 w-20 rounded-xl text-sm" placeholder="Qty">
                     <button @click="addIngToRecipeForm()" class="bg-gray-900 text-white px-6 rounded-xl font-black text-[10px] uppercase">Add</button>
                 </div>
                 <div class="flex flex-wrap gap-2">
@@ -152,7 +150,12 @@
                         </div>
                         <div class="flex flex-wrap gap-1 mt-4">
                             <template x-for="i in recipe.ingredients">
-                                <span class="text-[10px] px-2 py-1 rounded-md border font-black uppercase" :class="getIngredientStatusClass(i.name)" x-text="i.name"></span>
+                                <span class="text-[10px] px-2 py-1 rounded-md border font-black uppercase flex items-center gap-1" :class="getIngredientStatusClass(i.name)">
+                                    <span x-text="i.name"></span>
+                                    <template x-show="isIngredientExpired(i.name)">
+                                        <span class="text-[8px] bg-red-100 text-red-600 px-1 rounded">EXPIRED!</span>
+                                    </template>
+                                </span>
                             </template>
                         </div>
                     </div>
@@ -200,11 +203,12 @@
                                     <div class="flex-1">
                                         <p class="font-black text-2xl text-gray-800" x-text="item.name"></p>
                                         <span class="text-red-500 text-[10px] font-black uppercase" x-text="'Need: ' + item.shortage + ' ' + item.unit"></span>
+                                        <p x-show="item.reason === 'expired'" class="text-[9px] text-orange-500 font-bold uppercase mt-1 italic">* Replacing expired stock</p>
                                     </div>
                                     <div class="bg-indigo-50/50 p-4 rounded-2xl grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 items-end border border-indigo-50">
                                         <div>
                                             <label class="text-[9px] font-black text-indigo-400 uppercase">Bought Qty</label>
-                                            <input type="number" x-model.number="item.shortage" class="w-full border p-2 rounded-xl text-sm font-black outline-none bg-white">
+                                            <input type="number" step="0.1" x-model.number="item.shortage" class="w-full border p-2 rounded-xl text-sm font-black outline-none bg-white">
                                         </div>
                                         <div>
                                             <label class="text-[9px] font-black text-indigo-400 uppercase">Location</label>
@@ -248,29 +252,26 @@
         </section>
 
         <div x-show="transferModal.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-bg" x-transition x-cloak>
-            <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 border border-gray-100" @click.outside="transferModal.show = false">
-                <div @click.stop>
-                    <h3 class="text-xl font-black text-gray-800 mb-2 uppercase">Move Stock</h3>
-                    <p class="text-[10px] font-bold text-gray-400 uppercase mb-6" x-text="'Currently in: ' + (transferModal.batch ? transferModal.batch.location : '')"></p>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <label class="text-[10px] font-black text-indigo-500 uppercase">Amount to Transfer</label>
-                            <input type="number" step="0.1" x-model.number="transferModal.moveQty" class="w-full border-2 border-indigo-50 p-3 rounded-xl text-lg font-black outline-none focus:border-indigo-400">
-                            <p class="text-[9px] text-gray-400 mt-1" x-text="'Max Available: ' + (transferModal.batch ? transferModal.batch.qty : 0)"></p>
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-black text-indigo-500 uppercase">New Location</label>
-                            <select x-model="transferModal.newLoc" class="w-full border-2 border-indigo-50 p-3 rounded-xl font-black text-sm outline-none">
-                                <template x-for="loc in locations">
-                                    <option :value="loc" x-text="loc"></option>
-                                </template>
-                            </select>
-                        </div>
-                        <div class="flex gap-2 pt-4">
-                            <button @click="transferModal.show = false" class="flex-1 bg-gray-100 text-gray-500 py-3 rounded-xl font-black uppercase text-xs">Cancel</button>
-                            <button @click="executeTransfer()" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black uppercase text-xs shadow-lg">Confirm Move</button>
-                        </div>
+            <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 border border-gray-100" @mousedown.self="transferModal.show = false">
+                <h3 class="text-xl font-black text-gray-800 mb-2 uppercase">Move Stock</h3>
+                <p class="text-[10px] font-bold text-gray-400 uppercase mb-6" x-text="'Currently in: ' + (transferModal.batch ? transferModal.batch.location : '')"></p>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[10px] font-black text-indigo-500 uppercase">Amount to Transfer</label>
+                        <input type="number" step="0.1" x-model.number="transferModal.moveQty" class="w-full border-2 border-indigo-50 p-3 rounded-xl text-lg font-black outline-none focus:border-indigo-400">
+                        <p class="text-[9px] text-gray-400 mt-1" x-text="'Max: ' + (transferModal.batch ? transferModal.batch.qty : 0)"></p>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-indigo-500 uppercase">New Location</label>
+                        <select x-model="transferModal.newLoc" class="w-full border-2 border-indigo-50 p-3 rounded-xl font-black text-sm outline-none">
+                            <template x-for="loc in locations">
+                                <option :value="loc" x-text="loc"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div class="flex gap-2 pt-4">
+                        <button @click="transferModal.show = false" class="flex-1 bg-gray-100 text-gray-500 py-3 rounded-xl font-black uppercase text-xs">Cancel</button>
+                        <button @click="executeTransfer()" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black uppercase text-xs shadow-lg">Confirm Move</button>
                     </div>
                 </div>
             </div>
@@ -290,9 +291,7 @@
                 categories: ['Produce', 'Dairy', 'Meat', 'Grains', 'Frozen', 'Other'],
                 filterLocation: '',
                 newLocName: '',
-                
                 transferModal: { show: false, item: null, batch: null, moveQty: 0, newLoc: '' },
-
                 forms: {
                     pantry: { name: '', qty: 0, min_threshold: 0, unit: '', location: 'Main Freezer', category: 'Other', expiry_date: '' },
                     recipe: { title: '', tempIngs: [], ingName: '', ingQty: 0 },
@@ -300,7 +299,7 @@
                 },
 
                 init() {
-                    const suffix = 'v5_6';
+                    const suffix = 'v5_7';
                     this.pantry = JSON.parse(localStorage.getItem('sp_pantry_' + suffix) || '[]');
                     this.recipes = JSON.parse(localStorage.getItem('sp_recipes_' + suffix) || '[]');
                     this.mealPlan = JSON.parse(localStorage.getItem('sp_plan_' + suffix) || '[]');
@@ -309,7 +308,7 @@
                 },
 
                 save() {
-                    const suffix = 'v5_6';
+                    const suffix = 'v5_7';
                     localStorage.setItem('sp_pantry_' + suffix, JSON.stringify(this.pantry));
                     localStorage.setItem('sp_recipes_' + suffix, JSON.stringify(this.recipes));
                     localStorage.setItem('sp_plan_' + suffix, JSON.stringify(this.mealPlan));
@@ -317,57 +316,40 @@
                     this.generateShoppingList();
                 },
 
-                openTransferModal(item, batch) {
-                    this.transferModal = { 
-                        show: true, 
-                        item: item, 
-                        batch: batch, 
-                        moveQty: batch.qty, 
-                        newLoc: this.locations[0] 
-                    };
+                // --- SMART HELPERS ---
+                getDaysUntil(d) { 
+                    if (!d) return 999;
+                    const today = new Date();
+                    today.setHours(0,0,0,0);
+                    return Math.ceil((new Date(d) - today) / 86400000); 
                 },
 
-                executeTransfer() {
-                    const { item, batch, moveQty, newLoc } = this.transferModal;
-                    if (moveQty <= 0 || moveQty > batch.qty) return;
+                isIngredientExpired(name) {
+                    const item = this.pantry.find(p => p.name.toLowerCase() === name.toLowerCase());
+                    if (!item || item.batches.length === 0) return false;
+                    // Returns true if ALL batches for this item are expired
+                    return item.batches.every(b => this.getDaysUntil(b.expiry) < 0);
+                },
 
-                    if (moveQty === batch.qty) {
-                        batch.location = newLoc;
-                    } else {
-                        batch.qty = parseFloat((batch.qty - moveQty).toFixed(2));
-                        item.batches.push({ qty: moveQty, expiry: batch.expiry, location: newLoc });
-                    }
-                    this.sortBatches();
-                    this.transferModal.show = false;
-                    this.save();
+                getIngredientStatusClass(name) {
+                    const pItem = this.pantry.find(p => p.name.toLowerCase() === name.toLowerCase());
+                    if (!pItem || this.getValidQty(pItem) <= 0) return 'text-red-400 border-red-100';
+                    if (this.isIngredientExpired(name)) return 'text-orange-600 border-orange-200 bg-orange-50';
+                    return 'text-green-600 border-green-100';
+                },
+
+                getValidQty(item) {
+                    // Only counts non-expired stock for "Valid" logic
+                    return item.batches
+                        .filter(b => this.getDaysUntil(b.expiry) >= 0)
+                        .reduce((sum, b) => sum + (parseFloat(b.qty) || 0), 0);
                 },
 
                 getTotalQty(item) {
                     return item.batches.reduce((sum, b) => sum + (parseFloat(b.qty) || 0), 0).toFixed(1);
                 },
 
-                getFilteredBatches(item) {
-                    return this.filterLocation ? item.batches.filter(b => b.location === this.filterLocation) : item.batches;
-                },
-
-                get filteredPantryItems() {
-                    let list = this.pantry;
-                    if (this.filterLocation) list = list.filter(item => item.batches.some(b => b.location === this.filterLocation));
-                    return list.sort((a,b) => a.name.localeCompare(b.name));
-                },
-
-                adjustBatch(item, batch, amount) {
-                    batch.qty = Math.max(0, parseFloat((batch.qty + amount).toFixed(2)));
-                    if (batch.qty <= 0) this.removeBatch(item, batch);
-                    this.save();
-                },
-
-                removeBatch(item, batch) {
-                    item.batches = item.batches.filter(b => b !== batch);
-                    if (item.batches.length === 0 && item.min_threshold <= 0) this.pantry = this.pantry.filter(i => i.id !== item.id);
-                    this.save();
-                },
-
+                // --- CORE PANTRY ---
                 savePantryItem() {
                     if(!this.forms.pantry.name) return;
                     const batch = { qty: parseFloat(this.forms.pantry.qty) || 0, expiry: this.forms.pantry.expiry_date, location: this.forms.pantry.location };
@@ -387,6 +369,61 @@
                     this.pantry.forEach(item => item.batches.sort((a,b) => (a.expiry || '9999-12-31') > (b.expiry || '9999-12-31') ? 1 : -1));
                 },
 
+                openTransferModal(item, batch) {
+                    this.transferModal = { show: true, item, batch, moveQty: batch.qty, newLoc: this.locations[0] };
+                },
+
+                executeTransfer() {
+                    const { item, batch, moveQty, newLoc } = this.transferModal;
+                    if (moveQty <= 0 || moveQty > batch.qty) return;
+                    if (moveQty === batch.qty) {
+                        batch.location = newLoc;
+                    } else {
+                        batch.qty = parseFloat((batch.qty - moveQty).toFixed(2));
+                        item.batches.push({ qty: moveQty, expiry: batch.expiry, location: newLoc });
+                    }
+                    this.sortBatches();
+                    this.transferModal.show = false;
+                    this.save();
+                },
+
+                // --- SHOPPING LOGIC (WITH EXPIRY AWARENESS) ---
+                generateShoppingList() {
+                    let needs = {};
+                    this.mealPlan.forEach(p => {
+                        this.recipes.find(r => r.id == p.recipeId)?.ingredients.forEach(i => {
+                            needs[i.name.toLowerCase()] = (needs[i.name.toLowerCase()] || 0) + i.qty;
+                        });
+                    });
+
+                    this.shoppingList = [];
+                    this.pantry.forEach(item => {
+                        const validStock = this.getValidQty(item);
+                        const totalStock = parseFloat(this.getTotalQty(item));
+                        const required = Math.max(needs[item.name.toLowerCase()] || 0, item.min_threshold || 0);
+
+                        if (validStock < required) {
+                            this.shoppingList.push({ 
+                                name: item.name, 
+                                shortage: (required - validStock).toFixed(1), 
+                                unit: item.unit, 
+                                category: item.category, 
+                                location: this.locations[0], 
+                                boughtExpiry: '',
+                                reason: (totalStock >= required && validStock < required) ? 'expired' : 'stock'
+                            });
+                        }
+                    });
+                },
+
+                checkoutItem(shopItem) {
+                    let pItem = this.pantry.find(p => p.name.toLowerCase() === shopItem.name.toLowerCase());
+                    const batch = { qty: shopItem.shortage, expiry: shopItem.boughtExpiry, location: shopItem.location };
+                    if (pItem) { pItem.batches.push(batch); this.sortBatches(); }
+                    this.save();
+                },
+
+                // --- RECIPE LOGIC ---
                 addIngToRecipeForm() {
                     if(!this.forms.recipe.ingName) return;
                     let exists = this.pantry.find(p => p.name.toLowerCase() === this.forms.recipe.ingName.toLowerCase());
@@ -395,19 +432,14 @@
                     this.forms.recipe.ingName = ''; this.forms.recipe.ingQty = 0;
                     this.save();
                 },
+
                 saveRecipe() {
                     if(!this.forms.recipe.title) return;
                     this.recipes.push({ id: Date.now(), title: this.forms.recipe.title, ingredients: [...this.forms.recipe.tempIngs] });
                     this.forms.recipe = { title: '', tempIngs: [], ingName: '', ingQty: 0 };
                     this.save();
                 },
-                getIngredientStatusClass(name) {
-                    const pItem = this.pantry.find(p => p.name.toLowerCase() === name.toLowerCase());
-                    return (!pItem || parseFloat(this.getTotalQty(pItem)) <= 0) ? 'text-red-400 border-red-100' : 'text-green-600 border-green-100';
-                },
-                getRecipeName(id) { return this.recipes.find(r => r.id == id)?.title || 'Unknown'; },
-                addToPlan() { if(this.forms.plan.recipeId && this.forms.plan.date) { this.mealPlan.push({ id: Date.now(), ...this.forms.plan }); this.save(); }},
-                get sortedMealPlan() { return [...this.mealPlan].sort((a,b) => new Date(a.date) - new Date(b.date)); },
+
                 cookMeal(plan) {
                     const recipe = this.recipes.find(r => r.id == plan.recipeId);
                     if (!recipe) return;
@@ -415,6 +447,7 @@
                         let item = this.pantry.find(p => p.name.toLowerCase() === ing.name.toLowerCase());
                         if(item) {
                             let needed = ing.qty;
+                            // Prioritize cooking with expired or soonest-to-expire food
                             item.batches.sort((a,b) => (a.expiry || '9999') > (b.expiry || '9999') ? 1 : -1);
                             for (let b of item.batches) {
                                 if (needed <= 0) break;
@@ -428,38 +461,24 @@
                     this.save();
                 },
 
-                generateShoppingList() {
-                    let needs = {};
-                    this.mealPlan.forEach(p => {
-                        this.recipes.find(r => r.id == p.recipeId)?.ingredients.forEach(i => {
-                            needs[i.name.toLowerCase()] = (needs[i.name.toLowerCase()] || 0) + i.qty;
-                        });
-                    });
-                    this.shoppingList = [];
-                    this.pantry.forEach(item => {
-                        const current = parseFloat(this.getTotalQty(item));
-                        const required = Math.max(needs[item.name.toLowerCase()] || 0, item.min_threshold || 0);
-                        if (current < required) {
-                            this.shoppingList.push({ name: item.name, shortage: (required - current).toFixed(1), unit: item.unit, category: item.category, location: this.locations[0], boughtExpiry: '' });
-                        }
-                    });
+                // --- UI UTILS ---
+                getFilteredBatches(item) { return this.filterLocation ? item.batches.filter(b => b.location === this.filterLocation) : item.batches; },
+                get filteredPantryItems() { 
+                    let list = this.pantry;
+                    if (this.filterLocation) list = list.filter(item => item.batches.some(b => b.location === this.filterLocation));
+                    return list.sort((a,b) => a.name.localeCompare(b.name));
                 },
-                get groupedShoppingList() {
-                    return this.shoppingList.reduce((acc, i) => { (acc[i.category] = acc[i.category] || []).push(i); return acc; }, {});
-                },
-                checkoutItem(shopItem) {
-                    let pItem = this.pantry.find(p => p.name.toLowerCase() === shopItem.name.toLowerCase());
-                    const batch = { qty: shopItem.shortage, expiry: shopItem.boughtExpiry, location: shopItem.location };
-                    if (pItem) { pItem.batches.push(batch); this.sortBatches(); }
-                    this.save();
-                },
-
-                getDaysUntil(d) { return d ? Math.ceil((new Date(d) - new Date().setHours(0,0,0,0)) / 86400000) : 999; },
-                getExpiryTextClass(d) { let days = this.getDaysUntil(d); return days < 0 ? 'text-red-600' : (days <= 3 ? 'text-orange-600' : 'text-indigo-400'); },
-                getExpiryLabel(d) { let days = this.getDaysUntil(d); if (!d) return 'Stable'; if (days < 0) return 'Expired'; if (days === 0) return 'Today'; return days + 'd'; },
+                get groupedShoppingList() { return this.shoppingList.reduce((acc, i) => { (acc[i.category] = acc[i.category] || []).push(i); return acc; }, {}); },
+                get sortedMealPlan() { return [...this.mealPlan].sort((a,b) => new Date(a.date) - new Date(b.date)); },
+                getRecipeName(id) { return this.recipes.find(r => r.id == id)?.title || 'Unknown'; },
+                getExpiryTextClass(d) { let days = this.getDaysUntil(d); return days < 0 ? 'text-red-600' : (days <= 7 ? 'text-orange-600' : 'text-indigo-400'); },
+                getExpiryLabel(d) { let days = this.getDaysUntil(d); if (!d) return 'Stable'; if (days < 0) return 'EXPIRED'; if (days === 0) return 'TODAY'; return days + 'd'; },
                 formatDate(d) { return new Date(d).toLocaleDateString(undefined, {month:'short', day:'numeric'}); },
                 formatDateDay(d) { return new Date(d).toLocaleDateString(undefined, {weekday:'short'}); },
                 formatDateNum(d) { return new Date(d).getDate(); },
+                adjustBatch(item, batch, amount) { batch.qty = Math.max(0, parseFloat((batch.qty + amount).toFixed(2))); if (batch.qty <= 0) this.removeBatch(item, batch); this.save(); },
+                removeBatch(item, batch) { item.batches = item.batches.filter(b => b !== batch); if (item.batches.length === 0 && item.min_threshold <= 0) this.pantry = this.pantry.filter(i => i.id !== item.id); this.save(); },
+                addToPlan() { if(this.forms.plan.recipeId && this.forms.plan.date) { this.mealPlan.push({ id: Date.now(), ...this.forms.plan }); this.save(); }},
                 addLocation() { if(this.newLocName) { this.locations.push(this.newLocName); this.newLocName=''; this.save(); }},
                 removeList(list, val) { this[list] = this[list].filter(v => v !== val); this.save(); },
                 deleteItem(type, id) { this[type] = this[type].filter(i => i.id !== id); this.save(); }
