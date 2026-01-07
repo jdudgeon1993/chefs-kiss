@@ -3,6 +3,258 @@
    PART 1: State, Storage, Utilities, Modal System
 --------------------------------------------------- */
 
+/* ---------------------------------------------------
+   PHASE 4A — UNIFIED MODAL FRAMEWORK
+--------------------------------------------------- */
+
+function closeModal() {
+  const overlay = document.querySelector(".modal-overlay");
+  if (overlay) overlay.remove();
+}
+
+function openCardModal({ title, subtitle = "", contentHTML = "", actions = [] }) {
+  // Remove any existing modal first
+  closeModal();
+
+  // Build overlay
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+
+  // Build modal card
+  const card = document.createElement("div");
+  card.className = "modal-card";
+
+  // Close button
+  const closeBtn = document.createElement("div");
+  closeBtn.className = "modal-close";
+  closeBtn.innerHTML = "&times;";
+  closeBtn.addEventListener("click", closeModal);
+
+  // Title + subtitle
+  const titleEl = document.createElement("div");
+  titleEl.className = "modal-card-title";
+  titleEl.textContent = title;
+
+  const subtitleEl = document.createElement("div");
+  subtitleEl.className = "modal-card-subtitle";
+  subtitleEl.textContent = subtitle;
+
+  // Divider
+  const dividerTop = document.createElement("div");
+  dividerTop.className = "modal-divider";
+
+  // Content container
+  const contentEl = document.createElement("div");
+  contentEl.className = "modal-content";
+  contentEl.innerHTML = contentHTML;
+
+  // Divider before actions
+  const dividerBottom = document.createElement("div");
+  dividerBottom.className = "modal-divider";
+
+  // Action buttons
+  const actionsRow = document.createElement("div");
+  actionsRow.className = "modal-actions";
+
+  actions.forEach(action => {
+    const btn = document.createElement("button");
+    btn.textContent = action.label;
+    btn.className = `btn ${action.class || ""}`;
+    btn.addEventListener("click", action.onClick);
+    actionsRow.appendChild(btn);
+  });
+
+  // Assemble modal
+  card.appendChild(closeBtn);
+  card.appendChild(titleEl);
+  if (subtitle) card.appendChild(subtitleEl);
+  card.appendChild(dividerTop);
+  card.appendChild(contentEl);
+  card.appendChild(dividerBottom);
+  card.appendChild(actionsRow);
+
+  overlay.appendChild(card);
+
+  // Add to DOM
+  document.getElementById("modal-root").appendChild(overlay);
+
+  // Close on overlay click
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeModal();
+  });
+
+  // Close on ESC key
+  document.addEventListener("keydown", function escHandler(e) {
+    if (e.key === "Escape") {
+      closeModal();
+      document.removeEventListener("keydown", escHandler);
+    }
+  });
+}
+
+/* ---------------------------------------------------
+   PHASE 4B — MODAL CONTENT HELPERS
+--------------------------------------------------- */
+
+/* Create a labeled input/select/textarea field */
+function modalField({ label, type = "text", value = "", options = [], placeholder = "", rows = 3 }) {
+  let inputHTML = "";
+
+  if (type === "select") {
+    inputHTML = `
+      <select>
+        ${options.map(opt => `<option value="${opt}">${opt}</option>`).join("")}
+      </select>
+    `;
+  } else if (type === "textarea") {
+    inputHTML = `
+      <textarea rows="${rows}" placeholder="${placeholder}">${value}</textarea>
+    `;
+  } else {
+    inputHTML = `
+      <input type="${type}" value="${value}" placeholder="${placeholder}">
+    `;
+  }
+
+  return `
+    <div class="modal-field">
+      <label>${label}</label>
+      ${inputHTML}
+    </div>
+  `;
+}
+
+/* Create a two-column row of fields */
+function modalRow(fieldsArray) {
+  return `
+    <div class="modal-fields">
+      ${fieldsArray.join("")}
+    </div>
+  `;
+}
+
+/* Create a full-width block (instructions, lists, etc.) */
+function modalFull(content) {
+  return `
+    <div class="modal-fields-full">
+      ${content}
+    </div>
+  `;
+}
+
+/* Create a recipe ingredient row */
+function modalIngredientRow({ ingredient = "", qty = "", unit = "" }) {
+  return `
+    <div class="modal-ingredient-row">
+      <input type="text" value="${ingredient}" placeholder="Ingredient">
+      <input type="text" value="${qty}" placeholder="Qty">
+      <input type="text" value="${unit}" placeholder="Unit">
+    </div>
+  `;
+}
+
+/* ---------------------------------------------------
+   PHASE 5A‑1 — PANTRY DATA MODEL + HELPERS
+--------------------------------------------------- */
+
+let pantry = JSON.parse(localStorage.getItem("pantry") || "[]");
+
+/* Save pantry to localStorage */
+function savePantry() {
+  localStorage.setItem("pantry", JSON.stringify(pantry));
+}
+
+/* Find ingredient by ID */
+function getIngredient(id) {
+  return pantry.find(item => item.id === id);
+}
+
+/* Generate unique IDs */
+function uid() {
+  return Math.random().toString(36).substr(2, 9);
+}
+
+/* ---------------------------------------------------
+   PHASE 5A‑3 — SAVE INGREDIENT + RENDER PANTRY
+--------------------------------------------------- */
+
+function saveIngredient(existing) {
+  const modal = document.querySelector(".modal-card");
+
+  const fields = modal.querySelectorAll(".modal-field input, .modal-field select, .modal-field textarea");
+  const values = Array.from(fields).map(f => f.value.trim());
+
+  const [
+    name,
+    category,
+    qty,
+    unit,
+    min,
+    location,
+    expiry,
+    notes
+  ] = values;
+
+  if (!name) {
+    alert("Ingredient name is required.");
+    return;
+  }
+
+  if (existing) {
+    // Update existing ingredient
+    existing.name = name;
+    existing.category = category;
+    existing.qty = Number(qty);
+    existing.unit = unit;
+    existing.min = Number(min);
+    existing.location = location;
+    existing.expiry = expiry;
+    existing.notes = notes;
+  } else {
+    // Add new ingredient
+    pantry.push({
+      id: uid(),
+      name,
+      category,
+      qty: Number(qty),
+      unit,
+      min: Number(min),
+      location,
+      expiry,
+      notes
+    });
+  }
+
+  savePantry();
+  renderPantry();
+  closeModal();
+}
+
+/* Render pantry list */
+function renderPantry() {
+  const container = document.getElementById("pantry-display");
+  container.innerHTML = "";
+
+  pantry.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "pantry-item";
+
+    card.innerHTML = `
+      <strong>${item.name}</strong><br>
+      <span>${item.qty} ${item.unit}</span><br>
+      <span>Category: ${item.category}</span><br>
+      <span>Location: ${item.location}</span><br>
+      <span>Min: ${item.min}</span><br>
+      <span>Expiry: ${item.expiry || "—"}</span>
+    `;
+
+    card.addEventListener("click", () => openIngredientModal(item));
+
+    container.appendChild(card);
+  });
+}
+
+
 /* -----------------------------
    GLOBAL STATE (Empty Start)
 ----------------------------- */
@@ -343,8 +595,224 @@ function setupPantryInteractions() {
 }
 
 /* ---------------------------------------------------
+   PHASE 5B‑1 — RECIPE DATA MODEL + HELPERS
+--------------------------------------------------- */
+
+let recipes = JSON.parse(localStorage.getItem("recipes") || "[]");
+
+/* Save recipes to localStorage */
+function saveRecipes() {
+  localStorage.setItem("recipes", JSON.stringify(recipes));
+}
+
+/* Find recipe by ID */
+function getRecipe(id) {
+  return recipes.find(r => r.id === id);
+}
+
+/* Generate unique IDs (shared with pantry) */
+function uid() {
+  return Math.random().toString(36).substr(2, 9);
+}
+
+/* ---------------------------------------------------
+   PHASE 5B‑2 — RECIPE MODAL (ADD/EDIT)
+--------------------------------------------------- */
+
+function openRecipeModal(existing = null) {
+  const isEdit = !!existing;
+
+  const title = isEdit ? "Edit Recipe" : "New Recipe";
+  const subtitle = isEdit
+    ? "Update your cozy kitchen creation."
+    : "Add a new recipe to your box.";
+
+  // Build ingredient rows
+  const ingredientRows = (existing?.ingredients || [])
+    .map(ing => modalIngredientRow({
+      ingredient: ing.name,
+      qty: ing.qty,
+      unit: ing.unit
+    }))
+    .join("");
+
+  const contentHTML = `
+    ${modalRow([
+      modalField({
+        label: "Recipe Name",
+        value: existing?.name || ""
+      }),
+      modalField({
+        label: "Servings",
+        type: "number",
+        value: existing?.servings || ""
+      })
+    ])}
+
+    ${modalFull(`
+      <label style="font-weight:600; margin-bottom:0.35rem;">Ingredients</label>
+      <div id="modal-ingredient-list">
+        ${ingredientRows}
+      </div>
+      <button class="modal-add-row" id="add-ingredient-row">+ Add Ingredient</button>
+    `)}
+
+    ${modalFull(`
+      ${modalField({
+        label: "Instructions",
+        type: "textarea",
+        value: existing?.instructions || "",
+        rows: 6
+      })}
+    `)}
+  `;
+
+  openCardModal({
+    title,
+    subtitle,
+    contentHTML,
+    actions: [
+      {
+        label: isEdit ? "Save Changes" : "Add Recipe",
+        class: "btn-primary",
+        onClick: () => saveRecipe(existing)
+      },
+      {
+        label: "Cancel",
+        class: "btn-secondary",
+        onClick: closeModal
+      }
+    ]
+  });
+
+  // Add ingredient row button logic
+  document.getElementById("add-ingredient-row").addEventListener("click", () => {
+    const list = document.getElementById("modal-ingredient-list");
+    list.insertAdjacentHTML("beforeend", modalIngredientRow({}));
+  });
+}
+
+/* ---------------------------------------------------
+   PHASE 5B‑3 — SAVE RECIPE
+--------------------------------------------------- */
+
+function saveRecipe(existing) {
+  const modal = document.querySelector(".modal-card");
+
+  const fields = modal.querySelectorAll(".modal-field input, .modal-field textarea");
+  const values = Array.from(fields).map(f => f.value.trim());
+
+  const [
+    name,
+    servings,
+    instructions
+  ] = values;
+
+  if (!name) {
+    alert("Recipe name is required.");
+    return;
+  }
+
+  // Collect ingredient rows
+  const ingRows = modal.querySelectorAll(".modal-ingredient-row");
+  const ingredients = Array.from(ingRows).map(row => {
+    const inputs = row.querySelectorAll("input");
+    return {
+      name: inputs[0].value.trim(),
+      qty: Number(inputs[1].value.trim()),
+      unit: inputs[2].value.trim()
+    };
+  }).filter(ing => ing.name);
+
+  if (existing) {
+    existing.name = name;
+    existing.servings = Number(servings);
+    existing.instructions = instructions;
+    existing.ingredients = ingredients;
+  } else {
+    recipes.push({
+      id: uid(),
+      name,
+      servings: Number(servings),
+      instructions,
+      ingredients
+    });
+  }
+
+  saveRecipes();
+  renderRecipes();
+  closeModal();
+}
+
+/* ---------------------------------------------------
    PART 3: Recipes — Cards, Modals, Cooking Flow
 --------------------------------------------------- */
+
+/* ---------------------------------------------------
+   PHASE 5B‑4 — RENDER RECIPES
+--------------------------------------------------- */
+
+function renderRecipes() {
+  const container = document.getElementById("recipe-list");
+  container.innerHTML = "";
+
+  recipes.forEach(recipe => {
+    const card = document.createElement("div");
+    card.className = "recipe-card";
+
+    card.innerHTML = `
+      <strong>${recipe.name}</strong><br>
+      <span>${recipe.servings} servings</span><br>
+      <span>${recipe.ingredients.length} ingredients</span>
+    `;
+
+    card.addEventListener("click", () => openRecipeViewModal(recipe));
+
+    container.appendChild(card);
+  });
+}
+
+/* ---------------------------------------------------
+   PHASE 5B‑5 — VIEW RECIPE MODAL
+--------------------------------------------------- */
+
+function openRecipeViewModal(recipe) {
+  const ingList = recipe.ingredients
+    .map(ing => `<li>${ing.qty} ${ing.unit} ${ing.name}</li>`)
+    .join("");
+
+  const contentHTML = `
+    ${modalFull(`
+      <h3 style="margin-bottom:0.5rem;">Ingredients</h3>
+      <ul style="margin-left:1.2rem; margin-bottom:1rem;">
+        ${ingList}
+      </ul>
+    `)}
+
+    ${modalFull(`
+      <h3 style="margin-bottom:0.5rem;">Instructions</h3>
+      <p>${recipe.instructions.replace(/\n/g, "<br>")}</p>
+    `)}
+  `;
+
+  openCardModal({
+    title: recipe.name,
+    subtitle: `${recipe.servings} servings`,
+    contentHTML,
+    actions: [
+      {
+        label: "Cook Now",
+        class: "btn-primary",
+        onClick: () => openCookModal(recipe)
+      },
+      {
+        label: "Edit",
+        class: "btn-secondary",
+        onClick: () => openRecipeModal(recipe)
+      }
+    ]
+  });
+}
 
 /* -----------------------------
    RENDER RECIPE GRID
