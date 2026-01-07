@@ -306,9 +306,10 @@ function modalFull(content) {
 function modalIngredientRow({ ingredient = "", qty = "", unit = "" }) {
   return `
     <div class="modal-ingredient-row">
-      <input type="text" value="${ingredient}" placeholder="Ingredient">
-      <input type="text" value="${qty}" placeholder="Qty">
-      <input type="text" value="${unit}" placeholder="Unit">
+      <input type="text" class="ing-name" value="${ingredient}" placeholder="Ingredient (e.g., Chicken Breast)">
+      <input type="number" class="ing-qty" value="${qty}" placeholder="Qty" step="0.01" min="0">
+      <input type="text" class="ing-unit" value="${unit}" placeholder="Unit (e.g., lbs, cups)">
+      <button class="modal-remove-row" type="button">&times;</button>
     </div>
   `;
 }
@@ -644,9 +645,24 @@ function openRecipeModal(existing = null) {
       const list = document.getElementById("modal-ingredient-list");
       if (list) {
         list.insertAdjacentHTML("beforeend", modalIngredientRow({}));
+        attachIngredientRowListeners();
       }
     });
   }
+
+  attachIngredientRowListeners();
+}
+
+function attachIngredientRowListeners() {
+  const removeButtons = document.querySelectorAll(".modal-ingredient-row .modal-remove-row");
+  removeButtons.forEach(btn => {
+    btn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const row = e.target.closest(".modal-ingredient-row");
+      if (row) row.remove();
+    };
+  });
 }
 
 function saveRecipe(existing) {
@@ -668,13 +684,16 @@ function saveRecipe(existing) {
 
   const ingRows = modal.querySelectorAll(".modal-ingredient-row");
   const ingredients = Array.from(ingRows).map(row => {
-    const inputs = row.querySelectorAll("input");
-    return {
-      name: inputs[0].value.trim(),
-      qty: Number(inputs[1].value.trim() || 0),
-      unit: inputs[2].value.trim()
-    };
-  }).filter(ing => ing.name);
+    const nameInput = row.querySelector(".ing-name");
+    const qtyInput = row.querySelector(".ing-qty");
+    const unitInput = row.querySelector(".ing-unit");
+
+    const name = nameInput ? nameInput.value.trim() : "";
+    const qty = qtyInput ? Number(qtyInput.value.trim() || 0) : 0;
+    const unit = unitInput ? unitInput.value.trim() : "";
+
+    return { name, qty, unit };
+  }).filter(ing => ing.name && ing.unit); // Must have both name AND unit
 
   if (existing) {
     existing.name = name;
@@ -705,14 +724,36 @@ function saveRecipe(existing) {
 function createGhostPantryItems(ingredients) {
   // For each ingredient in the recipe, ensure it exists in pantry
   // If not, create a "ghost" item at qty 0 with location "Unassigned"
-  ingredients.forEach(ing => {
-    const existing = pantry.find(p => p.name === ing.name && p.unit === ing.unit);
+  let ghostsCreated = 0;
 
-    if (!existing && ing.name && ing.unit) {
+  ingredients.forEach(ing => {
+    // Validate ingredient has required fields
+    if (!ing.name || !ing.unit) {
+      console.warn("Skipping invalid ingredient:", ing);
+      return;
+    }
+
+    // Trim values
+    const name = ing.name.trim();
+    const unit = ing.unit.trim();
+
+    // Skip if empty after trimming
+    if (!name || !unit) {
+      return;
+    }
+
+    // Case-insensitive matching to find existing pantry item
+    const existing = pantry.find(p =>
+      p.name.toLowerCase() === name.toLowerCase() &&
+      p.unit.toLowerCase() === unit.toLowerCase()
+    );
+
+    if (!existing) {
+      // Create ghost item with exact name/unit from recipe
       pantry.push({
         id: uid(),
-        name: ing.name,
-        unit: ing.unit,
+        name: name,
+        unit: unit,
         category: "Other",
         min: 0,
         locations: [{
@@ -724,10 +765,14 @@ function createGhostPantryItems(ingredients) {
         totalQty: 0,
         notes: "Auto-created from recipe"
       });
+      ghostsCreated++;
     }
   });
 
-  savePantry();
+  if (ghostsCreated > 0) {
+    savePantry();
+    console.log(`Created ${ghostsCreated} ghost pantry item(s)`);
+  }
 }
 
 function renderRecipes() {
@@ -1080,7 +1125,11 @@ function openCookNowModal(recipe, dateStr = null, mealId = null) {
   const insufficientIngredients = [];
 
   recipe.ingredients.forEach(ing => {
-    const pantryItem = pantry.find(p => p.name === ing.name && p.unit === ing.unit);
+    // Case-insensitive matching
+    const pantryItem = pantry.find(p =>
+      p.name.toLowerCase() === ing.name.toLowerCase() &&
+      p.unit.toLowerCase() === ing.unit.toLowerCase()
+    );
 
     if (!pantryItem) {
       missingIngredients.push(`${ing.name} (${ing.qty} ${ing.unit})`);
@@ -1142,7 +1191,11 @@ function openCookNowModal(recipe, dateStr = null, mealId = null) {
 function executeCook(recipe, dateStr, mealId) {
   // Deplete pantry ingredients
   recipe.ingredients.forEach(ing => {
-    const pantryItem = pantry.find(p => p.name === ing.name && p.unit === ing.unit);
+    // Case-insensitive matching
+    const pantryItem = pantry.find(p =>
+      p.name.toLowerCase() === ing.name.toLowerCase() &&
+      p.unit.toLowerCase() === ing.unit.toLowerCase()
+    );
 
     if (pantryItem) {
       let remaining = ing.qty;
@@ -1719,7 +1772,11 @@ function updateDashboard() {
   const reserved = calculateReservedIngredients();
   const readyRecipes = recipes.filter(recipe => {
     return recipe.ingredients.every(ing => {
-      const pantryItem = pantry.find(p => p.name === ing.name && p.unit === ing.unit);
+      // Case-insensitive matching
+      const pantryItem = pantry.find(p =>
+        p.name.toLowerCase() === ing.name.toLowerCase() &&
+        p.unit.toLowerCase() === ing.unit.toLowerCase()
+      );
       if (!pantryItem) return false;
 
       const key = `${ing.name}|${ing.unit}`;

@@ -1208,13 +1208,7 @@ body {
   min-height: 90px;
 }
 
-/* Ingredient rows inside recipe modal */
-.modal-ingredient-row {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
+/* Ingredient rows - see full styling below at line ~1363 */
 
 /* Location rows inside ingredient modal */
 .modal-location-row {
@@ -1362,9 +1356,55 @@ body {
 /* Ingredient row inside recipe modal */
 .modal-ingredient-row {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr auto;
   gap: 0.75rem;
   margin-bottom: 0.75rem;
+  align-items: center;
+}
+
+.modal-ingredient-row input {
+  padding: 0.75rem;
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.modal-ingredient-row input:focus {
+  outline: none;
+  border-color: #8A9A5B;
+  box-shadow: 0 0 0 3px rgba(138,154,91,0.1);
+}
+
+.modal-ingredient-row input.ing-name {
+  font-weight: 500;
+}
+
+.modal-ingredient-row input.ing-qty {
+  text-align: right;
+}
+
+.modal-ingredient-row .modal-remove-row {
+  background: rgba(179,106,94,0.1);
+  border: 1px solid rgba(179,106,94,0.3);
+  color: #B36A5E;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.modal-ingredient-row .modal-remove-row:hover {
+  background: rgba(179,106,94,0.2);
+  border-color: rgba(179,106,94,0.5);
 }
 
 /* Add ingredient row button */
@@ -1448,20 +1488,24 @@ body {
   }
 
   .modal-ingredient-row {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr auto;
     grid-template-areas:
-      "name name"
-      "qty unit";
+      "name name remove"
+      "qty unit remove";
   }
 
-  .modal-ingredient-row input:nth-child(1) {
+  .modal-ingredient-row .ing-name {
     grid-area: name;
   }
-  .modal-ingredient-row input:nth-child(2) {
+  .modal-ingredient-row .ing-qty {
     grid-area: qty;
   }
-  .modal-ingredient-row input:nth-child(3) {
+  .modal-ingredient-row .ing-unit {
     grid-area: unit;
+  }
+  .modal-ingredient-row .modal-remove-row {
+    grid-area: remove;
+    align-self: stretch;
   }
 }
 
