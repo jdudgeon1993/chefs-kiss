@@ -625,51 +625,105 @@ function setupRecipeInteractions() {
 }
 
 /* ---------------------------------------------------
-   PART 4: Planner & Dashboard
+   PART 4: Planner & Dashboard (Monthly Calendar)
 --------------------------------------------------- */
 
 /* -----------------------------
-   RENDER WEEKLY PLANNER
+   MONTH HELPERS
+----------------------------- */
+
+function getCurrentMonthInfo() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth(); // 0–11
+
+  // First day of month
+  const first = new Date(year, month, 1);
+  const firstWeekday = first.getDay(); // 0=Sun, 1=Mon, ...
+
+  // Days in month
+  const nextMonth = new Date(year, month + 1, 0);
+  const daysInMonth = nextMonth.getDate();
+
+  return { year, month, firstWeekday, daysInMonth };
+}
+
+function getMonthLabel() {
+  const now = new Date();
+  return now.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric"
+  });
+}
+
+/* -----------------------------
+   RENDER MONTHLY PLANNER (7x6)
 ----------------------------- */
 
 function renderPlanner() {
   if (!elDayGrid) return;
 
-  const week = getWeekDates();
+  const { year, month, firstWeekday, daysInMonth } = getCurrentMonthInfo();
+
   elDayGrid.innerHTML = "";
 
-  week.forEach(date => {
-    const assignedId = planner[date];
+  // Add a heading inside the planner section if desired
+  const plannerTitle = document.getElementById("planner-month-label");
+  if (plannerTitle) {
+    plannerTitle.textContent = getMonthLabel();
+  }
+
+  // Always render 6 rows x 7 columns = 42 cells
+  const totalCells = 42;
+
+  for (let cellIndex = 0; cellIndex < totalCells; cellIndex++) {
+    const dayNumber = cellIndex - firstWeekday + 1;
+    const validDay = dayNumber >= 1 && dayNumber <= daysInMonth;
+
+    const cell = document.createElement("div");
+    cell.className = "calendar-day";
+
+    if (!validDay) {
+      cell.classList.add("calendar-day--empty");
+      elDayGrid.appendChild(cell);
+      continue;
+    }
+
+    // yyyy-mm-dd for planner state
+    const dateISO = new Date(year, month, dayNumber).toISOString().split("T")[0];
+    const assignedId = planner[dateISO];
     const recipe = recipes.find(r => r.id === assignedId);
 
-    const div = document.createElement("div");
-    div.className = "day-card";
+    const isToday = dateISO === todayISO();
 
-    div.innerHTML = `
-      <div class="day-head">
-        <strong>${formatDatePretty(date)}</strong>
-        ${date === todayISO() ? `<span class="badge">Today</span>` : ""}
+    cell.setAttribute("data-date", dateISO);
+
+    cell.innerHTML = `
+      <div class="calendar-day-inner ${isToday ? "calendar-day--today" : ""}">
+        <div class="calendar-date-badge">
+          <span class="calendar-date">${dayNumber}</span>
+        </div>
+        <div class="calendar-content">
+          ${
+            recipe
+              ? `<div class="calendar-recipe-pill">${recipe.name}</div>`
+              : `<div class="calendar-empty-note">No meal planned</div>`
+          }
+        </div>
+        <button class="btn btn-ghost btn-plan-day" data-date="${dateISO}">
+          ${recipe ? "Change" : "Plan"}
+        </button>
       </div>
-      <div class="day-body" style="margin-top:10px;">
-        ${
-          recipe
-            ? `<p>${recipe.name}</p>`
-            : `<p style="opacity:0.6;">Nothing planned</p>`
-        }
-      </div>
-      <button class="btn btn-ghost btn-plan-day" data-date="${date}">
-        ${recipe ? "Change" : "Plan"}
-      </button>
     `;
 
-    elDayGrid.appendChild(div);
-  });
+    elDayGrid.appendChild(cell);
+  }
 
   attachPlannerButtons();
 }
 
 /* -----------------------------
-   PLAN DAY MODAL
+   PLAN DAY MODAL (unchanged)
 ----------------------------- */
 
 function openPlanDayModal(date) {
@@ -729,7 +783,7 @@ function attachPlannerButtons() {
 }
 
 /* -----------------------------
-   DASHBOARD LOGIC
+   DASHBOARD LOGIC (same idea)
 ----------------------------- */
 
 function updateDashboard() {
@@ -759,9 +813,8 @@ function updateDashboard() {
 ----------------------------- */
 
 function setupPlannerInteractions() {
-  // Buttons in the dashboard already use data-nav="planner"
-  // but since this is a single-page layout, they don't navigate.
-  // We could scroll to the planner section if desired later.
+  // Reserved for any planner-specific controls later
+  // (month navigation, filters, etc.)
 }
 
 /* ---------------------------------------------------
@@ -806,15 +859,16 @@ function renderShoppingList() {
 ----------------------------- */
 
 function generateShoppingFromPlanner() {
-  const week = getWeekDates();
+  const { year, month, daysInMonth } = getCurrentMonthInfo();
   const needed = {};
 
-  week.forEach(date => {
-    const recipeId = planner[date];
-    if (!recipeId) return;
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateISO = new Date(year, month, day).toISOString().split("T")[0];
+    const recipeId = planner[dateISO];
+    if (!recipeId) continue;
 
     const recipe = recipes.find(r => r.id === recipeId);
-    if (!recipe) return;
+    if (!recipe) continue;
 
     recipe.ingredients.forEach(ing => {
       const key = ing.name.toLowerCase();
@@ -823,7 +877,7 @@ function generateShoppingFromPlanner() {
       }
       needed[key].qty += ing.qty;
     });
-  });
+  }
 
   // Compare with pantry
   Object.values(needed).forEach(ing => {
