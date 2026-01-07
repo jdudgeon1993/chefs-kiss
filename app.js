@@ -1076,7 +1076,6 @@ function generateSeasonalNudges() {
 
   nudges.push(...(monthThemes[month] || []));
 
-  // Expiring soon nudges
   pantry.forEach(item => {
     if (!item.expiry) return;
     const diff = (new Date(item.expiry) - new Date()) / (1000 * 60 * 60 * 24);
@@ -1126,7 +1125,6 @@ function init() {
   hookElements();
   injectModalRoot();
 
-  // Render everything
   renderPantry();
   renderRecipes();
   renderPlanner();
@@ -1134,13 +1132,10 @@ function init() {
   generateSeasonalNudges();
   updateDashboard();
 
-  // Hook interactions
   setupPantryInteractions();
   setupRecipeInteractions();
   setupPlannerInteractions();
   setupShoppingInteractions();
-
-  console.log("Chef's Cove is warm and ready.");
 }
 
 document.addEventListener("DOMContentLoaded", init);
