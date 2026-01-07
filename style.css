@@ -310,3 +310,81 @@ body {
   position: relative;
   z-index: 1000;
 }
+
+/* ---------------------------------------------------
+   MODAL OVERLAY + ANIMATION (PHASE 3A)
+--------------------------------------------------- */
+
+/* The darkened background behind the modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 5000;
+  animation: fadeIn 0.25s ease-out;
+}
+
+/* Base modal card container (horizontal recipe-card shape) */
+.modal-card {
+  background: #FAF9F6;
+  border-radius: 14px;
+  width: 90%;
+  max-width: 680px; /* horizontal card width */
+  min-height: 260px;
+  padding: 1.5rem 2rem;
+  box-shadow:
+    0 12px 28px rgba(0,0,0,0.18),
+    0 0 0 1px rgba(0,0,0,0.08);
+  border: 1px solid rgba(120, 94, 60, 0.25);
+  animation: slideUp 0.25s ease-out;
+  position: relative;
+}
+
+/* Close button in the top-right corner */
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  font-size: 1.4rem;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+.modal-close:hover {
+  opacity: 1;
+}
+
+/* Fade + slide animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile: modal becomes a full-screen sheet */
+@media (max-width: 600px) {
+  .modal-card {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+    padding: 1.25rem 1.25rem 2rem;
+    animation: slideUp 0.25s ease-out;
+  }
+}
