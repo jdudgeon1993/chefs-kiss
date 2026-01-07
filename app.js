@@ -1093,6 +1093,36 @@ function setupRecipeInteractions() {
 }
 
 /* ---------------------------------------------------
+   PHASE 5C‑1 — PLANNER DATA MODEL + HELPERS
+--------------------------------------------------- */
+
+let planner = JSON.parse(localStorage.getItem("planner") || "{}");
+
+/* Save planner to localStorage */
+function savePlanner() {
+  localStorage.setItem("planner", JSON.stringify(planner));
+}
+
+/* Get planned recipe for a given date (YYYY-MM-DD) */
+function getPlannedRecipe(date) {
+  return planner[date] || null;
+}
+
+/* Assign recipe to date */
+function setPlannedRecipe(date, recipeId) {
+  planner[date] = recipeId;
+  savePlanner();
+}
+
+/* Remove recipe from date */
+function clearPlannedRecipe(date) {
+  delete planner[date];
+  savePlanner();
+}
+
+
+
+/* ---------------------------------------------------
    PART 4: Planner & Dashboard (Monthly Calendar)
 --------------------------------------------------- */
 
@@ -1283,6 +1313,180 @@ function updateDashboard() {
 function setupPlannerInteractions() {
   // Reserved for any planner-specific controls later
   // (month navigation, filters, etc.)
+}
+
+/* ---------------------------------------------------
+   PHASE 5C‑2 — RENDER MONTHLY CALENDAR
+--------------------------------------------------- */
+
+function renderPlanner() {
+  const container = document.getElementById("day-grid");
+  const monthLabel = document.getElementById("planner-month-label");
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+
+  const monthName = firstDay.toLocaleString("default", { month: "long" });
+  monthLabel.textContent = `${monthName} ${year}`;
+
+  container.innerHTML = "";
+
+  // Fill empty cells before the 1st
+  for (let i = 0; i < firstDay.getDay(); i++) {
+    const empty = document.createElement("div");
+    empty.className = "planner-day empty";
+    container.appendChild(empty);
+  }
+
+  // Fill actual days
+  for (let day = 1; day <= lastDay.getDate(); day++) {
+    const date = new Date(year, month, day);
+    const dateStr = date.toISOString().split("T")[0];
+
+    const cell = document.createElement("div");
+    cell.className = "planner-day";
+
+    const plannedId = getPlannedRecipe(dateStr);
+    const plannedRecipe = plannedId ? getRecipe(plannedId) : null;
+
+    cell.innerHTML = `
+      <div class="planner-day-number">${day}</div>
+      <div class="planner-day-content">
+        ${plannedRecipe ? `<span class="planner-recipe">${plannedRecipe.name}</span>` : `<span class="planner-empty">No meal</span>`}
+      </div>
+    `;
+
+    cell.addEventListener("click", () => openDayModal(dateStr));
+
+    container.appendChild(cell);
+  }
+}
+
+/* ---------------------------------------------------
+   PHASE 5C‑3 — DAY MODAL (VIEW / CHANGE / REMOVE)
+--------------------------------------------------- */
+
+function openDayModal(dateStr) {
+  const plannedId = getPlannedRecipe(dateStr);
+  const plannedRecipe = plannedId ? getRecipe(plannedId) : null;
+
+  // Build recipe dropdown options
+  const recipeOptions = recipes.map(r => r.name);
+
+  const contentHTML = `
+    ${modalRow([
+      modalField({
+        label: "Planned Recipe",
+        type: "select",
+        options: ["None", ...recipeOptions],
+        value: plannedRecipe ? plannedRecipe.name : "None"
+      }),
+      modalField({
+        label: "Date",
+        value: dateStr,
+        type: "text"
+      })
+    ])}
+
+    ${plannedRecipe ? modalFull(`
+      <button class="btn btn-secondary" id="open-recipe-from-day">
+        View Recipe Card
+      </button>
+    `) : ""}
+  `;
+
+  openCardModal({
+    title: `Plan for ${dateStr}`,
+    subtitle: plannedRecipe ? "Meal assigned" : "No meal assigned",
+    contentHTML,
+    actions: [
+      {
+        label: "Save",
+        class: "btn-primary",
+        onClick: () => saveDayPlan(dateStr)
+      },
+      {
+        label: "Remove",
+        class: "btn-secondary",
+        onClick: () => {
+          clearPlannedRecipe(dateStr);
+          renderPlanner();
+          closeModal();
+        }
+      }
+    ]
+  });
+
+  // If a recipe is planned, allow opening the recipe card
+  if (plannedRecipe) {
+    document.getElementById("open-recipe-from-day").addEventListener("click", () => {
+      closeModal();
+      openRecipeViewModal(plannedRecipe);
+    });
+  }
+}
+
+/* ---------------------------------------------------
+   PHASE 5C‑4 — SAVE DAY PLAN
+--------------------------------------------------- */
+
+function saveDayPlan(dateStr) {
+  const modal = document.querySelector(".modal-card");
+
+  const selects = modal.querySelectorAll("select");
+  const selectedRecipeName = selects[0].value;
+
+  if (selectedRecipeName === "None") {
+    clearPlannedRecipe(dateStr);
+  } else {
+    const recipe = recipes.find(r => r.name === selectedRecipeName);
+    if (recipe) {
+      setPlannedRecipe(dateStr, recipe.id);
+    }
+  }
+
+  renderPlanner();
+  closeModal();
+}
+
+/* ---------------------------------------------------
+   PHASE 5D‑1 — SHOPPING DATA MODEL + HELPERS
+--------------------------------------------------- */
+
+let shopping = JSON.parse(localStorage.getItem("shopping") || "[]");
+
+/* Save shopping list */
+function saveShopping() {
+  localStorage.setItem("shopping", JSON.stringify(shopping));
+}
+
+/* Clear shopping list */
+function clearShopping() {
+  shopping = [];
+  saveShopping();
+}
+
+/* Add item to shopping list */
+function addShoppingItem({ name, qty, unit, category, source }) {
+  shopping.push({
+    id: uid(),
+    name,
+    qty: Number(qty),
+    unit,
+    category,
+    source, // "Threshold", "Planner", or "Custom"
+    checked: false
+  });
+  saveShopping();
+}
+
+/* Check if item already exists (by name + unit) */
+function findShoppingItem(name, unit) {
+  return shopping.find(i => i.name === name && i.unit === unit);
 }
 
 /* ---------------------------------------------------
@@ -1513,6 +1717,127 @@ function setupShoppingInteractions() {
   generateShoppingFromPlanner();
 
   // Add checkout button if you want one later
+}
+
+/* ---------------------------------------------------
+   PHASE 5D‑2 — AUTO-GENERATE SHOPPING LIST
+--------------------------------------------------- */
+
+function generateShoppingList() {
+  clearShopping();
+
+  /* A) Threshold-based items */
+  pantry.forEach(item => {
+    if (item.qty < item.min) {
+      const needed = item.min - item.qty;
+
+      addShoppingItem({
+        name: item.name,
+        qty: needed,
+        unit: item.unit,
+        category: item.category,
+        source: "Threshold"
+      });
+    }
+  });
+
+  /* B) Missing ingredients from planned meals */
+  Object.keys(planner).forEach(dateStr => {
+    const recipeId = planner[dateStr];
+    const recipe = getRecipe(recipeId);
+    if (!recipe) return;
+
+    recipe.ingredients.forEach(ing => {
+      const pantryItem = pantry.find(p => p.name === ing.name);
+
+      const available = pantryItem ? pantryItem.qty : 0;
+      const missing = ing.qty - available;
+
+      if (missing > 0) {
+        // Avoid duplicates
+        const existing = findShoppingItem(ing.name, ing.unit);
+        if (existing) {
+          existing.qty += missing;
+        } else {
+          addShoppingItem({
+            name: ing.name,
+            qty: missing,
+            unit: ing.unit,
+            category: pantryItem?.category || "Other",
+            source: "Planner"
+          });
+        }
+      }
+    });
+  });
+
+  saveShopping();
+  renderShoppingList();
+}
+
+/* ---------------------------------------------------
+   PHASE 5D‑3 — RENDER SHOPPING LIST (SORTED BY CATEGORY)
+--------------------------------------------------- */
+
+function renderShoppingList() {
+  const container = document.getElementById("shopping-list");
+  container.innerHTML = "";
+
+  if (shopping.length === 0) {
+    container.innerHTML = `<p style="opacity:0.7;">Your shopping list is empty.</p>`;
+    return;
+  }
+
+  // Sort by category, then alphabetically
+  const sorted = [...shopping].sort((a, b) => {
+    if (a.category !== b.category) return a.category.localeCompare(b.category);
+    return a.name.localeCompare(b.name);
+  });
+
+  let currentCategory = "";
+
+  sorted.forEach(item => {
+    // Insert category header
+    if (item.category !== currentCategory) {
+      currentCategory = item.category;
+      const header = document.createElement("div");
+      header.className = "shopping-category-header";
+      header.textContent = currentCategory;
+      container.appendChild(header);
+    }
+
+    // Build item card
+    const card = document.createElement("div");
+    card.className = "shopping-item";
+
+    card.innerHTML = `
+      <input type="checkbox" class="shopping-check" ${item.checked ? "checked" : ""}>
+      
+      <div class="shopping-info">
+        <strong>${item.name}</strong>
+        <div class="shopping-sub">
+          ${item.qty} ${item.unit} • ${item.source}
+        </div>
+      </div>
+
+      <button class="shopping-remove">&times;</button>
+    `;
+
+    // Checkbox logic
+    card.querySelector(".shopping-check").addEventListener("change", (e) => {
+      item.checked = e.target.checked;
+      saveShopping();
+    });
+
+    // Remove button logic
+    card.querySelector(".shopping-remove").addEventListener("click", () => {
+      shopping = shopping.filter(i => i.id !== item.id);
+      saveShopping();
+      renderShoppingList();
+    });
+
+    container.appendChild(card);
+  });
 }
 
 /* ---------------------------------------------------
