@@ -272,6 +272,82 @@ body {
   margin-top: 0.25rem;
 }
 
+/* Today's meals section */
+.today-meals-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(0,0,0,0.1);
+}
+
+.today-meals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.today-meal-card {
+  background: rgba(248,244,235,0.6);
+  border-radius: 12px;
+  padding: 1.25rem;
+  border: 1px solid rgba(0,0,0,0.08);
+  transition: all 0.2s ease;
+}
+
+.today-meal-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.today-meal-header {
+  margin-bottom: 0.75rem;
+}
+
+.today-meal-type {
+  display: inline-block;
+  background: rgba(138,154,91,0.2);
+  color: #6a4f35;
+  padding: 0.25rem 0.65rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.today-meal-header h3 {
+  font-size: 1.15rem;
+  color: #2F3E46;
+  margin: 0.35rem 0 0 0;
+}
+
+.today-meal-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  opacity: 0.7;
+  margin-bottom: 1rem;
+}
+
+.btn-cook-today {
+  width: 100%;
+  background: linear-gradient(135deg, #8A9A5B, #9fb56d);
+  color: #fff;
+  border: none;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn-cook-today:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(138,154,91,0.4);
+}
+
 .dashboard-actions {
   margin-top: 1.5rem;
   display: flex;
@@ -559,6 +635,32 @@ body {
   color: #B36A5E;
 }
 
+.pantry-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.btn-quick-use {
+  background: rgba(138,154,91,0.15);
+  color: #6a4f35;
+  border: 1px solid rgba(138,154,91,0.3);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.btn-quick-use:hover {
+  background: rgba(138,154,91,0.25);
+  border-color: rgba(138,154,91,0.5);
+  transform: translateY(-1px);
+}
+
 .expiry-today {
   color: #B36A5E;
   animation: pulse 1.5s ease-in-out infinite;
@@ -752,6 +854,96 @@ body {
   color: #999;
   font-style: italic;
   font-size: 0.8rem;
+}
+
+/* Day meal rows */
+.day-meal-row {
+  background: rgba(248,244,235,0.4);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.day-meal-info {
+  flex: 1;
+}
+
+.day-meal-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btn-cook-meal {
+  background: linear-gradient(135deg, #8A9A5B, #9fb56d);
+  color: #fff;
+  border: none;
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.btn-cook-meal:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(138,154,91,0.3);
+}
+
+.btn-remove-meal {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+  color: #B36A5E;
+  padding: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-remove-meal:hover {
+  opacity: 1;
+}
+
+.meal-cooked-badge {
+  display: inline-block;
+  background: rgba(138,154,91,0.2);
+  color: #6a4f35;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+.cook-warning {
+  background: rgba(179,106,94,0.1);
+  border-left: 3px solid #B36A5E;
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 4px;
+}
+
+.cook-warning strong {
+  color: #B36A5E;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.cook-warning ul {
+  margin: 0.5rem 0 0 1.2rem;
+  opacity: 0.9;
 }
 
 /* ---------------------------------------------------
@@ -983,6 +1175,33 @@ body {
   gap: 0.75rem;
   margin-bottom: 0.75rem;
   align-items: center;
+}
+
+/* Deplete modal specific */
+#deplete-locations .modal-location-row {
+  grid-template-columns: 1fr 1.5fr 1fr;
+  padding: 0.75rem;
+  background: rgba(248,244,235,0.3);
+  border-radius: 8px;
+}
+
+#deplete-locations .modal-location-row label {
+  font-weight: 600;
+  color: #6a4f35;
+}
+
+#deplete-locations .loc-qty-display {
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+#deplete-locations .deplete-qty-input {
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.25);
+  background: #fff;
+  font-size: 0.95rem;
+  font-family: inherit;
 }
 
 .modal-location-row select,
