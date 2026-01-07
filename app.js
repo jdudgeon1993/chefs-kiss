@@ -72,25 +72,80 @@ function getRecipe(id) {
   return recipes.find(r => r.id === id);
 }
 
-// Planner (YYYY-MM-DD → recipeId)
+// Planner (YYYY-MM-DD → [{id, recipeId, mealType, cooked}])
 let planner = JSON.parse(localStorage.getItem("planner") || "{}");
+
+// Migrate old planner format (single recipeId) to new format (array of meals)
+function migratePlannerData() {
+  let needsMigration = false;
+
+  Object.keys(planner).forEach(dateStr => {
+    // Check if old format (string recipeId instead of array)
+    if (typeof planner[dateStr] === 'string') {
+      needsMigration = true;
+      planner[dateStr] = [{
+        id: uid(),
+        recipeId: planner[dateStr],
+        mealType: "Dinner",
+        cooked: false
+      }];
+    }
+  });
+
+  if (needsMigration) {
+    savePlanner();
+  }
+}
 
 function savePlanner() {
   localStorage.setItem("planner", JSON.stringify(planner));
 }
 
-function getPlannedRecipe(date) {
-  return planner[date] || null;
+function getPlannedMeals(date) {
+  return planner[date] || [];
 }
 
-function setPlannedRecipe(date, recipeId) {
-  planner[date] = recipeId;
+function addPlannedMeal(date, recipeId, mealType = "Dinner") {
+  if (!planner[date]) {
+    planner[date] = [];
+  }
+
+  planner[date].push({
+    id: uid(),
+    recipeId,
+    mealType,
+    cooked: false
+  });
+
   savePlanner();
 }
 
-function clearPlannedRecipe(date) {
+function removePlannedMeal(date, mealId) {
+  if (!planner[date]) return;
+
+  planner[date] = planner[date].filter(meal => meal.id !== mealId);
+
+  // Clean up empty dates
+  if (planner[date].length === 0) {
+    delete planner[date];
+  }
+
+  savePlanner();
+}
+
+function clearPlannedDay(date) {
   delete planner[date];
   savePlanner();
+}
+
+function markMealCooked(date, mealId) {
+  if (!planner[date]) return;
+
+  const meal = planner[date].find(m => m.id === mealId);
+  if (meal) {
+    meal.cooked = true;
+    savePlanner();
+  }
 }
 
 // Shopping
@@ -653,28 +708,9 @@ function openRecipeViewModal(recipe) {
   });
 }
 
-// Minimal cook modal for now
+// Redirect to full Cook Now modal
 function openCookModal(recipe) {
-  const contentHTML = `
-    ${modalFull(`
-      <p style="margin-bottom:1rem;">
-        Ready to cook <strong>${recipe.name}</strong>? You can use this as a reference while you work.
-      </p>
-    `)}
-  `;
-
-  openCardModal({
-    title: "Cook Now",
-    subtitle: recipe.name,
-    contentHTML,
-    actions: [
-      {
-        label: "Close",
-        class: "btn-secondary",
-        onClick: closeModal
-      }
-    ]
-  });
+  openCookNowModal(recipe);
 }
 
 /* ---------------------------------------------------
@@ -703,16 +739,23 @@ function openPlannerModal() {
     const date = new Date(year, month, day);
     const dateStr = date.toISOString().split("T")[0];
 
-    const plannedId = getPlannedRecipe(dateStr);
-    const plannedRecipe = plannedId ? getRecipe(plannedId) : null;
+    const plannedMeals = getPlannedMeals(dateStr);
+
+    let displayText = "";
+    if (plannedMeals.length === 0) {
+      displayText = `<span class="planner-empty">No meals</span>`;
+    } else if (plannedMeals.length === 1) {
+      const recipe = getRecipe(plannedMeals[0].recipeId);
+      displayText = `<span class="planner-recipe">${recipe ? recipe.name : "Unknown"}</span>`;
+    } else {
+      displayText = `<span class="planner-recipe">${plannedMeals.length} meals</span>`;
+    }
 
     dayGridHTML += `
       <div class="planner-day" data-date="${dateStr}">
         <div class="planner-day-number">${day}</div>
         <div class="planner-day-content">
-          ${plannedRecipe
-            ? `<span class="planner-recipe">${plannedRecipe.name}</span>`
-            : `<span class="planner-empty">No meal</span>`}
+          ${displayText}
         </div>
       </div>
     `;
@@ -759,52 +802,85 @@ function renderPlanner() {
 }
 
 function openDayModal(dateStr) {
-  const plannedId = getPlannedRecipe(dateStr);
-  const plannedRecipe = plannedId ? getRecipe(plannedId) : null;
+  const plannedMeals = getPlannedMeals(dateStr);
+
+  const mealsListHTML = plannedMeals.length > 0
+    ? plannedMeals.map(meal => {
+        const recipe = getRecipe(meal.recipeId);
+        const recipeName = recipe ? recipe.name : "Unknown";
+        const cookedBadge = meal.cooked ? `<span class="meal-cooked-badge">✓ Cooked</span>` : "";
+
+        return `
+          <div class="day-meal-row" data-meal-id="${meal.id}">
+            <div class="day-meal-info">
+              <strong>${meal.mealType}:</strong> ${recipeName} ${cookedBadge}
+            </div>
+            <div class="day-meal-actions">
+              ${!meal.cooked ? `<button class="btn-cook-meal" data-meal-id="${meal.id}">Cook Now</button>` : ""}
+              <button class="btn-remove-meal" data-meal-id="${meal.id}">&times;</button>
+            </div>
+          </div>
+        `;
+      }).join("")
+    : `<p style="opacity:0.7;">No meals planned for this day.</p>`;
 
   const recipeOptions = recipes.map(r => r.name);
-  const currentName = plannedRecipe ? plannedRecipe.name : "None";
 
   const contentHTML = `
-    ${modalRow([
-      modalField({
-        label: "Planned Recipe",
-        type: "select",
-        options: ["None", ...recipeOptions],
-        value: currentName
-      }),
-      modalField({
-        label: "Date",
-        value: dateStr,
-        type: "text"
-      })
-    ])}
+    ${modalFull(`
+      <h3 style="margin-bottom:0.75rem;">Planned Meals</h3>
+      <div id="day-meals-list">
+        ${mealsListHTML}
+      </div>
+    `)}
 
-    ${plannedRecipe ? modalFull(`
-      <button class="btn btn-secondary" id="open-recipe-from-day">
-        View Recipe Card
-      </button>
-    `) : ""}
+    ${modalFull(`
+      <h3 style="margin:1.5rem 0 0.75rem 0;">Add New Meal</h3>
+      <div class="add-meal-row">
+        ${modalRow([
+          modalField({
+            label: "Meal Type",
+            type: "select",
+            options: ["Breakfast", "Lunch", "Dinner", "Snack"]
+          }),
+          modalField({
+            label: "Recipe",
+            type: "select",
+            options: recipes.length > 0 ? recipeOptions : ["No recipes available"]
+          })
+        ])}
+      </div>
+    `)}
   `;
 
   openCardModal({
     title: `Plan for ${dateStr}`,
-    subtitle: plannedRecipe ? "Meal assigned" : "No meal assigned",
+    subtitle: plannedMeals.length > 0 ? `${plannedMeals.length} meal(s) planned` : "No meals planned",
     contentHTML,
     actions: [
       {
-        label: "Save",
+        label: "Add Meal",
         class: "btn-primary",
-        onClick: () => saveDayPlan(dateStr)
+        onClick: () => saveAddMeal(dateStr)
       },
       {
-        label: "Remove",
+        label: "Clear All",
         class: "btn-secondary",
         onClick: () => {
-          clearPlannedRecipe(dateStr);
-          generateShoppingList();
-          renderPantry();
-          updateDashboard();
+          if (confirm("Remove all meals for this day?")) {
+            clearPlannedDay(dateStr);
+            generateShoppingList();
+            renderPantry();
+            updateDashboard();
+            closeModal();
+            setTimeout(() => openPlannerModal(), 100);
+          }
+        }
+      },
+      {
+        label: "Done",
+        class: "btn-secondary",
+        onClick: () => {
           closeModal();
           setTimeout(() => openPlannerModal(), 100);
         }
@@ -812,35 +888,178 @@ function openDayModal(dateStr) {
     ]
   });
 
-  if (plannedRecipe) {
-    const btn = document.getElementById("open-recipe-from-day");
-    if (btn) {
-      btn.addEventListener("click", () => {
-        closeModal();
-        openRecipeViewModal(plannedRecipe);
-      });
-    }
-  }
+  // Wire up remove and cook buttons
+  const removeBtns = document.querySelectorAll(".btn-remove-meal");
+  removeBtns.forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const mealId = btn.getAttribute("data-meal-id");
+      removePlannedMeal(dateStr, mealId);
+      generateShoppingList();
+      renderPantry();
+      updateDashboard();
+      closeModal();
+      setTimeout(() => openDayModal(dateStr), 100);
+    });
+  });
+
+  const cookBtns = document.querySelectorAll(".btn-cook-meal");
+  cookBtns.forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const mealId = btn.getAttribute("data-meal-id");
+      const meal = plannedMeals.find(m => m.id === mealId);
+      if (meal) {
+        const recipe = getRecipe(meal.recipeId);
+        if (recipe) {
+          closeModal();
+          setTimeout(() => openCookNowModal(recipe, dateStr, mealId), 100);
+        }
+      }
+    });
+  });
 }
 
-function saveDayPlan(dateStr) {
+function saveAddMeal(dateStr) {
   const modal = document.querySelector(".modal-card");
-  const select = modal.querySelector("select");
+  const selects = modal.querySelectorAll(".add-meal-row select");
 
-  const selectedName = select.value;
+  const mealType = selects[0].value;
+  const recipeName = selects[1].value;
 
-  if (selectedName === "None") {
-    clearPlannedRecipe(dateStr);
-  } else {
-    const recipe = recipes.find(r => r.name === selectedName);
-    if (recipe) setPlannedRecipe(dateStr, recipe.id);
+  if (recipeName === "No recipes available") {
+    alert("Please create a recipe first before adding it to your meal plan.");
+    return;
   }
 
+  const recipe = recipes.find(r => r.name === recipeName);
+  if (!recipe) {
+    alert("Recipe not found.");
+    return;
+  }
+
+  addPlannedMeal(dateStr, recipe.id, mealType);
   generateShoppingList();
   renderPantry();
   updateDashboard();
   closeModal();
-  setTimeout(() => openPlannerModal(), 100);
+  setTimeout(() => openDayModal(dateStr), 100);
+}
+
+function openCookNowModal(recipe, dateStr = null, mealId = null) {
+  // Check if we have all ingredients
+  const missingIngredients = [];
+  const insufficientIngredients = [];
+
+  recipe.ingredients.forEach(ing => {
+    const pantryItem = pantry.find(p => p.name === ing.name && p.unit === ing.unit);
+
+    if (!pantryItem) {
+      missingIngredients.push(`${ing.name} (${ing.qty} ${ing.unit})`);
+    } else if (pantryItem.totalQty < ing.qty) {
+      insufficientIngredients.push(`${ing.name} (need ${ing.qty}, have ${pantryItem.totalQty} ${ing.unit})`);
+    }
+  });
+
+  let warningHTML = "";
+  if (missingIngredients.length > 0) {
+    warningHTML += `
+      <div class="cook-warning">
+        <strong>⚠️ Missing Ingredients:</strong>
+        <ul>${missingIngredients.map(i => `<li>${i}</li>`).join("")}</ul>
+      </div>
+    `;
+  }
+
+  if (insufficientIngredients.length > 0) {
+    warningHTML += `
+      <div class="cook-warning">
+        <strong>⚠️ Insufficient Quantities:</strong>
+        <ul>${insufficientIngredients.map(i => `<li>${i}</li>`).join("")}</ul>
+      </div>
+    `;
+  }
+
+  const contentHTML = `
+    ${modalFull(`
+      <p style="margin-bottom:1rem;">
+        Ready to cook <strong>${recipe.name}</strong>?
+      </p>
+      ${warningHTML}
+      <p style="margin-top:1rem; opacity:0.8;">
+        ${warningHTML ? "You can still mark this as cooked, but you may not have all ingredients." : "All ingredients are available. Cooking will deplete your pantry."}
+      </p>
+    `)}
+  `;
+
+  openCardModal({
+    title: "Cook Now",
+    subtitle: recipe.name,
+    contentHTML,
+    actions: [
+      {
+        label: "Cook & Deplete Pantry",
+        class: "btn-primary",
+        onClick: () => executeCook(recipe, dateStr, mealId)
+      },
+      {
+        label: "Cancel",
+        class: "btn-secondary",
+        onClick: closeModal
+      }
+    ]
+  });
+}
+
+function executeCook(recipe, dateStr, mealId) {
+  // Deplete pantry ingredients
+  recipe.ingredients.forEach(ing => {
+    const pantryItem = pantry.find(p => p.name === ing.name && p.unit === ing.unit);
+
+    if (pantryItem) {
+      let remaining = ing.qty;
+
+      // Deplete from locations (FIFO - soonest expiry first)
+      const sortedLocations = [...pantryItem.locations].sort((a, b) => {
+        if (!a.expiry) return 1;
+        if (!b.expiry) return -1;
+        return new Date(a.expiry) - new Date(b.expiry);
+      });
+
+      sortedLocations.forEach(loc => {
+        if (remaining <= 0) return;
+
+        const actualLoc = pantryItem.locations.find(l => l.id === loc.id);
+        if (!actualLoc) return;
+
+        const toDeplete = Math.min(actualLoc.qty, remaining);
+        actualLoc.qty -= toDeplete;
+        remaining -= toDeplete;
+      });
+
+      // Remove empty locations
+      pantryItem.locations = pantryItem.locations.filter(loc => loc.qty > 0);
+
+      // Update total quantity
+      pantryItem.totalQty = getTotalQty(pantryItem);
+    }
+  });
+
+  // Mark meal as cooked if from planner
+  if (dateStr && mealId) {
+    markMealCooked(dateStr, mealId);
+  }
+
+  savePantry();
+  renderPantry();
+  generateShoppingList();
+  updateDashboard();
+  closeModal();
+
+  // Return to appropriate view
+  if (dateStr) {
+    setTimeout(() => openDayModal(dateStr), 100);
+  }
 }
 
 /* ---------------------------------------------------
@@ -850,68 +1069,90 @@ function saveDayPlan(dateStr) {
 function generateShoppingList() {
   clearShopping();
 
-  // Threshold-based items
-  pantry.forEach(item => {
-    if (item.min && item.totalQty < item.min) {
-      const needed = item.min - item.totalQty;
-      addShoppingItem({
-        name: item.name,
-        qty: needed,
-        unit: item.unit,
-        category: item.category,
-        source: "Threshold"
-      });
-    }
-  });
-
-  // Missing ingredients from planned meals
   const reserved = calculateReservedIngredients();
 
-  Object.keys(planner).forEach(dateStr => {
-    const recipeId = planner[dateStr];
-    const recipe = getRecipe(recipeId);
-    if (!recipe) return;
+  // For each pantry item, calculate combined threshold + meal needs
+  pantry.forEach(item => {
+    const key = `${item.name}|${item.unit}`;
+    const reservedQty = reserved[key] || 0;
 
-    recipe.ingredients.forEach(ing => {
-      const pantryItem = pantry.find(p => p.name === ing.name && p.unit === ing.unit);
+    // Threshold deficit: how much below minimum we are
+    const thresholdDeficit = Math.max(0, (item.min || 0) - item.totalQty);
 
-      if (!pantryItem) {
-        // Ingredient doesn't exist in pantry at all
-        const existing = findShoppingItem(ing.name, ing.unit);
-        if (existing) {
-          existing.qty = Math.max(existing.qty, ing.qty);
-        } else {
-          addShoppingItem({
-            name: ing.name,
-            qty: ing.qty,
-            unit: ing.unit,
-            category: "Other",
-            source: "Planner"
-          });
-        }
-      } else {
-        // Check if we have enough after reservations
-        const key = `${ing.name}|${ing.unit}`;
-        const alreadyReserved = reserved[key] || 0;
-        const available = pantryItem.totalQty - alreadyReserved;
+    // Total needed: threshold deficit + all planned meal needs
+    // This ensures we buy enough to cover meals AND get back to minimum threshold
+    const totalNeeded = thresholdDeficit + reservedQty;
 
-        if (available < ing.qty) {
-          const missing = ing.qty - Math.max(0, available);
-          const existing = findShoppingItem(ing.name, ing.unit);
-          if (existing) {
-            existing.qty = Math.max(existing.qty, missing);
-          } else {
-            addShoppingItem({
-              name: ing.name,
-              qty: missing,
-              unit: ing.unit,
-              category: pantryItem.category,
-              source: "Planner"
-            });
-          }
+    if (totalNeeded > 0) {
+      const hasThreshold = thresholdDeficit > 0;
+      const hasMeals = reservedQty > 0;
+
+      let source = "Threshold";
+      if (hasThreshold && hasMeals) {
+        source = "Threshold + Meals";
+      } else if (hasMeals) {
+        source = "Meals";
+      }
+
+      addShoppingItem({
+        name: item.name,
+        qty: totalNeeded,
+        unit: item.unit,
+        category: item.category,
+        source
+      });
+    }
+
+    // Remove from reserved map so we can track ingredients not in pantry
+    delete reserved[key];
+  });
+
+  // Add ingredients from planned meals that don't exist in pantry at all
+  Object.keys(reserved).forEach(key => {
+    const [name, unit] = key.split("|");
+    addShoppingItem({
+      name,
+      qty: reserved[key],
+      unit,
+      category: "Other",
+      source: "Meals"
+    });
+  });
+
+  // Add expired items to shopping list
+  const now = new Date();
+  pantry.forEach(item => {
+    // Check if any location has expired items
+    let totalExpiredQty = 0;
+    item.locations.forEach(loc => {
+      if (loc.expiry) {
+        const expiryDate = new Date(loc.expiry);
+        if (expiryDate < now) {
+          totalExpiredQty += loc.qty;
         }
       }
     });
+
+    if (totalExpiredQty > 0) {
+      // Check if already on shopping list
+      const existing = findShoppingItem(item.name, item.unit);
+      if (existing) {
+        // Add expired quantity to existing item
+        existing.qty += totalExpiredQty;
+        if (existing.source.indexOf("Expired") === -1) {
+          existing.source = existing.source + " + Expired";
+        }
+      } else {
+        // Add new shopping item for expired goods
+        addShoppingItem({
+          name: item.name,
+          qty: totalExpiredQty,
+          unit: item.unit,
+          category: item.category,
+          source: "Expired"
+        });
+      }
+    }
   });
 
   saveShopping();
@@ -1196,20 +1437,27 @@ function saveCheckoutItems() {
 --------------------------------------------------- */
 
 function calculateReservedIngredients() {
-  // Calculate how much of each ingredient is reserved for planned meals
+  // Calculate how much of each ingredient is reserved for planned meals (not yet cooked)
   const reserved = {};
 
   Object.keys(planner).forEach(dateStr => {
-    const recipeId = planner[dateStr];
-    const recipe = getRecipe(recipeId);
-    if (!recipe) return;
+    const meals = planner[dateStr];
+    if (!Array.isArray(meals)) return;
 
-    recipe.ingredients.forEach(ing => {
-      const key = `${ing.name}|${ing.unit}`;
-      if (!reserved[key]) {
-        reserved[key] = 0;
-      }
-      reserved[key] += ing.qty;
+    meals.forEach(meal => {
+      // Only count uncooked meals
+      if (meal.cooked) return;
+
+      const recipe = getRecipe(meal.recipeId);
+      if (!recipe) return;
+
+      recipe.ingredients.forEach(ing => {
+        const key = `${ing.name}|${ing.unit}`;
+        if (!reserved[key]) {
+          reserved[key] = 0;
+        }
+        reserved[key] += ing.qty;
+      });
     });
   });
 
@@ -1226,13 +1474,19 @@ function getDaysUntilExpiry(expiryDate) {
 }
 
 function updateDashboard() {
-  // Today's meal
+  // Today's meals
   const today = new Date().toISOString().split("T")[0];
-  const todayRecipeId = getPlannedRecipe(today);
-  const todayRecipe = todayRecipeId ? getRecipe(todayRecipeId) : null;
+  const todayMeals = getPlannedMeals(today);
   const todayMealEl = document.getElementById("dash-today-meal");
   if (todayMealEl) {
-    todayMealEl.textContent = todayRecipe ? todayRecipe.name : "Not planned";
+    if (todayMeals.length === 0) {
+      todayMealEl.textContent = "Not planned";
+    } else if (todayMeals.length === 1) {
+      const recipe = getRecipe(todayMeals[0].recipeId);
+      todayMealEl.textContent = recipe ? recipe.name : "Unknown";
+    } else {
+      todayMealEl.textContent = `${todayMeals.length} meals`;
+    }
   }
 
   // Ready-to-cook recipes (recipes where all ingredients are available)
@@ -1276,7 +1530,7 @@ function updateDashboard() {
     expiredEl.textContent = expired.length;
   }
 
-  // Meals planned this week
+  // Meals planned this week (count total meals, not just days)
   const startOfWeek = new Date(now);
   startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
   const endOfWeek = new Date(startOfWeek);
@@ -1286,7 +1540,7 @@ function updateDashboard() {
   Object.keys(planner).forEach(dateStr => {
     const date = new Date(dateStr);
     if (date >= startOfWeek && date <= endOfWeek) {
-      weekPlanned++;
+      weekPlanned += planner[dateStr].length;
     }
   });
 
@@ -1294,6 +1548,66 @@ function updateDashboard() {
   if (weekPlannedEl) {
     weekPlannedEl.textContent = weekPlanned;
   }
+
+  // Render today's meals section
+  renderTodaysMeals();
+}
+
+function renderTodaysMeals() {
+  const container = document.getElementById("today-meals-section");
+  if (!container) return;
+
+  const today = new Date().toISOString().split("T")[0];
+  const todayMeals = getPlannedMeals(today).filter(m => !m.cooked);
+
+  if (todayMeals.length === 0) {
+    container.innerHTML = "";
+    container.style.display = "none";
+    return;
+  }
+
+  container.style.display = "block";
+
+  const mealsHTML = todayMeals.map(meal => {
+    const recipe = getRecipe(meal.recipeId);
+    if (!recipe) return "";
+
+    return `
+      <div class="today-meal-card">
+        <div class="today-meal-header">
+          <span class="today-meal-type">${meal.mealType}</span>
+          <h3>${recipe.name}</h3>
+        </div>
+        <div class="today-meal-meta">
+          <span>👥 ${recipe.servings} servings</span>
+          <span>🥘 ${recipe.ingredients.length} ingredients</span>
+        </div>
+        <button class="btn btn-cook-today" data-meal-id="${meal.id}" data-recipe-id="${recipe.id}">
+          Cook Now
+        </button>
+      </div>
+    `;
+  }).join("");
+
+  container.innerHTML = `
+    <h3 style="margin-bottom:1rem; color:#6a4f35;">Today's Meals</h3>
+    <div class="today-meals-grid">
+      ${mealsHTML}
+    </div>
+  `;
+
+  // Wire up Cook Now buttons
+  const cookBtns = container.querySelectorAll(".btn-cook-today");
+  cookBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const mealId = btn.getAttribute("data-meal-id");
+      const recipeId = btn.getAttribute("data-recipe-id");
+      const recipe = getRecipe(recipeId);
+      if (recipe) {
+        openCookNowModal(recipe, today, mealId);
+      }
+    });
+  });
 }
 
 /* ---------------------------------------------------
@@ -1426,12 +1740,107 @@ function applyPantryFilter() {
         ${locationHTML}
       </div>
       ${expiryStatus ? `<div class="pantry-expiry">${expiryStatus}</div>` : ''}
+      <div class="pantry-actions">
+        <button class="btn-quick-use" data-action="quick-use">Quick Use</button>
+      </div>
     `;
 
-    card.addEventListener("click", () => openIngredientModal(item));
+    card.addEventListener("click", (e) => {
+      // Check if clicked on quick-use button
+      if (e.target.classList.contains("btn-quick-use") || e.target.getAttribute("data-action") === "quick-use") {
+        e.stopPropagation();
+        openQuickDepleteModal(item);
+      } else {
+        openIngredientModal(item);
+      }
+    });
 
     container.appendChild(card);
   });
+}
+
+/* ---------------------------------------------------
+   QUICK DEPLETE (for snacking/micro transactions)
+--------------------------------------------------- */
+
+function openQuickDepleteModal(item) {
+  const locationRows = item.locations.map(loc => `
+    <div class="modal-location-row">
+      <label>${loc.location}</label>
+      <span class="loc-qty-display">${loc.qty} ${item.unit} available</span>
+      <input type="number"
+             class="deplete-qty-input"
+             placeholder="0"
+             step="0.01"
+             min="0"
+             max="${loc.qty}"
+             data-loc-id="${loc.id}">
+    </div>
+  `).join("");
+
+  const contentHTML = `
+    ${modalFull(`
+      <p style="margin-bottom:1rem; opacity:0.8;">
+        How much <strong>${item.name}</strong> did you use?
+      </p>
+      <div id="deplete-locations">
+        ${locationRows}
+      </div>
+    `)}
+  `;
+
+  openCardModal({
+    title: "Quick Use",
+    subtitle: `${item.name} - Snacking or quick consumption`,
+    contentHTML,
+    actions: [
+      {
+        label: "Use",
+        class: "btn-primary",
+        onClick: () => saveQuickDeplete(item)
+      },
+      {
+        label: "Cancel",
+        class: "btn-secondary",
+        onClick: closeModal
+      }
+    ]
+  });
+}
+
+function saveQuickDeplete(item) {
+  const modal = document.querySelector(".modal-card");
+  const inputs = modal.querySelectorAll(".deplete-qty-input");
+
+  let totalDepleted = 0;
+
+  inputs.forEach(input => {
+    const qty = Number(input.value) || 0;
+    const locId = input.getAttribute("data-loc-id");
+
+    if (qty > 0) {
+      const location = item.locations.find(l => l.id === locId);
+      if (location) {
+        location.qty = Math.max(0, location.qty - qty);
+        totalDepleted += qty;
+      }
+    }
+  });
+
+  if (totalDepleted > 0) {
+    // Remove locations with 0 quantity
+    item.locations = item.locations.filter(loc => loc.qty > 0);
+
+    // Update total quantity
+    item.totalQty = getTotalQty(item);
+
+    savePantry();
+    renderPantry();
+    generateShoppingList();
+    updateDashboard();
+  }
+
+  closeModal();
 }
 
 /* ---------------------------------------------------
@@ -1461,8 +1870,9 @@ function setupSmoothScroll() {
 --------------------------------------------------- */
 
 function init() {
-  // Migrate pantry data to new multi-location structure
+  // Migrate data structures
   migratePantryData();
+  migratePlannerData();
 
   // Update date/time immediately and every minute
   updateDateTime();
