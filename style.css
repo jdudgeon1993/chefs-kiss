@@ -463,6 +463,163 @@ body {
   opacity: 0.6;
 }
 
+/* -----------------------------------
+   Planner — Cottagecore Monthly Calendar
+----------------------------------- */
+
+.planner {
+  position: relative;
+}
+
+.planner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.75rem;
+}
+
+.planner-header h2,
+#planner-month-label {
+  font-family: "Patrick Hand", system-ui, sans-serif;
+  font-size: 1.4rem;
+  letter-spacing: 0.03em;
+}
+
+/* The grid itself */
+
+#day-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-auto-rows: minmax(90px, auto);
+  gap: 0.4rem;
+  padding: 0.75rem;
+  background: rgba(248, 244, 235, 0.95); /* parchment wash */
+  border-radius: 14px;
+  box-shadow:
+    0 10px 20px rgba(0, 0, 0, 0.04),
+    inset 0 0 0 1px rgba(120, 94, 60, 0.08);
+  position: relative;
+}
+
+/* Gentle hand-drawn frame illusion */
+
+#day-grid::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(120, 94, 60, 0.16);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+/* Day cells */
+
+.calendar-day {
+  position: relative;
+}
+
+.calendar-day--empty {
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+/* Inner card */
+
+.calendar-day-inner {
+  height: 100%;
+  padding: 0.4rem 0.45rem 0.5rem;
+  border-radius: 12px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.85),
+    rgba(252, 247, 238, 0.95)
+  );
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.03),
+    inset 0 0 0 1px rgba(120, 94, 60, 0.06);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.35rem;
+  position: relative;
+}
+
+/* Today highlight */
+
+.calendar-day--today {
+  box-shadow:
+    0 0 0 1px rgba(129, 161, 116, 0.5),
+    0 0 0 4px rgba(129, 161, 116, 0.15),
+    0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Date badge with watercolor circle */
+
+.calendar-date-badge {
+  position: relative;
+  width: fit-content;
+  margin-bottom: 0.1rem;
+}
+
+.calendar-date-badge::before {
+  content: "";
+  position: absolute;
+  inset: -4px -6px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(207, 191, 145, 0.25),
+    rgba(207, 191, 145, 0)
+  );
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.calendar-date {
+  position: relative;
+  font-family: "Patrick Hand", system-ui, sans-serif;
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  color: #6a4f35;
+}
+
+/* Calendar content */
+
+.calendar-content {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+}
+
+.calendar-recipe-pill {
+  display: inline-block;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(129, 161, 116, 0.1);
+  border: 1px solid rgba(129, 161, 116, 0.25);
+  font-size: 0.78rem;
+  line-height: 1.2;
+  color: #415934;
+  max-height: 3.2em;
+  overflow: hidden;
+}
+
+.calendar-empty-note {
+  font-size: 0.75rem;
+  opacity: 0.55;
+  font-style: italic;
+}
+
+/* Plan/change button */
+
+.calendar-day-inner .btn-plan-day {
+  align-self: flex-end;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+}
+
 /* ---------------------------------------------------
    SEASONAL
 --------------------------------------------------- */
