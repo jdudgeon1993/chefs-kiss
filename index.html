@@ -4,16 +4,22 @@
   <meta charset="UTF-8">
   <title>Chef's Cove — Cottagecore Edition</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Styles -->
   <link rel="stylesheet" href="style.css">
+
+  <!-- App logic -->
   <script defer src="app.js"></script>
 </head>
 <body class="theme-daylight">
+  <!-- Hero / Header -->
   <header class="hero">
     <div class="hero-logo">🍲</div>
     <h1>Chef's Cove</h1>
     <p class="hero-subtitle">A cozy kitchen companion for seasonal living</p>
   </header>
 
+  <!-- Dashboard -->
   <section class="section dashboard">
     <h2>Today & Week</h2>
     <div class="stat-row">
@@ -32,9 +38,10 @@
     </div>
   </section>
 
+  <!-- Pantry -->
   <section class="section pantry">
     <h2>Pantry</h2>
-    <p>Your source of truth. Multi-location, soft units.</p>
+    <p>Your source of truth. Multi‑location, soft units.</p>
     <div class="pantry-controls">
       <select id="filter-category">
         <option value="">All categories</option>
@@ -51,36 +58,42 @@
     <div id="pantry-display" class="pantry-list"></div>
   </section>
 
+  <!-- Recipes -->
   <section class="section recipes">
     <h2>Recipes</h2>
-    <p>Pantry-aware, cozy cards with seasonal flair.</p>
+    <p>Pantry‑aware, cozy cards with seasonal flair.</p>
     <button class="btn" id="btn-new-recipe">New recipe</button>
     <div id="recipe-list" class="recipe-grid"></div>
   </section>
 
+  <!-- Planner (Monthly Cottagecore Calendar) -->
   <section class="section planner">
-    <h2>Planner</h2>
-    <p>Plan your week like a handwritten journal.</p>
-    <div class="planner-today">
-      <strong>Today:</strong> <span id="today-meal">Not planned</span>
+    <div class="planner-header">
+      <h2>Planner</h2>
+      <span id="planner-month-label"></span>
     </div>
-    <div id="day-grid" class="day-grid"></div>
+    <p>Plan your month like a handwritten kitchen calendar.</p>
+    <div id="day-grid"></div>
   </section>
 
+  <!-- Shopping List -->
   <section class="section shopping">
     <h2>Shopping List</h2>
     <p>Generated from plans + pantry, with your personal additions.</p>
-    <input type="text" id="user-item-name" placeholder="Add custom item">
-    <button class="btn" id="btn-add-custom-item">Add</button>
+    <div class="shopping-controls">
+      <input type="text" id="user-item-name" placeholder="Add custom item">
+      <button class="btn" id="btn-add-custom-item">Add</button>
+    </div>
     <div id="shopping-list" class="shopping-list"></div>
   </section>
 
+  <!-- Seasonal & Nudges -->
   <section class="section seasonal">
     <h2>Seasonal & Gentle Nudges</h2>
     <p>January whispers soup and sourdough. Let the seasons guide your meals.</p>
     <div id="seasonal-list" class="seasonal-list"></div>
   </section>
 
-  <!-- Modals will be injected here -->
+  <!-- Modals will be injected here by app.js -->
 </body>
 </html>
