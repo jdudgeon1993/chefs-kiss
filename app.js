@@ -51,8 +51,18 @@ function migratePantryData() {
   }
 }
 
-function savePantry() {
+async function savePantry() {
+  // Save to localStorage (for offline mode)
   localStorage.setItem("pantry", JSON.stringify(pantry));
+
+  // Save to database if authenticated
+  if (window.db && window.auth && window.auth.isAuthenticated()) {
+    // Note: We don't await here to avoid blocking the UI
+    // Database sync happens in background
+    window.db.syncAllData(pantry, recipes, planner, []).catch(err => {
+      console.error('Background sync failed:', err);
+    });
+  }
 }
 
 function getIngredient(id) {
@@ -67,8 +77,16 @@ function getTotalQty(ingredient) {
 // Recipes
 let recipes = JSON.parse(localStorage.getItem("recipes") || "[]");
 
-function saveRecipes() {
+async function saveRecipes() {
+  // Save to localStorage (for offline mode)
   localStorage.setItem("recipes", JSON.stringify(recipes));
+
+  // Save to database if authenticated
+  if (window.db && window.auth && window.auth.isAuthenticated()) {
+    window.db.syncAllData(pantry, recipes, planner, []).catch(err => {
+      console.error('Background sync failed:', err);
+    });
+  }
 }
 
 function getRecipe(id) {
@@ -100,8 +118,16 @@ function migratePlannerData() {
   }
 }
 
-function savePlanner() {
+async function savePlanner() {
+  // Save to localStorage (for offline mode)
   localStorage.setItem("planner", JSON.stringify(planner));
+
+  // Save to database if authenticated
+  if (window.db && window.auth && window.auth.isAuthenticated()) {
+    window.db.syncAllData(pantry, recipes, planner, []).catch(err => {
+      console.error('Background sync failed:', err);
+    });
+  }
 }
 
 function getPlannedMeals(date) {
@@ -2810,13 +2836,58 @@ function clearLocalData() {
 }
 
 async function loadUserData() {
-  // TODO: Load user's data from Supabase
-  // For now, just re-render with existing localStorage data
-  console.log('📥 Loading user data (localStorage mode)');
-  renderPantry();
-  renderRecipes();
-  generateShoppingList();
-  updateDashboard();
+  if (!window.db || !window.auth || !window.auth.isAuthenticated()) {
+    console.log('📥 Loading user data (localStorage mode)');
+    renderPantry();
+    renderRecipes();
+    generateShoppingList();
+    updateDashboard();
+    return;
+  }
+
+  console.log('📥 Loading user data from database...');
+
+  try {
+    // Load pantry from database
+    const dbPantry = await window.db.loadPantryItems();
+    if (dbPantry) {
+      pantry = dbPantry;
+      localStorage.setItem("pantry", JSON.stringify(pantry));
+    }
+
+    // Load recipes from database
+    const dbRecipes = await window.db.loadRecipes();
+    if (dbRecipes) {
+      recipes = dbRecipes;
+      localStorage.setItem("recipes", JSON.stringify(recipes));
+    }
+
+    // Load meal plans from database
+    const dbPlanner = await window.db.loadMealPlans();
+    if (dbPlanner) {
+      planner = dbPlanner;
+      localStorage.setItem("planner", JSON.stringify(planner));
+    }
+
+    // Load custom shopping list items from database
+    const dbShopping = await window.db.loadShoppingList();
+    if (dbShopping) {
+      // Store custom items separately - they'll be merged with auto-generated items
+      window.customShoppingItems = dbShopping;
+    }
+
+    console.log('✅ User data loaded from database');
+
+    // Re-render everything
+    renderPantry();
+    renderRecipes();
+    generateShoppingList();
+    updateDashboard();
+
+  } catch (err) {
+    console.error('Error loading user data:', err);
+    showToast('⚠️ Error loading data from database');
+  }
 }
 
 /* ---------------------------------------------------
@@ -3028,19 +3099,24 @@ async function init() {
     await window.auth.initAuth();
   }
 
-  // Migrate data structures
+  // Migrate data structures (for localStorage data)
   migratePantryData();
   migratePlannerData();
+
+  // Load user data from database if authenticated
+  if (window.auth && window.auth.isAuthenticated()) {
+    await loadUserData();
+  } else {
+    // Not authenticated - render from localStorage
+    renderPantry();
+    renderRecipes();
+    generateShoppingList();
+    updateDashboard();
+  }
 
   // Update date/time immediately and every minute
   updateDateTime();
   setInterval(updateDateTime, 60000);
-
-  // Render initial state and auto-generate shopping list
-  renderPantry();
-  renderRecipes();
-  generateShoppingList(); // Auto-generate shopping list on page load
-  updateDashboard();
 
   // Wire pantry filter
   const filterCategory = document.getElementById("filter-category");
