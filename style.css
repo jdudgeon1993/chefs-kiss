@@ -108,7 +108,7 @@ body::before {
 }
 
 .main-content {
-  margin-left: 10px;
+  margin-left: 0px;
   flex: 1;
   min-width: 0;
   position: relative;
