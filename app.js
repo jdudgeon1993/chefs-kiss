@@ -2825,10 +2825,18 @@ function showToast(message) {
 }
 
 function clearLocalData() {
+  // Unsubscribe from realtime channels
+  if (window.realtime) {
+    window.realtime.unsubscribeAll();
+  }
+
+  // Clear all data
   pantry = [];
   recipes = [];
   planner = {};
   shopping = [];
+  window.customShoppingItems = [];
+
   savePantry();
   saveRecipes();
   savePlanner();
@@ -2883,6 +2891,11 @@ async function loadUserData() {
     renderRecipes();
     generateShoppingList();
     updateDashboard();
+
+    // Initialize realtime subscriptions
+    if (window.realtime) {
+      await window.realtime.initRealtimeSync();
+    }
 
   } catch (err) {
     console.error('Error loading user data:', err);
@@ -3106,6 +3119,11 @@ async function init() {
   // Load user data from database if authenticated
   if (window.auth && window.auth.isAuthenticated()) {
     await loadUserData();
+
+    // Initialize realtime subscriptions for multi-user sync
+    if (window.realtime) {
+      await window.realtime.initRealtimeSync();
+    }
   } else {
     // Not authenticated - render from localStorage
     renderPantry();
