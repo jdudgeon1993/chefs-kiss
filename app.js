@@ -629,6 +629,7 @@ function openRecipeModal(existing = null) {
     title,
     subtitle,
     contentHTML,
+    slideout: true,
     actions: [
       {
         label: isEdit ? "Save Changes" : "Add Recipe",
@@ -864,6 +865,7 @@ function openRecipeViewModal(recipe) {
     title: recipe.name,
     subtitle: `${recipe.servings} servings`,
     contentHTML,
+    slideout: true,
     actions: [
       {
         label: "Cook Now",
@@ -1203,6 +1205,7 @@ function openCookNowModal(recipe, dateStr = null, mealId = null) {
     title: "Cook Now",
     subtitle: recipe.name,
     contentHTML,
+    slideout: true,
     actions: [
       {
         label: "Cook & Deplete Pantry",
@@ -1524,19 +1527,53 @@ function saveEditShoppingItem(item) {
 }
 
 function parseQuickAddInput(input) {
-  // Try to parse "qty unit name" format
-  // Examples: "2 lbs chicken", "1 gallon milk", "3 tomatoes"
+  // Try to parse various formats:
+  // "2 lbs chicken", "1 gallon milk", "3 tomatoes", "1/2 cup flour"
+  // "2 pounds chicken", "3 chicken" (no unit)
   const trimmed = input.trim();
 
-  // Pattern: number (optional decimal) + unit + name
-  const pattern = /^(\d+\.?\d*)\s+(\w+)\s+(.+)$/;
-  const match = trimmed.match(pattern);
+  // Pattern 1: number + unit (1-2 words) + name
+  // Examples: "2 lbs chicken", "1 gallon milk", "2 pounds beef"
+  const pattern1 = /^(\d+\.?\d*|[½¼¾⅓⅔]|\d+\/\d+)\s+([\w\s]{1,15}?)\s+(.+)$/;
+  const match1 = trimmed.match(pattern1);
 
-  if (match) {
+  if (match1) {
+    // Try to parse fraction if present
+    let qty = match1[1];
+    if (qty.includes('/')) {
+      const parts = qty.split('/');
+      qty = parseFloat(parts[0]) / parseFloat(parts[1]);
+    } else if (qty === '½') {
+      qty = 0.5;
+    } else if (qty === '¼') {
+      qty = 0.25;
+    } else if (qty === '¾') {
+      qty = 0.75;
+    } else if (qty === '⅓') {
+      qty = 0.33;
+    } else if (qty === '⅔') {
+      qty = 0.67;
+    } else {
+      qty = parseFloat(qty);
+    }
+
     return {
-      qty: parseFloat(match[1]),
-      unit: match[2],
-      name: match[3].trim()
+      qty: qty,
+      unit: match1[2].trim(),
+      name: match1[3].trim()
+    };
+  }
+
+  // Pattern 2: number + name (no unit)
+  // Examples: "3 tomatoes", "2 chicken"
+  const pattern2 = /^(\d+\.?\d*)\s+(.+)$/;
+  const match2 = trimmed.match(pattern2);
+
+  if (match2) {
+    return {
+      qty: parseFloat(match2[1]),
+      unit: 'pcs',
+      name: match2[2].trim()
     };
   }
 
@@ -1855,6 +1892,33 @@ function calculateReservedIngredients() {
   return reserved;
 }
 
+function calculateReadyRecipes() {
+  const reserved = calculateReservedIngredients();
+  return recipes.filter(recipe => {
+    return recipe.ingredients.every(ing => {
+      // If recipe requires 0 quantity, it's considered missing
+      if (ing.qty <= 0) return false;
+
+      // Case-insensitive matching
+      const pantryItem = pantry.find(p =>
+        p.name.toLowerCase() === ing.name.toLowerCase() &&
+        p.unit.toLowerCase() === ing.unit.toLowerCase()
+      );
+      if (!pantryItem) return false;
+
+      // If pantry has 0 total, it's missing
+      if (pantryItem.totalQty <= 0) return false;
+
+      // Normalize to lowercase for case-insensitive matching
+      const key = `${ing.name.toLowerCase()}|${ing.unit.toLowerCase()}`;
+      const reservedQty = reserved[key] || 0;
+      const available = pantryItem.totalQty - reservedQty;
+
+      return available >= ing.qty;
+    });
+  });
+}
+
 function getDaysUntilExpiry(expiryDate) {
   if (!expiryDate) return null;
   const now = new Date();
@@ -1884,12 +1948,18 @@ function updateDashboard() {
   const reserved = calculateReservedIngredients();
   const readyRecipes = recipes.filter(recipe => {
     return recipe.ingredients.every(ing => {
+      // If recipe requires 0 quantity, it's considered missing
+      if (ing.qty <= 0) return false;
+
       // Case-insensitive matching
       const pantryItem = pantry.find(p =>
         p.name.toLowerCase() === ing.name.toLowerCase() &&
         p.unit.toLowerCase() === ing.unit.toLowerCase()
       );
       if (!pantryItem) return false;
+
+      // If pantry has 0 total, it's missing
+      if (pantryItem.totalQty <= 0) return false;
 
       // Normalize to lowercase for case-insensitive matching
       const key = `${ing.name.toLowerCase()}|${ing.unit.toLowerCase()}`;
@@ -2409,6 +2479,7 @@ function openSigninModal() {
     title: "Sign In",
     subtitle: "Connect to your kitchen account",
     contentHTML,
+    slideout: true,
     actions: [
       {
         label: "Sign In",
@@ -2472,6 +2543,7 @@ function openCreateAccountModal() {
     title: "Create Account",
     subtitle: "Join Chef's Kiss and sync your kitchen",
     contentHTML,
+    slideout: true,
     actions: [
       {
         label: "Create Account",
@@ -2588,6 +2660,7 @@ function openSettingsModal() {
     title: "Settings",
     subtitle: "Manage your kitchen preferences",
     contentHTML,
+    slideout: true,
     actions: [
       {
         label: "Done",
@@ -2717,12 +2790,6 @@ function init() {
   generateShoppingList(); // Auto-generate shopping list on page load
   updateDashboard();
 
-  // Wire pantry button
-  const btnAddIngredient = document.getElementById("btn-add-ingredient");
-  if (btnAddIngredient) {
-    btnAddIngredient.addEventListener("click", () => openIngredientModal(null));
-  }
-
   // Wire pantry filter
   const filterCategory = document.getElementById("filter-category");
   if (filterCategory) {
@@ -2739,12 +2806,6 @@ function init() {
   const sortPantry = document.getElementById("sort-pantry");
   if (sortPantry) {
     sortPantry.addEventListener("change", applyPantryFilter);
-  }
-
-  // Wire recipe button
-  const btnAddRecipe = document.getElementById("btn-new-recipe");
-  if (btnAddRecipe) {
-    btnAddRecipe.addEventListener("click", () => openRecipeModal(null));
   }
 
   // Recipe search input
@@ -2806,11 +2867,6 @@ function init() {
       floatingActionBtn.classList.remove("active");
       floatingActionOptions.classList.remove("active");
     });
-  }
-
-  const floatingPlannerBtn = document.getElementById("floating-planner-btn");
-  if (floatingPlannerBtn) {
-    floatingPlannerBtn.addEventListener("click", openPlannerModal);
   }
 
   const btnOpenPlanner = document.getElementById("btn-open-planner");
