@@ -146,6 +146,12 @@
 
         <div class="pantry-toolbar">
           <div class="pantry-filters">
+            <input
+              type="text"
+              id="pantry-search"
+              class="search-input"
+              placeholder="🔍 Search pantry..."
+            >
             <select id="filter-category">
               <option value="">All categories</option>
               <option value="Meat">Meat</option>
@@ -155,6 +161,12 @@
               <option value="Frozen">Frozen</option>
               <option value="Spices">Spices</option>
               <option value="Other">Other</option>
+            </select>
+            <select id="sort-pantry">
+              <option value="alpha">A-Z</option>
+              <option value="lowStock">Low Stock First</option>
+              <option value="expiring">Expiring Soon</option>
+              <option value="recent">Recently Added</option>
             </select>
           </div>
           <button class="btn btn-primary" id="btn-add-ingredient">
@@ -177,6 +189,19 @@
         </header>
 
         <div class="recipes-toolbar">
+          <div class="recipe-filters">
+            <input
+              type="text"
+              id="recipe-search"
+              class="search-input"
+              placeholder="🔍 Search recipes..."
+            >
+            <select id="filter-recipe-ready">
+              <option value="">All recipes</option>
+              <option value="ready">Ready to Cook</option>
+              <option value="missing">Missing Ingredients</option>
+            </select>
+          </div>
           <button class="btn btn-primary" id="btn-new-recipe">
             New recipe
           </button>

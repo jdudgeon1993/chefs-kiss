@@ -10,6 +10,9 @@ function uid() {
 // Pantry - Multi-location data model
 let pantry = JSON.parse(localStorage.getItem("pantry") || "[]");
 
+// Track which categories are collapsed
+const pantryCollapsedCategories = new Set();
+
 // Migrate old pantry data to new multi-location structure
 function migratePantryData() {
   let needsMigration = false;
@@ -779,14 +782,40 @@ function renderRecipes() {
   const container = document.getElementById("recipe-list");
   if (!container) return;
 
+  const searchInput = document.getElementById("recipe-search");
+  const filterReady = document.getElementById("filter-recipe-ready");
+
+  const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : "";
+  const readyFilter = filterReady ? filterReady.value : "";
+
   container.innerHTML = "";
 
-  if (recipes.length === 0) {
-    container.innerHTML = `<p style="opacity:0.7;">No recipes yet. Add your first cozy dish.</p>`;
+  // Apply filters
+  let filtered = recipes;
+
+  // Search filter
+  if (searchTerm) {
+    filtered = filtered.filter(recipe =>
+      recipe.name.toLowerCase().includes(searchTerm) ||
+      recipe.ingredients.some(ing => ing.name.toLowerCase().includes(searchTerm))
+    );
+  }
+
+  // Ready to cook filter
+  if (readyFilter === "ready") {
+    const readyRecipes = calculateReadyRecipes();
+    filtered = filtered.filter(recipe => readyRecipes.some(r => r.id === recipe.id));
+  } else if (readyFilter === "missing") {
+    const readyRecipes = calculateReadyRecipes();
+    filtered = filtered.filter(recipe => !readyRecipes.some(r => r.id === recipe.id));
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<p style="opacity:0.7;">${searchTerm ? "No recipes match your search." : "No recipes yet. Add your first cozy dish."}</p>`;
     return;
   }
 
-  recipes.forEach(recipe => {
+  filtered.forEach(recipe => {
     const card = document.createElement("div");
     card.className = "recipe-card";
 
@@ -1492,7 +1521,68 @@ function saveEditShoppingItem(item) {
   closeModal();
 }
 
-function openCustomShoppingModal() {
+function parseQuickAddInput(input) {
+  // Try to parse "qty unit name" format
+  // Examples: "2 lbs chicken", "1 gallon milk", "3 tomatoes"
+  const trimmed = input.trim();
+
+  // Pattern: number (optional decimal) + unit + name
+  const pattern = /^(\d+\.?\d*)\s+(\w+)\s+(.+)$/;
+  const match = trimmed.match(pattern);
+
+  if (match) {
+    return {
+      qty: parseFloat(match[1]),
+      unit: match[2],
+      name: match[3].trim()
+    };
+  }
+
+  // If no qty/unit pattern, check if it's just a name
+  if (trimmed.length > 0) {
+    return { name: trimmed };
+  }
+
+  return null;
+}
+
+function handleQuickAddShopping() {
+  const input = document.getElementById("user-item-name");
+  if (!input) return;
+
+  const text = input.value.trim();
+  if (!text) {
+    openCustomShoppingModal();
+    return;
+  }
+
+  const parsed = parseQuickAddInput(text);
+
+  if (parsed && parsed.qty && parsed.unit) {
+    // Quick add - we have all the info
+    addShoppingItem({
+      name: parsed.name,
+      actualQty: parsed.qty,
+      recommendedQty: parsed.qty,
+      unit: parsed.unit,
+      category: "Other", // Default category
+      source: "Custom",
+      checked: false
+    });
+
+    // Clear input
+    input.value = '';
+
+    // Refresh shopping list
+    renderShoppingList();
+  } else {
+    // Open modal for full details
+    // Pre-fill the name if we have it
+    openCustomShoppingModal(parsed?.name || '');
+  }
+}
+
+function openCustomShoppingModal(prefillName = '') {
   const contentHTML = `
     ${modalRow([
       modalField({
@@ -1548,6 +1638,19 @@ function openCustomShoppingModal() {
       }
     ]
   });
+
+  // Pre-fill name if provided
+  if (prefillName) {
+    setTimeout(() => {
+      const modal = document.querySelector(".modal-card");
+      const firstInput = modal?.querySelector(".modal-field input");
+      if (firstInput) {
+        firstInput.value = prefillName;
+        firstInput.focus();
+        firstInput.select();
+      }
+    }, 100);
+  }
 }
 
 function saveCustomShoppingItem() {
@@ -1933,28 +2036,148 @@ function updateDateTime() {
    PANTRY FILTER
 --------------------------------------------------- */
 
+function getEarliestExpiryDays(item) {
+  let earliest = null;
+  item.locations.forEach(loc => {
+    if (loc.expiry) {
+      const days = getDaysUntilExpiry(loc.expiry);
+      if (days !== null && (earliest === null || days < earliest)) {
+        earliest = days;
+      }
+    }
+  });
+  return earliest;
+}
+
 function applyPantryFilter() {
   const filterSelect = document.getElementById("filter-category");
+  const searchInput = document.getElementById("pantry-search");
+  const sortSelect = document.getElementById("sort-pantry");
+
   const selectedCategory = filterSelect ? filterSelect.value : "";
+  const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : "";
+  const sortBy = sortSelect ? sortSelect.value : "alpha";
 
   const container = document.getElementById("pantry-display");
   if (!container) return;
 
   container.innerHTML = "";
 
-  const filtered = selectedCategory
-    ? pantry.filter(item => item.category === selectedCategory)
-    : pantry;
+  // Apply filters
+  let filtered = pantry;
+
+  // Category filter
+  if (selectedCategory) {
+    filtered = filtered.filter(item => item.category === selectedCategory);
+  }
+
+  // Search filter
+  if (searchTerm) {
+    filtered = filtered.filter(item =>
+      item.name.toLowerCase().includes(searchTerm) ||
+      item.category.toLowerCase().includes(searchTerm) ||
+      item.unit.toLowerCase().includes(searchTerm)
+    );
+  }
+
+  // Sort
+  if (sortBy === "alpha") {
+    filtered.sort((a, b) => a.name.localeCompare(b.name));
+  } else if (sortBy === "lowStock") {
+    filtered.sort((a, b) => {
+      const aRatio = a.min > 0 ? a.totalQty / a.min : 999;
+      const bRatio = b.min > 0 ? b.totalQty / b.min : 999;
+      return aRatio - bRatio;
+    });
+  } else if (sortBy === "expiring") {
+    filtered.sort((a, b) => {
+      const aExpiry = getEarliestExpiryDays(a);
+      const bExpiry = getEarliestExpiryDays(b);
+      if (aExpiry === null && bExpiry === null) return 0;
+      if (aExpiry === null) return 1;
+      if (bExpiry === null) return -1;
+      return aExpiry - bExpiry;
+    });
+  } else if (sortBy === "recent") {
+    // Keep original order (most recently added at end, so reverse)
+    filtered = [...filtered].reverse();
+  }
 
   if (filtered.length === 0) {
-    container.innerHTML = `<p style="opacity:0.7;">${selectedCategory ? "No items in this category." : "Your pantry is empty. Add your first ingredient."}</p>`;
+    container.innerHTML = `<p style="opacity:0.7;">${selectedCategory || searchTerm ? "No items match your filters." : "Your pantry is empty. Add your first ingredient."}</p>`;
     return;
   }
 
   // Calculate reserved quantities
   const reserved = calculateReservedIngredients();
 
+  // Group items by category
+  const categories = ['Meat', 'Dairy', 'Produce', 'Pantry', 'Frozen', 'Spices', 'Other'];
+  const grouped = {};
+  categories.forEach(cat => grouped[cat] = []);
   filtered.forEach(item => {
+    if (grouped[item.category]) {
+      grouped[item.category].push(item);
+    }
+  });
+
+  // Render by category
+  categories.forEach(category => {
+    const items = grouped[category];
+    if (items.length === 0) return;
+
+    // Calculate category stats
+    const lowStockCount = items.filter(item => {
+      const key = `${item.name.toLowerCase()}|${item.unit.toLowerCase()}`;
+      const reservedQty = reserved[key] || 0;
+      const available = item.totalQty - reservedQty;
+      return available < item.min;
+    }).length;
+
+    const expiringCount = items.filter(item => {
+      const days = getEarliestExpiryDays(item);
+      return days !== null && days <= 7;
+    }).length;
+
+    // Category header
+    const categoryHeader = document.createElement("div");
+    categoryHeader.className = "category-header";
+    const isCollapsed = pantryCollapsedCategories.has(category);
+    const icon = isCollapsed ? "▶" : "▼";
+
+    let statusText = [];
+    if (lowStockCount > 0) statusText.push(`${lowStockCount} low stock`);
+    if (expiringCount > 0) statusText.push(`${expiringCount} expiring soon`);
+    const statusHTML = statusText.length > 0 ? `<span class="category-status">${statusText.join(', ')}</span>` : '';
+
+    categoryHeader.innerHTML = `
+      <div class="category-header-left">
+        <span class="category-icon">${icon}</span>
+        <span class="category-name">${getCategoryEmoji(category)} ${category}</span>
+        <span class="category-count">(${items.length} items)</span>
+      </div>
+      <div class="category-header-right">
+        ${statusHTML}
+      </div>
+    `;
+
+    categoryHeader.addEventListener("click", () => {
+      if (pantryCollapsedCategories.has(category)) {
+        pantryCollapsedCategories.delete(category);
+      } else {
+        pantryCollapsedCategories.add(category);
+      }
+      applyPantryFilter();
+    });
+
+    container.appendChild(categoryHeader);
+
+    // Category items container
+    if (!isCollapsed) {
+      const categoryItems = document.createElement("div");
+      categoryItems.className = "category-items";
+
+      items.forEach(item => {
     const card = document.createElement("div");
     card.className = "pantry-item";
 
@@ -2046,8 +2269,25 @@ function applyPantryFilter() {
       }
     });
 
-    container.appendChild(card);
+        categoryItems.appendChild(card);
+      });
+
+      container.appendChild(categoryItems);
+    }
   });
+}
+
+function getCategoryEmoji(category) {
+  const emojis = {
+    'Meat': '🥩',
+    'Dairy': '🥛',
+    'Produce': '🥬',
+    'Pantry': '🏺',
+    'Frozen': '🧊',
+    'Spices': '🌶️',
+    'Other': '📦'
+  };
+  return emojis[category] || '📦';
 }
 
 /* ---------------------------------------------------
@@ -2485,10 +2725,34 @@ function init() {
     filterCategory.addEventListener("change", applyPantryFilter);
   }
 
+  // Pantry search input
+  const pantrySearch = document.getElementById("pantry-search");
+  if (pantrySearch) {
+    pantrySearch.addEventListener("input", applyPantryFilter);
+  }
+
+  // Pantry sort select
+  const sortPantry = document.getElementById("sort-pantry");
+  if (sortPantry) {
+    sortPantry.addEventListener("change", applyPantryFilter);
+  }
+
   // Wire recipe button
   const btnAddRecipe = document.getElementById("btn-new-recipe");
   if (btnAddRecipe) {
     btnAddRecipe.addEventListener("click", () => openRecipeModal(null));
+  }
+
+  // Recipe search input
+  const recipeSearch = document.getElementById("recipe-search");
+  if (recipeSearch) {
+    recipeSearch.addEventListener("input", renderRecipes);
+  }
+
+  // Recipe ready filter
+  const filterRecipeReady = document.getElementById("filter-recipe-ready");
+  if (filterRecipeReady) {
+    filterRecipeReady.addEventListener("change", renderRecipes);
   }
 
   // Wire planner buttons
@@ -2510,7 +2774,18 @@ function init() {
   // Shopping buttons
   const btnAddCustom = document.getElementById("btn-add-custom-item");
   if (btnAddCustom) {
-    btnAddCustom.addEventListener("click", openCustomShoppingModal);
+    btnAddCustom.addEventListener("click", handleQuickAddShopping);
+  }
+
+  // Shopping quick-add with Enter key
+  const userItemInput = document.getElementById("user-item-name");
+  if (userItemInput) {
+    userItemInput.addEventListener("keypress", (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleQuickAddShopping();
+      }
+    });
   }
 
   const btnCheckout = document.getElementById("btn-checkout");
