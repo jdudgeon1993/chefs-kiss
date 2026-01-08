@@ -2449,16 +2449,23 @@ function saveQuickDeplete(item) {
 }
 
 /* ---------------------------------------------------
-   SIGN-IN MODAL (UI skeleton for future Supabase integration)
+   AUTHENTICATION MODALS
 --------------------------------------------------- */
 
 function openSigninModal() {
+  // If already signed in, show account info instead
+  if (window.auth && window.auth.isAuthenticated()) {
+    openAccountModal();
+    return;
+  }
+
   const contentHTML = `
     ${modalRow([
       modalField({
         label: "Email",
         type: "email",
-        placeholder: "your@email.com"
+        placeholder: "your@email.com",
+        id: "signin-email"
       })
     ])}
 
@@ -2466,9 +2473,12 @@ function openSigninModal() {
       modalField({
         label: "Password",
         type: "password",
-        placeholder: "Enter your password"
+        placeholder: "Enter your password",
+        id: "signin-password"
       })
     ])}
+
+    <div id="signin-error" style="color:#d32f2f; margin-top:0.5rem; font-size:0.9rem; display:none;"></div>
 
     <p style="margin-top:1.5rem; text-align:center; opacity:0.8;">
       Don't have an account? <a href="#" id="create-account-link" style="color:#8a9a5b; font-weight:600; text-decoration:none;">Create one</a>
@@ -2484,10 +2494,7 @@ function openSigninModal() {
       {
         label: "Sign In",
         class: "btn-primary",
-        onClick: () => {
-          alert("Sign-in functionality will be available soon! This will connect to Supabase for user authentication.");
-          closeModal();
-        }
+        onClick: handleSignIn
       },
       {
         label: "Cancel",
@@ -2506,6 +2513,65 @@ function openSigninModal() {
       setTimeout(() => openCreateAccountModal(), 100);
     });
   }
+
+  // Enable Enter key to submit
+  const emailInput = document.getElementById("signin-email");
+  const passwordInput = document.getElementById("signin-password");
+
+  [emailInput, passwordInput].forEach(input => {
+    if (input) {
+      input.addEventListener("keypress", (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleSignIn();
+        }
+      });
+    }
+  });
+}
+
+async function handleSignIn() {
+  const emailInput = document.getElementById("signin-email");
+  const passwordInput = document.getElementById("signin-password");
+  const errorDiv = document.getElementById("signin-error");
+
+  const email = emailInput?.value.trim();
+  const password = passwordInput?.value;
+
+  // Validation
+  if (!email || !password) {
+    showError(errorDiv, "Please enter both email and password");
+    return;
+  }
+
+  if (!isValidEmail(email)) {
+    showError(errorDiv, "Please enter a valid email address");
+    return;
+  }
+
+  // Disable button during sign in
+  const signInBtn = document.querySelector(".modal-card .btn-primary");
+  const originalText = signInBtn?.textContent;
+  if (signInBtn) {
+    signInBtn.disabled = true;
+    signInBtn.textContent = "Signing in...";
+  }
+
+  // Attempt sign in
+  const result = await window.auth.signIn(email, password);
+
+  if (result.success) {
+    closeModal();
+    // Reload data from database
+    await loadUserData();
+    showToast("✅ Signed in successfully!");
+  } else {
+    showError(errorDiv, result.error);
+    if (signInBtn) {
+      signInBtn.disabled = false;
+      signInBtn.textContent = originalText;
+    }
+  }
 }
 
 function openCreateAccountModal() {
@@ -2514,7 +2580,8 @@ function openCreateAccountModal() {
       modalField({
         label: "Email",
         type: "email",
-        placeholder: "your@email.com"
+        placeholder: "your@email.com",
+        id: "signup-email"
       })
     ])}
 
@@ -2522,7 +2589,8 @@ function openCreateAccountModal() {
       modalField({
         label: "Password",
         type: "password",
-        placeholder: "Create a password"
+        placeholder: "At least 6 characters",
+        id: "signup-password"
       })
     ])}
 
@@ -2530,9 +2598,12 @@ function openCreateAccountModal() {
       modalField({
         label: "Confirm Password",
         type: "password",
-        placeholder: "Confirm your password"
+        placeholder: "Confirm your password",
+        id: "signup-confirm"
       })
     ])}
+
+    <div id="signup-error" style="color:#d32f2f; margin-top:0.5rem; font-size:0.9rem; display:none;"></div>
 
     <p style="margin-top:1.5rem; text-align:center; opacity:0.8;">
       Already have an account? <a href="#" id="signin-link" style="color:#8a9a5b; font-weight:600; text-decoration:none;">Sign in</a>
@@ -2548,10 +2619,7 @@ function openCreateAccountModal() {
       {
         label: "Create Account",
         class: "btn-primary",
-        onClick: () => {
-          alert("Account creation will be available soon! This will connect to Supabase for user registration.");
-          closeModal();
-        }
+        onClick: handleSignUp
       },
       {
         label: "Cancel",
@@ -2570,6 +2638,185 @@ function openCreateAccountModal() {
       setTimeout(() => openSigninModal(), 100);
     });
   }
+
+  // Enable Enter key to submit
+  const emailInput = document.getElementById("signup-email");
+  const passwordInput = document.getElementById("signup-password");
+  const confirmInput = document.getElementById("signup-confirm");
+
+  [emailInput, passwordInput, confirmInput].forEach(input => {
+    if (input) {
+      input.addEventListener("keypress", (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleSignUp();
+        }
+      });
+    }
+  });
+}
+
+async function handleSignUp() {
+  const emailInput = document.getElementById("signup-email");
+  const passwordInput = document.getElementById("signup-password");
+  const confirmInput = document.getElementById("signup-confirm");
+  const errorDiv = document.getElementById("signup-error");
+
+  const email = emailInput?.value.trim();
+  const password = passwordInput?.value;
+  const confirm = confirmInput?.value;
+
+  // Validation
+  if (!email || !password || !confirm) {
+    showError(errorDiv, "Please fill in all fields");
+    return;
+  }
+
+  if (!isValidEmail(email)) {
+    showError(errorDiv, "Please enter a valid email address");
+    return;
+  }
+
+  if (password.length < 6) {
+    showError(errorDiv, "Password must be at least 6 characters");
+    return;
+  }
+
+  if (password !== confirm) {
+    showError(errorDiv, "Passwords do not match");
+    return;
+  }
+
+  // Disable button during sign up
+  const signUpBtn = document.querySelector(".modal-card .btn-primary");
+  const originalText = signUpBtn?.textContent;
+  if (signUpBtn) {
+    signUpBtn.disabled = true;
+    signUpBtn.textContent = "Creating account...";
+  }
+
+  // Attempt sign up
+  const result = await window.auth.signUp(email, password);
+
+  if (result.success) {
+    closeModal();
+    showToast(result.message || "✅ Account created!");
+    // Load data after signup
+    await loadUserData();
+  } else {
+    showError(errorDiv, result.error);
+    if (signUpBtn) {
+      signUpBtn.disabled = false;
+      signUpBtn.textContent = originalText;
+    }
+  }
+}
+
+function openAccountModal() {
+  const user = window.auth.getCurrentUser();
+
+  if (!user) {
+    openSigninModal();
+    return;
+  }
+
+  const contentHTML = `
+    <div style="padding:1rem 0;">
+      <div style="margin-bottom:1rem;">
+        <strong style="opacity:0.7;">Email:</strong><br>
+        ${user.email}
+      </div>
+      <div style="margin-bottom:1rem;">
+        <strong style="opacity:0.7;">Account created:</strong><br>
+        ${new Date(user.created_at).toLocaleDateString()}
+      </div>
+    </div>
+  `;
+
+  openCardModal({
+    title: "Account",
+    subtitle: "Your Chef's Kiss account",
+    contentHTML,
+    slideout: true,
+    actions: [
+      {
+        label: "Sign Out",
+        class: "btn-secondary",
+        onClick: async () => {
+          const result = await window.auth.signOut();
+          if (result.success) {
+            closeModal();
+            showToast("✅ Signed out");
+            // Clear local data
+            clearLocalData();
+          }
+        }
+      },
+      {
+        label: "Close",
+        class: "btn-primary",
+        onClick: closeModal
+      }
+    ]
+  });
+}
+
+// Helper functions
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function showError(errorDiv, message) {
+  if (errorDiv) {
+    errorDiv.textContent = message;
+    errorDiv.style.display = "block";
+  }
+}
+
+function showToast(message) {
+  // Simple toast notification
+  const toast = document.createElement('div');
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2e3a1f;
+    color: white;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 10000;
+    animation: slideUp 0.3s ease;
+  `;
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.animation = 'fadeOut 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+function clearLocalData() {
+  pantry = [];
+  recipes = [];
+  planner = {};
+  shopping = [];
+  savePantry();
+  saveRecipes();
+  savePlanner();
+  renderAll();
+}
+
+async function loadUserData() {
+  // TODO: Load user's data from Supabase
+  // For now, just re-render with existing localStorage data
+  console.log('📥 Loading user data (localStorage mode)');
+  renderPantry();
+  renderRecipes();
+  generateShoppingList();
+  updateDashboard();
 }
 
 /* ---------------------------------------------------
@@ -2775,7 +3022,12 @@ function setupSmoothScroll() {
    INITIALIZATION
 --------------------------------------------------- */
 
-function init() {
+async function init() {
+  // Initialize authentication first
+  if (window.auth) {
+    await window.auth.initAuth();
+  }
+
   // Migrate data structures
   migratePantryData();
   migratePlannerData();
