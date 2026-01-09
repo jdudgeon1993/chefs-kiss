@@ -3725,6 +3725,105 @@ function setupSmoothScroll() {
 }
 
 /* ---------------------------------------------------
+   INVITE CODE HANDLER
+--------------------------------------------------- */
+
+async function handleInviteCode(code) {
+  // Show loading modal
+  openCardModal({
+    title: "Joining Household",
+    subtitle: "Processing your invite...",
+    contentHTML: `
+      ${modalFull(`
+        <div style="text-align:center; padding:2rem;">
+          <div style="font-size:2rem; margin-bottom:1rem;">🔄</div>
+          <p style="opacity:0.8;">Verifying invite code...</p>
+        </div>
+      `)}
+    `,
+    actions: []
+  });
+
+  // Check if user is authenticated
+  if (!window.auth || !window.auth.isAuthenticated()) {
+    // User needs to sign in first
+    closeModal();
+    showToast('⚠️ Please sign in or create an account to accept this invite');
+
+    // Open sign-in modal with invite code stored
+    sessionStorage.setItem('pendingInvite', code);
+    openSigninModal();
+    return;
+  }
+
+  // Fetch invite details
+  const invite = await window.db.getInviteByCode(code);
+
+  if (!invite) {
+    closeModal();
+    showToast('❌ Invalid or expired invite code');
+    return;
+  }
+
+  // Show confirmation modal
+  const householdName = invite.households?.name || 'Unknown Household';
+
+  openCardModal({
+    title: "Join Household",
+    subtitle: `You've been invited!`,
+    contentHTML: `
+      ${modalFull(`
+        <div style="text-align:center; padding:1.5rem;">
+          <div style="font-size:3rem; margin-bottom:1rem;">🏠</div>
+          <h3 style="margin-bottom:0.5rem; font-size:1.4rem;">${householdName}</h3>
+          <p style="opacity:0.7; margin-bottom:1.5rem;">
+            Join this household to share pantry items, recipes, and meal plans!
+          </p>
+          <div style="background:rgba(138,154,91,0.1); border-radius:8px; padding:1rem; margin-bottom:1rem;">
+            <p style="font-size:0.9rem; opacity:0.8;">
+              <strong>Invite Code:</strong> ${code}
+            </p>
+            <p style="font-size:0.85rem; opacity:0.6; margin-top:0.5rem;">
+              Role: ${invite.role === 'admin' ? '⭐ Admin' : 'Member'}
+            </p>
+          </div>
+        </div>
+      `)}
+    `,
+    slideout: true,
+    actions: [
+      {
+        label: "Join Household",
+        class: "btn-primary",
+        onClick: async () => {
+          // Accept the invite
+          const result = await window.db.acceptHouseholdInvite(code);
+
+          if (result.success) {
+            closeModal();
+            showToast('✅ Welcome to the household!');
+
+            // Reload auth to load new household
+            await window.auth.initAuth();
+
+            // Reload page to load household data
+            setTimeout(() => window.location.reload(), 1000);
+          } else {
+            closeModal();
+            showToast(`❌ ${result.error || 'Failed to join household'}`);
+          }
+        }
+      },
+      {
+        label: "Cancel",
+        class: "btn-secondary",
+        onClick: closeModal
+      }
+    ]
+  });
+}
+
+/* ---------------------------------------------------
    INITIALIZATION
 --------------------------------------------------- */
 
@@ -3732,6 +3831,26 @@ async function init() {
   // Initialize authentication first
   if (window.auth) {
     await window.auth.initAuth();
+  }
+
+  // Check for pending invite from sessionStorage (user just signed in)
+  const pendingInvite = sessionStorage.getItem('pendingInvite');
+  if (pendingInvite && window.auth && window.auth.isAuthenticated()) {
+    sessionStorage.removeItem('pendingInvite');
+    await handleInviteCode(pendingInvite);
+    return; // Skip rest of init, page will reload after accepting
+  }
+
+  // Check for invite code in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const inviteCode = urlParams.get('invite');
+
+  if (inviteCode) {
+    // Handle invite acceptance
+    await handleInviteCode(inviteCode);
+    // Clear invite param from URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+    return; // Skip rest of init, page will reload after accepting
   }
 
   // Migrate data structures (for localStorage data)
