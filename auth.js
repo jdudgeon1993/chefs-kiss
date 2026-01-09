@@ -70,16 +70,20 @@ async function loadUserHousehold() {
     const { data, error } = await window.supabaseClient
       .from('household_members')
       .select('household_id')
-      .eq('user_id', currentUser.id)
-      .single();
+      .eq('user_id', currentUser.id);
 
     if (error) {
       console.error('Error loading household:', error);
       return;
     }
 
-    currentHouseholdId = data.household_id;
-    console.log('✅ Household loaded:', currentHouseholdId);
+    if (data && data.length > 0) {
+      currentHouseholdId = data[0].household_id;
+      console.log('✅ Household loaded:', currentHouseholdId);
+    } else {
+      console.log('⚠️ User has no household yet');
+      currentHouseholdId = null;
+    }
   } catch (err) {
     console.error('Error in loadUserHousehold:', err);
   }
