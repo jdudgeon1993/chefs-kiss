@@ -2981,6 +2981,14 @@ function openAccountModal() {
     slideout: true,
     actions: [
       {
+        label: "Join Household",
+        class: "btn-secondary",
+        onClick: () => {
+          closeModal();
+          openJoinHouseholdModal();
+        }
+      },
+      {
         label: "Sign Out",
         class: "btn-secondary",
         onClick: async () => {
@@ -3000,6 +3008,60 @@ function openAccountModal() {
       }
     ]
   });
+}
+
+function openJoinHouseholdModal() {
+  const contentHTML = `
+    ${modalFull(`
+      <p style="margin-bottom:1rem; opacity:0.8;">
+        Enter the invite code you received from your household member.
+      </p>
+      ${modalField({
+        label: "Invite Code",
+        placeholder: "e.g., 3NZBK4SP",
+        id: "join-code-input"
+      })}
+      <div id="join-error" style="color:#B36A5E; margin-top:0.5rem; display:none;"></div>
+    `)}
+  `;
+
+  openCardModal({
+    title: "Join Household",
+    subtitle: "Enter your invite code",
+    contentHTML,
+    slideout: true,
+    actions: [
+      {
+        label: "Join",
+        class: "btn-primary",
+        onClick: async () => {
+          const codeInput = document.getElementById('join-code-input');
+          const errorDiv = document.getElementById('join-error');
+          const code = codeInput?.value.trim().toUpperCase();
+
+          if (!code) {
+            showError(errorDiv, 'Please enter an invite code');
+            return;
+          }
+
+          // Process the invite code
+          closeModal();
+          await handleInviteCode(code);
+        }
+      },
+      {
+        label: "Cancel",
+        class: "btn-secondary",
+        onClick: closeModal
+      }
+    ]
+  });
+
+  // Auto-focus the input
+  setTimeout(() => {
+    const input = document.getElementById('join-code-input');
+    if (input) input.focus();
+  }, 100);
 }
 
 // Helper functions

@@ -858,47 +858,27 @@ async function loadHouseholdMembers() {
   try {
     const { data: members, error } = await window.supabaseClient
       .from('household_members')
-      .select(`
-        id,
-        user_id,
-        role,
-        created_at
-      `)
+      .select('id, user_id, role, created_at')
       .eq('household_id', householdId)
       .order('created_at');
 
     if (error) throw error;
 
-    // Fetch user emails from auth.users
-    const enrichedMembers = await Promise.all(
-      members.map(async (member) => {
-        const { data: userData } = await window.supabaseClient.auth.admin.getUserById(member.user_id);
-        return {
-          ...member,
-          email: userData?.user?.email || 'Unknown'
-        };
-      })
-    );
+    // Show current user's email, others show as role
+    const currentUserId = window.auth.getCurrentUser()?.id;
+    const currentUserEmail = window.auth.getCurrentUser()?.email;
+
+    const enrichedMembers = members.map(member => ({
+      ...member,
+      email: member.user_id === currentUserId ? currentUserEmail : `Household ${member.role}`
+    }));
 
     console.log(`📥 Loaded ${enrichedMembers.length} household members`);
     return enrichedMembers;
 
   } catch (err) {
     console.error('Error loading household members:', err);
-    // Try simpler query without admin API
-    try {
-      const { data: members, error } = await window.supabaseClient
-        .from('household_members')
-        .select('id, user_id, role, created_at')
-        .eq('household_id', householdId)
-        .order('created_at');
-
-      if (error) throw error;
-      return members.map(m => ({ ...m, email: 'Member' }));
-    } catch (err2) {
-      console.error('Error with fallback query:', err2);
-      return [];
-    }
+    return [];
   }
 }
 
