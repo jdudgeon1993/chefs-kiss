@@ -199,6 +199,8 @@ async function loadRecipes() {
     const recipesData = recipes.map(recipe => ({
       id: recipe.id,
       name: recipe.name,
+      servings: recipe.servings || 0,
+      photo: recipe.photo || '',
       ingredients: recipe.ingredients || [],
       instructions: recipe.instructions || '',
       notes: recipe.notes || '',
@@ -233,6 +235,8 @@ async function saveRecipe(recipe) {
       id: recipe.id,
       household_id: householdId,
       name: recipe.name,
+      servings: recipe.servings || 0,
+      photo: recipe.photo || '',
       ingredients: recipe.ingredients || [],
       instructions: recipe.instructions || '',
       notes: recipe.notes || '',
