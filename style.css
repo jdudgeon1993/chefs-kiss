@@ -180,6 +180,7 @@ body {
   position: relative;
   z-index: 1;
   padding: 0;
+  padding-top: 120px; /* Space for fixed header (min-height of header) */
 }
 
 .btn-block {
@@ -302,6 +303,10 @@ body {
    HEADER - Cottagecore - FULL WIDTH, CENTERED
 --------------------------------------------------- */
 .site-header {
+  position: fixed;
+  top: 45px; /* Below utility bar */
+  left: 0;
+  right: 0;
   width: 100%;
   padding: 2rem 0;
   background: #FAF0E6;
@@ -310,7 +315,6 @@ body {
   justify-content: center;
   align-items: center;
   box-shadow: 0 4px 16px rgba(156,175,136,0.08);
-  position: relative;
   z-index: 50;
   min-height: 120px; /* Set minimum height for consistency */
 }
