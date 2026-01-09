@@ -3186,9 +3186,78 @@ async function openSettingsModal() {
         ${categoriesList}
       </div>
       <div class="settings-add-row">
-        <input type="text" id="new-category-input" placeholder="Add new category...">
-        <input type="text" id="new-category-emoji" placeholder="📦" maxlength="2" style="width:60px; text-align:center;">
+        <input type="text" id="new-category-input" placeholder="Add new category..." style="flex: 1;">
+        <button class="btn btn-icon" id="emoji-picker-btn" type="button" title="Choose emoji">
+          <span id="selected-emoji">📦</span>
+        </button>
         <button class="btn btn-secondary" id="add-category-btn">Add</button>
+      </div>
+      <div id="emoji-picker" style="display: none; margin-top: 0.5rem; padding: 0.75rem; background: rgba(255,255,255,0.05); border-radius: 8px; max-height: 200px; overflow-y: auto;">
+        <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.5rem;">
+          <!-- Food & Drink -->
+          <button class="emoji-option" data-emoji="🍎">🍎</button>
+          <button class="emoji-option" data-emoji="🥬">🥬</button>
+          <button class="emoji-option" data-emoji="🥕">🥕</button>
+          <button class="emoji-option" data-emoji="🍅">🍅</button>
+          <button class="emoji-option" data-emoji="🥔">🥔</button>
+          <button class="emoji-option" data-emoji="🥦">🥦</button>
+          <button class="emoji-option" data-emoji="🌽">🌽</button>
+          <button class="emoji-option" data-emoji="🫑">🫑</button>
+
+          <button class="emoji-option" data-emoji="🥛">🥛</button>
+          <button class="emoji-option" data-emoji="🧀">🧀</button>
+          <button class="emoji-option" data-emoji="🥚">🥚</button>
+          <button class="emoji-option" data-emoji="🧈">🧈</button>
+          <button class="emoji-option" data-emoji="🍦">🍦</button>
+          <button class="emoji-option" data-emoji="🥩">🥩</button>
+          <button class="emoji-option" data-emoji="🍗">🍗</button>
+          <button class="emoji-option" data-emoji="🥓">🥓</button>
+
+          <button class="emoji-option" data-emoji="🐟">🐟</button>
+          <button class="emoji-option" data-emoji="🦐">🦐</button>
+          <button class="emoji-option" data-emoji="🥫">🥫</button>
+          <button class="emoji-option" data-emoji="🍞">🍞</button>
+          <button class="emoji-option" data-emoji="🥖">🥖</button>
+          <button class="emoji-option" data-emoji="🥐">🥐</button>
+          <button class="emoji-option" data-emoji="🍪">🍪</button>
+          <button class="emoji-option" data-emoji="🍰">🍰</button>
+
+          <button class="emoji-option" data-emoji="🧊">🧊</button>
+          <button class="emoji-option" data-emoji="❄️">❄️</button>
+          <button class="emoji-option" data-emoji="🧂">🧂</button>
+          <button class="emoji-option" data-emoji="🌶️">🌶️</button>
+          <button class="emoji-option" data-emoji="🫚">🫚</button>
+          <button class="emoji-option" data-emoji="🧄">🧄</button>
+          <button class="emoji-option" data-emoji="🧅">🧅</button>
+          <button class="emoji-option" data-emoji="🍯">🍯</button>
+
+          <button class="emoji-option" data-emoji="🫗">🫗</button>
+          <button class="emoji-option" data-emoji="🧃">🧃</button>
+          <button class="emoji-option" data-emoji="☕">☕</button>
+          <button class="emoji-option" data-emoji="🍵">🍵</button>
+          <button class="emoji-option" data-emoji="🥤">🥤</button>
+          <button class="emoji-option" data-emoji="🧉">🧉</button>
+          <button class="emoji-option" data-emoji="🍷">🍷</button>
+          <button class="emoji-option" data-emoji="🍺">🍺</button>
+
+          <button class="emoji-option" data-emoji="🍝">🍝</button>
+          <button class="emoji-option" data-emoji="🍕">🍕</button>
+          <button class="emoji-option" data-emoji="🌮">🌮</button>
+          <button class="emoji-option" data-emoji="🍜">🍜</button>
+          <button class="emoji-option" data-emoji="🍚">🍚</button>
+          <button class="emoji-option" data-emoji="🥗">🥗</button>
+          <button class="emoji-option" data-emoji="🥙">🥙</button>
+          <button class="emoji-option" data-emoji="🥪">🥪</button>
+
+          <button class="emoji-option" data-emoji="🍱">🍱</button>
+          <button class="emoji-option" data-emoji="🍛">🍛</button>
+          <button class="emoji-option" data-emoji="🍲">🍲</button>
+          <button class="emoji-option" data-emoji="🥘">🥘</button>
+          <button class="emoji-option" data-emoji="🍳">🍳</button>
+          <button class="emoji-option" data-emoji="🥞">🥞</button>
+          <button class="emoji-option" data-emoji="📦">📦</button>
+          <button class="emoji-option" data-emoji="🏺">🏺</button>
+        </div>
       </div>
     `)}
 
@@ -3303,14 +3372,37 @@ async function openSettingsModal() {
     });
   }
 
+  // Wire up emoji picker
+  const emojiPickerBtn = document.getElementById("emoji-picker-btn");
+  const emojiPicker = document.getElementById("emoji-picker");
+  const selectedEmojiSpan = document.getElementById("selected-emoji");
+  let currentEmoji = '📦';
+
+  if (emojiPickerBtn && emojiPicker) {
+    emojiPickerBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'block' : 'none';
+    });
+
+    // Handle emoji selection
+    const emojiOptions = document.querySelectorAll(".emoji-option");
+    emojiOptions.forEach(option => {
+      option.addEventListener("click", (e) => {
+        e.preventDefault();
+        currentEmoji = option.getAttribute("data-emoji");
+        selectedEmojiSpan.textContent = currentEmoji;
+        emojiPicker.style.display = 'none';
+      });
+    });
+  }
+
   // Wire up add category button
   const addCatBtn = document.getElementById("add-category-btn");
   const newCatInput = document.getElementById("new-category-input");
-  const newCatEmoji = document.getElementById("new-category-emoji");
-  if (addCatBtn && newCatInput && newCatEmoji) {
+  if (addCatBtn && newCatInput) {
     addCatBtn.addEventListener("click", async () => {
       const newCategory = newCatInput.value.trim();
-      const emoji = newCatEmoji.value.trim() || '📦';
+      const emoji = currentEmoji;
 
       if (!newCategory) {
         showToast("⚠️ Please enter a category name");
