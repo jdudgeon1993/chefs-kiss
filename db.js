@@ -838,6 +838,252 @@ async function removeCategory(categoryId, isDefault) {
 }
 
 /* ---------------------------------------------------
+   HOUSEHOLD MANAGEMENT OPERATIONS
+--------------------------------------------------- */
+
+/**
+ * Load all members of current household with their email addresses
+ */
+async function loadHouseholdMembers() {
+  if (!window.auth || !window.auth.isAuthenticated()) {
+    return [];
+  }
+
+  const householdId = window.auth.getCurrentHouseholdId();
+  if (!householdId) {
+    console.warn('No household ID found');
+    return [];
+  }
+
+  try {
+    const { data: members, error } = await window.supabaseClient
+      .from('household_members')
+      .select(`
+        id,
+        user_id,
+        role,
+        created_at
+      `)
+      .eq('household_id', householdId)
+      .order('created_at');
+
+    if (error) throw error;
+
+    // Fetch user emails from auth.users
+    const enrichedMembers = await Promise.all(
+      members.map(async (member) => {
+        const { data: userData } = await window.supabaseClient.auth.admin.getUserById(member.user_id);
+        return {
+          ...member,
+          email: userData?.user?.email || 'Unknown'
+        };
+      })
+    );
+
+    console.log(`📥 Loaded ${enrichedMembers.length} household members`);
+    return enrichedMembers;
+
+  } catch (err) {
+    console.error('Error loading household members:', err);
+    // Try simpler query without admin API
+    try {
+      const { data: members, error } = await window.supabaseClient
+        .from('household_members')
+        .select('id, user_id, role, created_at')
+        .eq('household_id', householdId)
+        .order('created_at');
+
+      if (error) throw error;
+      return members.map(m => ({ ...m, email: 'Member' }));
+    } catch (err2) {
+      console.error('Error with fallback query:', err2);
+      return [];
+    }
+  }
+}
+
+/**
+ * Create a new household invite code
+ */
+async function createHouseholdInvite(role = 'member') {
+  if (!window.auth || !window.auth.isAuthenticated()) {
+    return null;
+  }
+
+  const householdId = window.auth.getCurrentHouseholdId();
+  if (!householdId) {
+    console.warn('No household ID found');
+    return null;
+  }
+
+  try {
+    const { data, error } = await window.supabaseClient
+      .rpc('create_household_invite', {
+        p_household_id: householdId,
+        p_role: role
+      });
+
+    if (error) throw error;
+
+    console.log('✅ Created invite:', data[0].code);
+    return data[0]; // Returns { code, expires_at }
+
+  } catch (err) {
+    console.error('Error creating invite:', err);
+    return null;
+  }
+}
+
+/**
+ * Get invite details by code
+ */
+async function getInviteByCode(code) {
+  try {
+    const { data: invite, error } = await window.supabaseClient
+      .from('household_invites')
+      .select(`
+        id,
+        household_id,
+        code,
+        role,
+        expires_at,
+        used_at,
+        households (
+          name
+        )
+      `)
+      .eq('code', code)
+      .is('used_at', null)
+      .single();
+
+    if (error) throw error;
+
+    return invite;
+
+  } catch (err) {
+    console.error('Error fetching invite:', err);
+    return null;
+  }
+}
+
+/**
+ * Accept a household invite
+ */
+async function acceptHouseholdInvite(code) {
+  if (!window.auth || !window.auth.isAuthenticated()) {
+    return { success: false, error: 'Not authenticated' };
+  }
+
+  try {
+    const { data: householdId, error } = await window.supabaseClient
+      .rpc('accept_household_invite', {
+        p_code: code
+      });
+
+    if (error) throw error;
+
+    console.log('✅ Accepted invite, joined household:', householdId);
+    return { success: true, householdId };
+
+  } catch (err) {
+    console.error('Error accepting invite:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Remove a member from the household (admin/owner only)
+ */
+async function removeHouseholdMember(userId) {
+  if (!window.auth || !window.auth.isAuthenticated()) {
+    return false;
+  }
+
+  const householdId = window.auth.getCurrentHouseholdId();
+  if (!householdId) {
+    console.warn('No household ID found');
+    return false;
+  }
+
+  try {
+    const { error } = await window.supabaseClient
+      .rpc('remove_household_member', {
+        p_household_id: householdId,
+        p_user_id: userId
+      });
+
+    if (error) throw error;
+
+    console.log('✅ Removed member:', userId);
+    return true;
+
+  } catch (err) {
+    console.error('Error removing member:', err);
+    return false;
+  }
+}
+
+/**
+ * Leave the current household
+ */
+async function leaveHousehold() {
+  if (!window.auth || !window.auth.isAuthenticated()) {
+    return false;
+  }
+
+  const householdId = window.auth.getCurrentHouseholdId();
+  if (!householdId) {
+    console.warn('No household ID found');
+    return false;
+  }
+
+  try {
+    const { error } = await window.supabaseClient
+      .rpc('leave_household', {
+        p_household_id: householdId
+      });
+
+    if (error) throw error;
+
+    console.log('✅ Left household:', householdId);
+    return true;
+
+  } catch (err) {
+    console.error('Error leaving household:', err);
+    return false;
+  }
+}
+
+/**
+ * Get household name
+ */
+async function getHouseholdName() {
+  if (!window.auth || !window.auth.isAuthenticated()) {
+    return null;
+  }
+
+  const householdId = window.auth.getCurrentHouseholdId();
+  if (!householdId) {
+    return null;
+  }
+
+  try {
+    const { data, error } = await window.supabaseClient
+      .from('households')
+      .select('name')
+      .eq('id', householdId)
+      .single();
+
+    if (error) throw error;
+    return data.name;
+
+  } catch (err) {
+    console.error('Error fetching household name:', err);
+    return null;
+  }
+}
+
+/* ---------------------------------------------------
    EXPORTS (attached to window for global access)
 --------------------------------------------------- */
 
@@ -873,6 +1119,15 @@ window.db = {
   loadCategoryObjects,
   addCategory,
   removeCategory,
+
+  // Household Management
+  loadHouseholdMembers,
+  createHouseholdInvite,
+  getInviteByCode,
+  acceptHouseholdInvite,
+  removeHouseholdMember,
+  leaveHousehold,
+  getHouseholdName,
 
   // Sync
   syncAllData
