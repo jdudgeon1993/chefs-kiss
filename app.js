@@ -2953,7 +2953,7 @@ async function handleSignUp() {
   }
 }
 
-function openAccountModal() {
+async function openAccountModal() {
   const user = window.auth.getCurrentUser();
 
   if (!user) {
@@ -2961,33 +2961,89 @@ function openAccountModal() {
     return;
   }
 
+  // Load household info and members
+  const householdName = await window.db.getHouseholdName() || 'No Household';
+  const members = await window.db.loadHouseholdMembers();
+  const currentUserId = user.id;
+
+  const membersList = members.length > 0
+    ? members.map(member => {
+        const isCurrentUser = member.user_id === currentUserId;
+        const roleLabel = member.role === 'owner' ? '👑 Owner' : member.role === 'admin' ? '⭐ Admin' : 'Member';
+        const canRemove = !isCurrentUser && member.role !== 'owner';
+
+        return `
+          <div class="settings-item">
+            <span>
+              ${member.email || 'Member'}
+              <small style="opacity:0.6; margin-left:0.5rem;">${roleLabel}</small>
+              ${isCurrentUser ? '<small style="opacity:0.6; margin-left:0.5rem;">(you)</small>' : ''}
+            </span>
+            ${canRemove ? `
+              <button class="btn-settings-remove" data-member-id="${member.user_id}">&times;</button>
+            ` : ''}
+          </div>
+        `;
+      }).join('')
+    : '<p style="opacity:0.6; text-align:center; padding:1rem;">Only you in this household</p>';
+
   const contentHTML = `
-    <div style="padding:1rem 0;">
-      <div style="margin-bottom:1rem;">
-        <strong style="opacity:0.7;">Email:</strong><br>
-        ${user.email}
+    ${modalFull(`
+      <h3 style="margin-bottom:0.5rem;">Account Info</h3>
+      <div style="margin-bottom:1.5rem;">
+        <p style="margin:0.5rem 0;"><strong style="opacity:0.7;">Email:</strong> ${user.email}</p>
+        <p style="margin:0.5rem 0;"><strong style="opacity:0.7;">Created:</strong> ${new Date(user.created_at).toLocaleDateString()}</p>
       </div>
-      <div style="margin-bottom:1rem;">
-        <strong style="opacity:0.7;">Account created:</strong><br>
-        ${new Date(user.created_at).toLocaleDateString()}
+    `)}
+
+    ${modalFull(`
+      <h3 style="margin-bottom:0.5rem;">Household</h3>
+      <p style="margin:0.5rem 0; opacity:0.8;"><strong>${householdName}</strong> (${members.length} member${members.length !== 1 ? 's' : ''})</p>
+    `)}
+
+    ${modalFull(`
+      <h3 style="margin:0.75rem 0 0.5rem;">Members</h3>
+      <div class="settings-list" id="members-list" style="margin-bottom:1rem; max-height:200px;">
+        ${membersList}
       </div>
-    </div>
+      <button class="btn btn-secondary" id="invite-member-btn" style="width:100%;">Invite Member</button>
+    `)}
   `;
 
+  const isOwner = members.find(m => m.user_id === currentUserId)?.role === 'owner';
+  const hasMultipleMembers = members.length > 1;
+
   openCardModal({
-    title: "Account",
-    subtitle: "Your Chef's Kiss account",
+    title: "Account & Household",
+    subtitle: "Manage your account and household",
     contentHTML,
     slideout: true,
     actions: [
       {
-        label: "Join Household",
+        label: "Join Another Household",
         class: "btn-secondary",
         onClick: () => {
           closeModal();
           openJoinHouseholdModal();
         }
       },
+      ...(isOwner && hasMultipleMembers ? [] : [{
+        label: "Leave Household",
+        class: "btn-secondary",
+        onClick: async () => {
+          if (confirm('Are you sure you want to leave this household? You will lose access to all shared data.')) {
+            const success = await window.db.leaveHousehold();
+            if (success) {
+              showToast('✅ Left household');
+              closeModal();
+              await window.auth.signOut();
+              setTimeout(() => window.location.reload(), 1000);
+            } else {
+              showToast('❌ Failed to leave household');
+            }
+          }
+        }
+      }]),
       {
         label: "Sign Out",
         class: "btn-secondary",
@@ -2996,7 +3052,6 @@ function openAccountModal() {
           if (result.success) {
             closeModal();
             showToast("✅ Signed out");
-            // Clear local data
             clearLocalData();
           }
         }
@@ -3008,6 +3063,32 @@ function openAccountModal() {
       }
     ]
   });
+
+  // Wire up remove member buttons
+  const removeMemberBtns = document.querySelectorAll('.btn-settings-remove[data-member-id]');
+  removeMemberBtns.forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const memberId = btn.getAttribute('data-member-id');
+      if (confirm('Remove this member from your household?')) {
+        const success = await window.db.removeHouseholdMember(memberId);
+        if (success) {
+          showToast('✅ Member removed');
+          closeModal();
+          setTimeout(() => openAccountModal(), 100);
+        } else {
+          showToast('❌ Failed to remove member');
+        }
+      }
+    });
+  });
+
+  // Wire up invite button
+  const inviteBtn = document.getElementById('invite-member-btn');
+  if (inviteBtn) {
+    inviteBtn.addEventListener('click', () => {
+      openInviteMemberModal();
+    });
+  }
 }
 
 function openJoinHouseholdModal() {
@@ -3329,20 +3410,6 @@ async function openSettingsModal() {
     `)}
 
     ${modalFull(`
-      <h3 style="margin:1.5rem 0 0.75rem 0;">Household Members</h3>
-      <p style="opacity:0.8; font-size:0.9rem; margin-bottom:0.75rem;">
-        Invite family or roommates to share your pantry. They'll see real-time updates!
-      </p>
-      <div class="settings-list" id="members-list" style="margin-bottom: 1rem;">
-        <p style="opacity:0.6; text-align:center; padding:1rem;">Loading members...</p>
-      </div>
-      <div style="display:flex; gap:0.5rem;">
-        <button class="btn btn-secondary" id="invite-member-btn">Invite Member</button>
-        <button class="btn btn-secondary" id="leave-household-btn" style="background:rgba(179,106,94,0.1); border-color:rgba(179,106,94,0.3); color:#B36A5E;">Leave Household</button>
-      </div>
-    `)}
-
-    ${modalFull(`
       <h3 style="margin:1.5rem 0 0.75rem 0;">App Info</h3>
       <div class="settings-info">
         <p><strong>Name:</strong> Chef's Kiss</p>
@@ -3514,81 +3581,6 @@ async function openSettingsModal() {
         setTimeout(() => openSettingsModal(), 100);
       } else {
         showToast("❌ Failed to add category");
-      }
-    });
-  }
-
-  // Load and display household members
-  const membersList = document.getElementById("members-list");
-  if (membersList && window.db && window.auth && window.auth.isAuthenticated()) {
-    const members = await window.db.loadHouseholdMembers();
-    const currentUserId = window.auth.getCurrentUser()?.id;
-
-    if (members.length > 0) {
-      membersList.innerHTML = members.map(member => {
-        const isCurrentUser = member.user_id === currentUserId;
-        const roleLabel = member.role === 'owner' ? '👑 Owner' : member.role === 'admin' ? '⭐ Admin' : 'Member';
-        const canRemove = !isCurrentUser && member.role !== 'owner';
-
-        return `
-          <div class="settings-item">
-            <span>
-              ${member.email || 'Member'}
-              <small style="opacity:0.6; margin-left:0.5rem;">${roleLabel}</small>
-              ${isCurrentUser ? '<small style="opacity:0.6; margin-left:0.5rem;">(you)</small>' : ''}
-            </span>
-            ${canRemove ? `
-              <button class="btn-settings-remove" data-member-id="${member.user_id}">&times;</button>
-            ` : ''}
-          </div>
-        `;
-      }).join('');
-
-      // Wire up remove member buttons
-      const removeMemberBtns = document.querySelectorAll('.btn-settings-remove[data-member-id]');
-      removeMemberBtns.forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const memberId = btn.getAttribute('data-member-id');
-          if (confirm('Remove this member from your household?')) {
-            const success = await window.db.removeHouseholdMember(memberId);
-            if (success) {
-              showToast('✅ Member removed');
-              closeModal();
-              setTimeout(() => openSettingsModal(), 100);
-            } else {
-              showToast('❌ Failed to remove member');
-            }
-          }
-        });
-      });
-    } else {
-      membersList.innerHTML = '<p style="opacity:0.6; text-align:center; padding:1rem;">Only you in this household</p>';
-    }
-  }
-
-  // Wire up invite member button
-  const inviteBtn = document.getElementById('invite-member-btn');
-  if (inviteBtn) {
-    inviteBtn.addEventListener('click', () => {
-      openInviteMemberModal();
-    });
-  }
-
-  // Wire up leave household button
-  const leaveBtn = document.getElementById('leave-household-btn');
-  if (leaveBtn) {
-    leaveBtn.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to leave this household? You will lose access to all shared data.')) {
-        const success = await window.db.leaveHousehold();
-        if (success) {
-          showToast('✅ Left household');
-          closeModal();
-          // Reload auth to clear household
-          await window.auth.signOut();
-          setTimeout(() => window.location.reload(), 1000);
-        } else {
-          showToast('❌ Failed to leave household');
-        }
       }
     });
   }
