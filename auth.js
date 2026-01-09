@@ -71,15 +71,20 @@ async function loadUserHousehold() {
       .from('household_members')
       .select('household_id')
       .eq('user_id', currentUser.id)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Error loading household:', error);
       return;
     }
 
-    currentHouseholdId = data.household_id;
-    console.log('✅ Household loaded:', currentHouseholdId);
+    if (data) {
+      currentHouseholdId = data.household_id;
+      console.log('✅ Household loaded:', currentHouseholdId);
+    } else {
+      console.warn('⚠️ No household found for user');
+      currentHouseholdId = null;
+    }
   } catch (err) {
     console.error('Error in loadUserHousehold:', err);
   }
