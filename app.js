@@ -2,9 +2,19 @@
    CORE DATA MODELS
 --------------------------------------------------- */
 
-// Shared ID generator
+// Shared ID generator - generates proper UUIDs for Supabase compatibility
 function uid() {
-  return Math.random().toString(36).substr(2, 9);
+  // Use crypto.randomUUID() for proper UUID v4 generation
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+
+  // Fallback for older browsers - generate UUID v4 manually
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 }
 
 // Pantry - Multi-location data model
@@ -771,6 +781,8 @@ async function saveRecipe(existing) {
     existing.photo = photo || "";
     existing.instructions = instructions;
     existing.ingredients = ingredients;
+    existing.notes = existing.notes || "";  // Preserve existing notes
+    existing.tags = existing.tags || [];    // Preserve existing tags
     recipeToSync = existing;
   } else {
     const newRecipe = {
@@ -779,7 +791,9 @@ async function saveRecipe(existing) {
       servings: Number(servings || 0),
       photo: photo || "",
       instructions,
-      ingredients
+      ingredients,
+      notes: "",   // Add notes field
+      tags: []     // Add tags field
     };
     recipes.push(newRecipe);
     recipeToSync = newRecipe;
