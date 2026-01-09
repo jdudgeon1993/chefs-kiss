@@ -3186,20 +3186,93 @@ async function openSettingsModal() {
         ${categoriesList}
       </div>
       <div class="settings-add-row">
-        <input type="text" id="new-category-input" placeholder="Add new category...">
-        <input type="text" id="new-category-emoji" placeholder="📦" maxlength="2" style="width:60px; text-align:center;">
+        <input type="text" id="new-category-input" placeholder="Add new category..." style="flex: 1;">
+        <button class="btn btn-icon" id="emoji-picker-btn" type="button" title="Choose emoji">
+          <span id="selected-emoji">📦</span>
+        </button>
         <button class="btn btn-secondary" id="add-category-btn">Add</button>
+      </div>
+      <div id="emoji-picker" style="display: none; margin-top: 0.5rem; padding: 0.75rem; background: rgba(255,255,255,0.05); border-radius: 8px; max-height: 200px; overflow-y: auto;">
+        <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.5rem;">
+          <!-- Food & Drink -->
+          <button class="emoji-option" data-emoji="🍎">🍎</button>
+          <button class="emoji-option" data-emoji="🥬">🥬</button>
+          <button class="emoji-option" data-emoji="🥕">🥕</button>
+          <button class="emoji-option" data-emoji="🍅">🍅</button>
+          <button class="emoji-option" data-emoji="🥔">🥔</button>
+          <button class="emoji-option" data-emoji="🥦">🥦</button>
+          <button class="emoji-option" data-emoji="🌽">🌽</button>
+          <button class="emoji-option" data-emoji="🫑">🫑</button>
+
+          <button class="emoji-option" data-emoji="🥛">🥛</button>
+          <button class="emoji-option" data-emoji="🧀">🧀</button>
+          <button class="emoji-option" data-emoji="🥚">🥚</button>
+          <button class="emoji-option" data-emoji="🧈">🧈</button>
+          <button class="emoji-option" data-emoji="🍦">🍦</button>
+          <button class="emoji-option" data-emoji="🥩">🥩</button>
+          <button class="emoji-option" data-emoji="🍗">🍗</button>
+          <button class="emoji-option" data-emoji="🥓">🥓</button>
+
+          <button class="emoji-option" data-emoji="🐟">🐟</button>
+          <button class="emoji-option" data-emoji="🦐">🦐</button>
+          <button class="emoji-option" data-emoji="🥫">🥫</button>
+          <button class="emoji-option" data-emoji="🍞">🍞</button>
+          <button class="emoji-option" data-emoji="🥖">🥖</button>
+          <button class="emoji-option" data-emoji="🥐">🥐</button>
+          <button class="emoji-option" data-emoji="🍪">🍪</button>
+          <button class="emoji-option" data-emoji="🍰">🍰</button>
+
+          <button class="emoji-option" data-emoji="🧊">🧊</button>
+          <button class="emoji-option" data-emoji="❄️">❄️</button>
+          <button class="emoji-option" data-emoji="🧂">🧂</button>
+          <button class="emoji-option" data-emoji="🌶️">🌶️</button>
+          <button class="emoji-option" data-emoji="🫚">🫚</button>
+          <button class="emoji-option" data-emoji="🧄">🧄</button>
+          <button class="emoji-option" data-emoji="🧅">🧅</button>
+          <button class="emoji-option" data-emoji="🍯">🍯</button>
+
+          <button class="emoji-option" data-emoji="🫗">🫗</button>
+          <button class="emoji-option" data-emoji="🧃">🧃</button>
+          <button class="emoji-option" data-emoji="☕">☕</button>
+          <button class="emoji-option" data-emoji="🍵">🍵</button>
+          <button class="emoji-option" data-emoji="🥤">🥤</button>
+          <button class="emoji-option" data-emoji="🧉">🧉</button>
+          <button class="emoji-option" data-emoji="🍷">🍷</button>
+          <button class="emoji-option" data-emoji="🍺">🍺</button>
+
+          <button class="emoji-option" data-emoji="🍝">🍝</button>
+          <button class="emoji-option" data-emoji="🍕">🍕</button>
+          <button class="emoji-option" data-emoji="🌮">🌮</button>
+          <button class="emoji-option" data-emoji="🍜">🍜</button>
+          <button class="emoji-option" data-emoji="🍚">🍚</button>
+          <button class="emoji-option" data-emoji="🥗">🥗</button>
+          <button class="emoji-option" data-emoji="🥙">🥙</button>
+          <button class="emoji-option" data-emoji="🥪">🥪</button>
+
+          <button class="emoji-option" data-emoji="🍱">🍱</button>
+          <button class="emoji-option" data-emoji="🍛">🍛</button>
+          <button class="emoji-option" data-emoji="🍲">🍲</button>
+          <button class="emoji-option" data-emoji="🥘">🥘</button>
+          <button class="emoji-option" data-emoji="🍳">🍳</button>
+          <button class="emoji-option" data-emoji="🥞">🥞</button>
+          <button class="emoji-option" data-emoji="📦">📦</button>
+          <button class="emoji-option" data-emoji="🏺">🏺</button>
+        </div>
       </div>
     `)}
 
     ${modalFull(`
-      <h3 style="margin:1.5rem 0 0.75rem 0;">Share Pantry</h3>
+      <h3 style="margin:1.5rem 0 0.75rem 0;">Household Members</h3>
       <p style="opacity:0.8; font-size:0.9rem; margin-bottom:0.75rem;">
-        Generate a code to share your pantry with family or roommates. (Coming soon!)
+        Invite family or roommates to share your pantry. They'll see real-time updates!
       </p>
-      <button class="btn btn-secondary" id="generate-code-btn" disabled>
-        Generate Share Code
-      </button>
+      <div class="settings-list" id="members-list" style="margin-bottom: 1rem;">
+        <p style="opacity:0.6; text-align:center; padding:1rem;">Loading members...</p>
+      </div>
+      <div style="display:flex; gap:0.5rem;">
+        <button class="btn btn-secondary" id="invite-member-btn">Invite Member</button>
+        <button class="btn btn-secondary" id="leave-household-btn" style="background:rgba(179,106,94,0.1); border-color:rgba(179,106,94,0.3); color:#B36A5E;">Leave Household</button>
+      </div>
     `)}
 
     ${modalFull(`
@@ -3303,14 +3376,37 @@ async function openSettingsModal() {
     });
   }
 
+  // Wire up emoji picker
+  const emojiPickerBtn = document.getElementById("emoji-picker-btn");
+  const emojiPicker = document.getElementById("emoji-picker");
+  const selectedEmojiSpan = document.getElementById("selected-emoji");
+  let currentEmoji = '📦';
+
+  if (emojiPickerBtn && emojiPicker) {
+    emojiPickerBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'block' : 'none';
+    });
+
+    // Handle emoji selection
+    const emojiOptions = document.querySelectorAll(".emoji-option");
+    emojiOptions.forEach(option => {
+      option.addEventListener("click", (e) => {
+        e.preventDefault();
+        currentEmoji = option.getAttribute("data-emoji");
+        selectedEmojiSpan.textContent = currentEmoji;
+        emojiPicker.style.display = 'none';
+      });
+    });
+  }
+
   // Wire up add category button
   const addCatBtn = document.getElementById("add-category-btn");
   const newCatInput = document.getElementById("new-category-input");
-  const newCatEmoji = document.getElementById("new-category-emoji");
-  if (addCatBtn && newCatInput && newCatEmoji) {
+  if (addCatBtn && newCatInput) {
     addCatBtn.addEventListener("click", async () => {
       const newCategory = newCatInput.value.trim();
-      const emoji = newCatEmoji.value.trim() || '📦';
+      const emoji = currentEmoji;
 
       if (!newCategory) {
         showToast("⚠️ Please enter a category name");
@@ -3351,6 +3447,81 @@ async function openSettingsModal() {
         setTimeout(() => openSettingsModal(), 100);
       } else {
         showToast("❌ Failed to add category");
+      }
+    });
+  }
+
+  // Load and display household members
+  const membersList = document.getElementById("members-list");
+  if (membersList && window.db && window.auth && window.auth.isAuthenticated()) {
+    const members = await window.db.loadHouseholdMembers();
+    const currentUserId = window.auth.getCurrentUser()?.id;
+
+    if (members.length > 0) {
+      membersList.innerHTML = members.map(member => {
+        const isCurrentUser = member.user_id === currentUserId;
+        const roleLabel = member.role === 'owner' ? '👑 Owner' : member.role === 'admin' ? '⭐ Admin' : 'Member';
+        const canRemove = !isCurrentUser && member.role !== 'owner';
+
+        return `
+          <div class="settings-item">
+            <span>
+              ${member.email || 'Member'}
+              <small style="opacity:0.6; margin-left:0.5rem;">${roleLabel}</small>
+              ${isCurrentUser ? '<small style="opacity:0.6; margin-left:0.5rem;">(you)</small>' : ''}
+            </span>
+            ${canRemove ? `
+              <button class="btn-settings-remove" data-member-id="${member.user_id}">&times;</button>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+
+      // Wire up remove member buttons
+      const removeMemberBtns = document.querySelectorAll('.btn-settings-remove[data-member-id]');
+      removeMemberBtns.forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const memberId = btn.getAttribute('data-member-id');
+          if (confirm('Remove this member from your household?')) {
+            const success = await window.db.removeHouseholdMember(memberId);
+            if (success) {
+              showToast('✅ Member removed');
+              closeModal();
+              setTimeout(() => openSettingsModal(), 100);
+            } else {
+              showToast('❌ Failed to remove member');
+            }
+          }
+        });
+      });
+    } else {
+      membersList.innerHTML = '<p style="opacity:0.6; text-align:center; padding:1rem;">Only you in this household</p>';
+    }
+  }
+
+  // Wire up invite member button
+  const inviteBtn = document.getElementById('invite-member-btn');
+  if (inviteBtn) {
+    inviteBtn.addEventListener('click', () => {
+      openInviteMemberModal();
+    });
+  }
+
+  // Wire up leave household button
+  const leaveBtn = document.getElementById('leave-household-btn');
+  if (leaveBtn) {
+    leaveBtn.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to leave this household? You will lose access to all shared data.')) {
+        const success = await window.db.leaveHousehold();
+        if (success) {
+          showToast('✅ Left household');
+          closeModal();
+          // Reload auth to clear household
+          await window.auth.signOut();
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          showToast('❌ Failed to leave household');
+        }
       }
     });
   }
@@ -3441,6 +3612,97 @@ async function removeCategory(categoryId, categoryName) {
 }
 
 /* ---------------------------------------------------
+   HOUSEHOLD INVITE MODAL
+--------------------------------------------------- */
+
+async function openInviteMemberModal() {
+  const contentHTML = `
+    ${modalFull(`
+      <p style="margin-bottom:1rem; opacity:0.8;">
+        Generate an invite code to share with family or roommates. They can join your household and see all pantry items, recipes, and meal plans in real-time!
+      </p>
+      <div style="text-align:center; padding:2rem 1rem; background:rgba(138,154,91,0.1); border-radius:12px; margin-bottom:1rem;">
+        <div id="invite-code-display" style="font-size:2rem; font-weight:700; letter-spacing:0.25rem; color:#6a4f35; margin-bottom:0.5rem;">
+          ••••••••
+        </div>
+        <div id="invite-status" style="font-size:0.9rem; opacity:0.6;">
+          Generating code...
+        </div>
+      </div>
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <button class="btn btn-secondary" id="copy-invite-btn" disabled style="flex:1; min-width:120px;">
+          Copy Code
+        </button>
+        <button class="btn btn-secondary" id="copy-link-btn" disabled style="flex:1; min-width:120px;">
+          Copy Link
+        </button>
+      </div>
+      <p style="margin-top:1rem; font-size:0.85rem; opacity:0.6;">
+        ⏰ Code expires in 7 days
+      </p>
+    `)}
+  `;
+
+  openCardModal({
+    title: "Invite Member",
+    subtitle: "Share your kitchen with others",
+    contentHTML,
+    slideout: true,
+    actions: [
+      {
+        label: "Done",
+        class: "btn-primary",
+        onClick: closeModal
+      }
+    ]
+  });
+
+  // Generate invite code
+  if (window.db && window.auth && window.auth.isAuthenticated()) {
+    const invite = await window.db.createHouseholdInvite('member');
+
+    if (invite) {
+      const codeDisplay = document.getElementById('invite-code-display');
+      const statusDisplay = document.getElementById('invite-status');
+      const copyCodeBtn = document.getElementById('copy-invite-btn');
+      const copyLinkBtn = document.getElementById('copy-link-btn');
+
+      if (codeDisplay && statusDisplay) {
+        codeDisplay.textContent = invite.code;
+
+        const expiresDate = new Date(invite.expires_at);
+        const daysUntilExpiry = Math.ceil((expiresDate - new Date()) / (1000 * 60 * 60 * 24));
+        statusDisplay.textContent = `Valid for ${daysUntilExpiry} days`;
+
+        // Enable copy buttons
+        if (copyCodeBtn) {
+          copyCodeBtn.disabled = false;
+          copyCodeBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(invite.code);
+            showToast('📋 Code copied to clipboard!');
+          });
+        }
+
+        if (copyLinkBtn) {
+          const inviteLink = `${window.location.origin}/join/${invite.code}`;
+          copyLinkBtn.disabled = false;
+          copyLinkBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(inviteLink);
+            showToast('📋 Link copied to clipboard!');
+          });
+        }
+      }
+    } else {
+      const statusDisplay = document.getElementById('invite-status');
+      if (statusDisplay) {
+        statusDisplay.textContent = 'Failed to generate code';
+        statusDisplay.style.color = '#B36A5E';
+      }
+    }
+  }
+}
+
+/* ---------------------------------------------------
    SMOOTH SCROLL
 --------------------------------------------------- */
 
@@ -3463,6 +3725,105 @@ function setupSmoothScroll() {
 }
 
 /* ---------------------------------------------------
+   INVITE CODE HANDLER
+--------------------------------------------------- */
+
+async function handleInviteCode(code) {
+  // Show loading modal
+  openCardModal({
+    title: "Joining Household",
+    subtitle: "Processing your invite...",
+    contentHTML: `
+      ${modalFull(`
+        <div style="text-align:center; padding:2rem;">
+          <div style="font-size:2rem; margin-bottom:1rem;">🔄</div>
+          <p style="opacity:0.8;">Verifying invite code...</p>
+        </div>
+      `)}
+    `,
+    actions: []
+  });
+
+  // Check if user is authenticated
+  if (!window.auth || !window.auth.isAuthenticated()) {
+    // User needs to sign in first
+    closeModal();
+    showToast('⚠️ Please sign in or create an account to accept this invite');
+
+    // Open sign-in modal with invite code stored
+    sessionStorage.setItem('pendingInvite', code);
+    openSigninModal();
+    return;
+  }
+
+  // Fetch invite details
+  const invite = await window.db.getInviteByCode(code);
+
+  if (!invite) {
+    closeModal();
+    showToast('❌ Invalid or expired invite code');
+    return;
+  }
+
+  // Show confirmation modal
+  const householdName = invite.households?.name || 'Unknown Household';
+
+  openCardModal({
+    title: "Join Household",
+    subtitle: `You've been invited!`,
+    contentHTML: `
+      ${modalFull(`
+        <div style="text-align:center; padding:1.5rem;">
+          <div style="font-size:3rem; margin-bottom:1rem;">🏠</div>
+          <h3 style="margin-bottom:0.5rem; font-size:1.4rem;">${householdName}</h3>
+          <p style="opacity:0.7; margin-bottom:1.5rem;">
+            Join this household to share pantry items, recipes, and meal plans!
+          </p>
+          <div style="background:rgba(138,154,91,0.1); border-radius:8px; padding:1rem; margin-bottom:1rem;">
+            <p style="font-size:0.9rem; opacity:0.8;">
+              <strong>Invite Code:</strong> ${code}
+            </p>
+            <p style="font-size:0.85rem; opacity:0.6; margin-top:0.5rem;">
+              Role: ${invite.role === 'admin' ? '⭐ Admin' : 'Member'}
+            </p>
+          </div>
+        </div>
+      `)}
+    `,
+    slideout: true,
+    actions: [
+      {
+        label: "Join Household",
+        class: "btn-primary",
+        onClick: async () => {
+          // Accept the invite
+          const result = await window.db.acceptHouseholdInvite(code);
+
+          if (result.success) {
+            closeModal();
+            showToast('✅ Welcome to the household!');
+
+            // Reload auth to load new household
+            await window.auth.initAuth();
+
+            // Reload page to load household data
+            setTimeout(() => window.location.reload(), 1000);
+          } else {
+            closeModal();
+            showToast(`❌ ${result.error || 'Failed to join household'}`);
+          }
+        }
+      },
+      {
+        label: "Cancel",
+        class: "btn-secondary",
+        onClick: closeModal
+      }
+    ]
+  });
+}
+
+/* ---------------------------------------------------
    INITIALIZATION
 --------------------------------------------------- */
 
@@ -3470,6 +3831,26 @@ async function init() {
   // Initialize authentication first
   if (window.auth) {
     await window.auth.initAuth();
+  }
+
+  // Check for pending invite from sessionStorage (user just signed in)
+  const pendingInvite = sessionStorage.getItem('pendingInvite');
+  if (pendingInvite && window.auth && window.auth.isAuthenticated()) {
+    sessionStorage.removeItem('pendingInvite');
+    await handleInviteCode(pendingInvite);
+    return; // Skip rest of init, page will reload after accepting
+  }
+
+  // Check for invite code in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const inviteCode = urlParams.get('invite');
+
+  if (inviteCode) {
+    // Handle invite acceptance
+    await handleInviteCode(inviteCode);
+    // Clear invite param from URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+    return; // Skip rest of init, page will reload after accepting
   }
 
   // Migrate data structures (for localStorage data)
