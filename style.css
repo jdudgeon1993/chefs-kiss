@@ -816,7 +816,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.25rem;
-  background: rgba(156,175,136,0.12);
+  background: #FAF1E6;
   border-radius: 12px;
   cursor: pointer;
   user-select: none;
@@ -829,8 +829,8 @@ body {
 }
 
 .category-header:hover {
-  background: rgba(156,175,136,0.18);
-  border-color: rgba(156,175,136,0.3);
+  background: #FAF1E6;
+  border-color: #FAF1E6;
 }
 
 .category-header-left {
