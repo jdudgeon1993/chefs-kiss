@@ -13,7 +13,7 @@
 :root {
   /* Primary Colors */
   --color-header-purple: #7D667A;
-  --color-background-gingham: rgba(125, 143, 105, 0.15);
+  --gingham-green: rgba(125, 143, 105, 0.15); 
   --color-card-bg: #FFFEF9;
   --color-accent-olive: #8B9376;
   --color-text-primary: #3a3a3a;
