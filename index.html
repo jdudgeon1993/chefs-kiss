@@ -20,33 +20,64 @@
 </head>
 <body>
 
-  <!-- STICKY SIDEBAR (Shopping List) -->
+  <!-- DUAL-PURPOSE SIDEBAR: Master Pantry + Shopping List -->
   <aside class="shopping-sidebar" id="shopping-sidebar">
-    <div class="sidebar-header">
-      <h2>Shopping</h2>
-      <p class="sidebar-subtitle">Auto-updated</p>
-    </div>
 
-    <div class="shopping-add-inline">
-      <input
-        type="text"
-        id="user-item-name"
-        placeholder="Add item..."
-      >
-      <button class="btn-add-icon" id="btn-add-custom-item" title="Add custom item">
-        +
+    <!-- MASTER PANTRY SECTION -->
+    <section class="sidebar-section pantry-section">
+      <div class="sidebar-header">
+        <h2>MASTER PANTRY</h2>
+      </div>
+
+      <div class="pantry-table-container">
+        <table class="pantry-table">
+          <thead>
+            <tr>
+              <th class="pantry-col-item">ITEM</th>
+              <th class="pantry-col-oh">OH</th>
+              <th class="pantry-col-rs">RS</th>
+              <th class="pantry-col-av">AV</th>
+            </tr>
+          </thead>
+          <tbody id="pantry-table-body">
+            <!-- Pantry items will be injected here -->
+          </tbody>
+        </table>
+      </div>
+
+      <button class="btn btn-new-entry" id="btn-new-pantry-entry">
+        + NEW ENTRY
       </button>
-    </div>
+    </section>
 
-    <div id="shopping-list" class="shopping-list">
-      <!-- Shopping items injected here -->
-    </div>
+    <!-- SHOPPING LIST SECTION -->
+    <section class="sidebar-section shopping-section">
+      <div class="sidebar-header">
+        <h2>SHOPPING LIST</h2>
+      </div>
 
-    <div class="shopping-actions">
-      <button class="btn btn-primary btn-block" id="btn-checkout">
-        Checkout
-      </button>
-    </div>
+      <div class="shopping-add-inline">
+        <input
+          type="text"
+          id="user-item-name"
+          placeholder="Add item..."
+        >
+        <button class="btn-add-icon" id="btn-add-custom-item" title="Add custom item">
+          +
+        </button>
+      </div>
+
+      <div id="shopping-list" class="shopping-list">
+        <!-- Shopping items injected here -->
+      </div>
+
+      <div class="shopping-actions">
+        <button class="btn btn-primary btn-block" id="btn-checkout">
+          Checkout
+        </button>
+      </div>
+    </section>
+
   </aside>
 
   <!-- UNIFIED PURPLE HEADER BAR -->

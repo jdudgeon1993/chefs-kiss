@@ -136,7 +136,7 @@ body {
 }
 
 /* ---------------------------------------------------
-   STICKY SIDEBAR LAYOUT - Cottagecore
+   DUAL-PURPOSE SIDEBAR: Master Pantry + Shopping List
 --------------------------------------------------- */
 .shopping-sidebar {
   position: fixed;
@@ -144,40 +144,133 @@ body {
   top: 70px; /* Start below unified header */
   width: 340px;
   height: calc(100vh - 70px); /* Full height minus header */
-
   background: var(--color-card-bg);
-  border-right: 2px solid rgba(156,175,136,0.2);
-  box-shadow: 3px 0 20px rgba(156,175,136,0.12);
+  border-right: 2px solid rgba(139,147,118,0.3);
+  box-shadow: 3px 0 20px rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
-  padding: 2rem 1.75rem;
   overflow-y: auto;
   z-index: 100;
 }
 
+/* Sidebar Sections */
+.sidebar-section {
+  padding: 1.5rem;
+  flex-shrink: 0;
+}
+
+.pantry-section {
+  border-bottom: 3px solid rgba(139,147,118,0.2);
+  background: rgba(245,240,232,0.5);
+}
+
+.shopping-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
 
 .sidebar-header {
-  margin-bottom: 2rem;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid rgba(125,102,122,0.2);
-  position: relative;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(125,102,122,0.15);
 }
 
 .sidebar-header h2 {
-  font-size: 1.75rem;
-  color: #8b6f47;
-  margin-bottom: 0.5rem;
-  font-family: "Libre Baskerville", Georgia, serif;
-  text-shadow: 0 2px 4px rgba(156,175,136,0.1);
-  letter-spacing: 0.5px;
+  font-size: 0.95rem;
+  color: var(--color-pantry-header);
+  margin: 0;
+  font-family: "Lato", sans-serif;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
 }
 
-.sidebar-subtitle {
+/* Master Pantry Table */
+.pantry-table-container {
+  margin-bottom: 1rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.pantry-table {
+  width: 100%;
+  border-collapse: collapse;
   font-size: 0.9rem;
-  opacity: 0.75;
-  font-style: italic;
-  color: #9CAF88;
+}
+
+.pantry-table thead {
+  position: sticky;
+  top: 0;
+  background: var(--color-card-bg);
+  z-index: 10;
+}
+
+.pantry-table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0.5rem 0.35rem;
+  border-bottom: 2px solid var(--color-accent-olive);
+  color: var(--color-pantry-header);
+}
+
+.pantry-col-item {
+  width: 50%;
+}
+
+.pantry-col-oh,
+.pantry-col-rs,
+.pantry-col-av {
+  width: 16.66%;
+  text-align: center;
+}
+
+.pantry-table tbody tr {
+  border-bottom: 1px solid rgba(197,184,165,0.2);
+  transition: background 0.2s;
+}
+
+.pantry-table tbody tr:hover {
+  background: var(--color-pantry-hover);
+}
+
+.pantry-table td {
+  padding: 0.65rem 0.35rem;
+  color: var(--color-text-primary);
+}
+
+.pantry-table td:first-child {
   font-weight: 500;
+}
+
+.pantry-table td:not(:first-child) {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* New Entry Button */
+.btn-new-entry {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--btn-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+
+.btn-new-entry:hover {
+  background: var(--btn-primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139,147,118,0.3);
 }
 
 .main-content {
@@ -269,6 +362,20 @@ body {
     border-top: 3px solid rgba(156,175,136,0.2);
     order: 2;
     box-shadow: 0 -4px 20px rgba(156,175,136,0.12);
+  }
+
+  .pantry-table-container {
+    max-height: 250px;
+  }
+
+  .pantry-table th,
+  .pantry-table td {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.25rem;
+  }
+
+  .sidebar-header h2 {
+    font-size: 0.85rem;
   }
 
   .main-content {
