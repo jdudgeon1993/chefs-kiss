@@ -408,7 +408,18 @@
         const tabsContainer = document.getElementById('recipe-tabs');
         const cardDisplay = document.getElementById('recipe-card-display');
 
-        if (!tabsContainer || !window.recipes) return;
+        if (!tabsContainer) {
+          console.warn('Recipe tabs container not found');
+          return;
+        }
+
+        if (!window.recipes || window.recipes.length === 0) {
+          console.log('No recipes to display');
+          tabsContainer.innerHTML = '<p style="padding: 1rem; color: #999; font-style: italic;">No recipes yet. Click the + button to add your first recipe!</p>';
+          return;
+        }
+
+        console.log('Rendering', window.recipes.length, 'recipes');
 
         // Clear existing tabs
         tabsContainer.innerHTML = '';
@@ -527,6 +538,7 @@
       setInterval(function() {
         if (window.pantry && window.pantry.length !== lastPantryLength) {
           lastPantryLength = window.pantry.length;
+          console.log('Pantry changed, re-rendering...');
           if (window.renderPantryTable) {
             window.renderPantryTable();
           }
@@ -534,17 +546,42 @@
 
         if (window.recipes && window.recipes.length !== lastRecipesLength) {
           lastRecipesLength = window.recipes.length;
+          console.log('Recipes changed, re-rendering...', window.recipes.length, 'recipes');
           if (window.renderRecipeLedger) {
             window.renderRecipeLedger();
           }
         }
-      }, 500);
+      }, 300);
 
-      // Initial render after a delay to let app.js load
+      // Also watch for modal root changes (when modals close after saving)
+      const modalRoot = document.getElementById('modal-root');
+      if (modalRoot) {
+        const observer = new MutationObserver(function(mutations) {
+          // When modal is removed, check if data changed
+          const hasModal = modalRoot.querySelector('.modal-overlay');
+          if (!hasModal) {
+            console.log('Modal closed, refreshing data...');
+            setTimeout(function() {
+              if (window.renderPantryTable) window.renderPantryTable();
+              if (window.renderRecipeLedger) window.renderRecipeLedger();
+            }, 100);
+          }
+        });
+        observer.observe(modalRoot, { childList: true, subtree: true });
+      }
+
+      // Initial render after delays to let app.js load
       setTimeout(function() {
+        console.log('Initial render attempt 1...');
         if (window.renderPantryTable) window.renderPantryTable();
         if (window.renderRecipeLedger) window.renderRecipeLedger();
       }, 1000);
+
+      setTimeout(function() {
+        console.log('Initial render attempt 2...');
+        if (window.renderPantryTable) window.renderPantryTable();
+        if (window.renderRecipeLedger) window.renderRecipeLedger();
+      }, 2000);
     });
   </script>
 
