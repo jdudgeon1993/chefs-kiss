@@ -119,82 +119,94 @@
     </div>
   </div>
 
-  <!-- PANTRY + RECIPES (TWO-COLUMN WRAP) -->
-  <section class="section section-inventory">
-    <div class="two-column">
+  <!-- RECIPE LEDGER INTERFACE -->
+  <section class="recipe-ledger-section">
 
-      <!-- PANTRY -->
-      <div class="column column-pantry" id="pantry-section">
-        <header class="section-header">
-          <h2>Pantry</h2>
-          <p class="section-subtitle">
-            Your source of truth. Soft units, honest quantities, real locations.
-          </p>
-        </header>
+    <!-- Filter Ledger Search Bar -->
+    <div class="ledger-search-bar">
+      <input
+        type="text"
+        id="ledger-search"
+        class="ledger-search-input"
+        placeholder="Filter Ledger Index..."
+      >
+    </div>
 
-        <div class="pantry-toolbar">
-          <div class="pantry-filters">
-            <input
-              type="text"
-              id="pantry-search"
-              class="search-input"
-              placeholder="🔍 Search pantry..."
-            >
-            <select id="filter-category">
-              <option value="">All categories</option>
-              <option value="Meat">Meat</option>
-              <option value="Dairy">Dairy</option>
-              <option value="Produce">Produce</option>
-              <option value="Pantry">Pantry staples</option>
-              <option value="Frozen">Frozen</option>
-              <option value="Spices">Spices</option>
-              <option value="Other">Other</option>
-            </select>
-            <select id="sort-pantry">
-              <option value="alpha">A-Z</option>
-              <option value="lowStock">Low Stock First</option>
-              <option value="expiring">Expiring Soon</option>
-              <option value="recent">Recently Added</option>
-            </select>
+    <!-- Recipe Tabs (Index Card Style) -->
+    <div class="recipe-tabs" id="recipe-tabs">
+      <!-- Recipe tabs will be injected here by JS -->
+      <!-- Example:
+      <button class="recipe-tab active" data-recipe-id="123">Sausage & Potatoes</button>
+      <button class="recipe-tab" data-recipe-id="124">Bread</button>
+      -->
+    </div>
+
+    <!-- Single Recipe Card Display -->
+    <div class="recipe-card-display" id="recipe-card-display">
+      <!-- Active recipe card will be displayed here -->
+      <div class="recipe-ledger-card">
+
+        <!-- Recipe ID -->
+        <div class="recipe-ledger-id">№ <span id="current-recipe-id">1768891242568</span></div>
+
+        <!-- Recipe Title -->
+        <h1 class="recipe-ledger-title" id="current-recipe-title">Sausage & Potatoes</h1>
+
+        <!-- Metadata: Yield & Time -->
+        <div class="recipe-ledger-meta">
+          <span class="recipe-meta-item">
+            <strong>YIELD:</strong> <span id="current-recipe-yield">4</span>
+          </span>
+          <span class="recipe-meta-separator">|</span>
+          <span class="recipe-meta-item">
+            <strong>TIME:</strong> <span id="current-recipe-time">45min</span>
+          </span>
+        </div>
+
+        <!-- Two-Column Layout: Ingredients | Method -->
+        <div class="recipe-ledger-content">
+
+          <!-- Left Column: Ingredients -->
+          <div class="recipe-ledger-column">
+            <h3 class="recipe-ledger-heading">INGREDIENTS</h3>
+            <ul class="recipe-ingredients-list" id="current-recipe-ingredients">
+              <!-- Ingredients will be injected here -->
+              <li>1 Pkg Sausage</li>
+              <li>1 Bag Baby Potatoes</li>
+              <li>5 Strips Bacon</li>
+            </ul>
           </div>
+
+          <!-- Right Column: Method -->
+          <div class="recipe-ledger-column">
+            <h3 class="recipe-ledger-heading">METHOD</h3>
+            <div class="recipe-method-text" id="current-recipe-method">
+              <!-- Method will be injected here -->
+              <p>Cook for 45 minutes</p>
+            </div>
+          </div>
+
         </div>
 
-        <div id="pantry-display" class="pantry-list">
-          <!-- Ingredient cards injected here -->
+        <!-- Action Buttons -->
+        <div class="recipe-ledger-actions">
+          <button class="btn btn-edit-ledger" id="btn-edit-current-recipe">
+            EDIT LEDGER
+          </button>
+          <button class="btn btn-burn-card" id="btn-delete-current-recipe">
+            [ BURN CARD ]
+          </button>
         </div>
+
       </div>
 
-      <!-- RECIPES -->
-      <div class="column column-recipes" id="recipes-section">
-        <header class="section-header">
-          <h2>Recipes</h2>
-          <p class="section-subtitle">
-            A cozy recipe box that knows your pantry.
-          </p>
-        </header>
-
-        <div class="recipes-toolbar">
-          <div class="recipe-filters">
-            <input
-              type="text"
-              id="recipe-search"
-              class="search-input"
-              placeholder="🔍 Search recipes..."
-            >
-            <select id="filter-recipe-ready">
-              <option value="">All recipes</option>
-              <option value="ready">Ready to Cook</option>
-              <option value="missing">Missing Ingredients</option>
-            </select>
-          </div>
-        </div>
-
-        <div id="recipe-list" class="recipe-grid">
-          <!-- Recipe cards injected here -->
-        </div>
+      <!-- Empty State (when no recipe selected) -->
+      <div class="recipe-ledger-empty" id="recipe-ledger-empty" style="display: none;">
+        <p>No recipe selected. Use the tabs above or add a new recipe.</p>
       </div>
 
     </div>
+
   </section>
 
   </div> <!-- end main-content -->

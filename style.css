@@ -708,6 +708,284 @@ body {
 }
 
 /* ---------------------------------------------------
+   RECIPE LEDGER INTERFACE
+--------------------------------------------------- */
+.recipe-ledger-section {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Filter Ledger Search Bar */
+.ledger-search-bar {
+  margin-bottom: 1.5rem;
+}
+
+.ledger-search-input {
+  width: 100%;
+  max-width: 600px;
+  padding: 1rem 1.5rem;
+  font-size: 1rem;
+  border: 2px solid var(--color-accent-olive);
+  border-radius: 12px;
+  background: white;
+  color: var(--color-text-primary);
+  font-family: "Lato", sans-serif;
+  transition: all 0.2s;
+}
+
+.ledger-search-input:focus {
+  outline: none;
+  border-color: var(--color-header-purple);
+  box-shadow: 0 4px 16px rgba(125,102,122,0.15);
+}
+
+/* Recipe Tabs (Index Card Style) */
+.recipe-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.recipe-tab {
+  padding: 0.75rem 1.5rem;
+  background: var(--color-pantry-row);
+  border: 2px solid var(--color-recipe-border);
+  border-radius: 8px 8px 0 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  font-family: "Lato", sans-serif;
+}
+
+.recipe-tab:hover {
+  background: var(--color-card-bg);
+  border-color: var(--color-accent-olive);
+}
+
+.recipe-tab.active {
+  background: var(--color-recipe-accent);
+  border-color: var(--color-recipe-accent);
+  color: white;
+  font-weight: 600;
+}
+
+/* Recipe Card Display */
+.recipe-card-display {
+  min-height: 500px;
+}
+
+.recipe-ledger-card {
+  background: var(--color-card-bg);
+  border: 3px solid var(--color-recipe-border);
+  border-radius: 16px;
+  padding: 3rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+}
+
+/* Recipe ID */
+.recipe-ledger-id {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  margin-bottom: 1rem;
+  letter-spacing: 0.5px;
+}
+
+/* Recipe Title */
+.recipe-ledger-title {
+  font-size: 3rem;
+  font-family: "Libre Baskerville", Georgia, serif;
+  color: var(--color-pantry-header);
+  margin-bottom: 1rem;
+  font-weight: 400;
+  line-height: 1.2;
+  text-align: center;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--color-recipe-accent);
+}
+
+/* Recipe Metadata */
+.recipe-ledger-meta {
+  text-align: center;
+  margin: 2rem 0;
+  padding: 1rem;
+  background: rgba(212,165,116,0.1);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: var(--color-text-primary);
+}
+
+.recipe-meta-item {
+  display: inline-block;
+  margin: 0 0.75rem;
+}
+
+.recipe-meta-item strong {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.recipe-meta-separator {
+  color: var(--color-recipe-accent);
+  font-weight: bold;
+  margin: 0 0.5rem;
+}
+
+/* Two-Column Layout: Ingredients | Method */
+.recipe-ledger-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  margin: 2.5rem 0;
+  padding: 2rem 0;
+  border-top: 1px solid rgba(197,184,165,0.3);
+  border-bottom: 1px solid rgba(197,184,165,0.3);
+}
+
+.recipe-ledger-column {
+  min-height: 200px;
+}
+
+.recipe-ledger-heading {
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--color-pantry-header);
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--color-accent-olive);
+  font-family: "Lato", sans-serif;
+}
+
+/* Ingredients List */
+.recipe-ingredients-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.recipe-ingredients-list li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(197,184,165,0.2);
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.recipe-ingredients-list li:before {
+  content: "• ";
+  color: var(--color-recipe-accent);
+  font-weight: bold;
+  font-size: 1.2rem;
+  margin-right: 0.5rem;
+}
+
+/* Method Text */
+.recipe-method-text {
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.recipe-method-text p {
+  margin-bottom: 1rem;
+}
+
+/* Action Buttons */
+.recipe-ledger-actions {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  margin-top: 2.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(197,184,165,0.3);
+}
+
+.btn-edit-ledger {
+  background: var(--btn-edit);
+  color: white;
+  padding: 1rem 2.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: "Lato", sans-serif;
+}
+
+.btn-edit-ledger:hover {
+  background: #6D566A;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(125,102,122,0.3);
+}
+
+.btn-burn-card {
+  background: transparent;
+  color: var(--btn-danger);
+  padding: 1rem 2.5rem;
+  border: 2px solid var(--btn-danger);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: "Lato", sans-serif;
+}
+
+.btn-burn-card:hover {
+  background: var(--btn-danger);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(200,107,107,0.3);
+}
+
+/* Empty State */
+.recipe-ledger-empty {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--color-text-secondary);
+  font-size: 1.1rem;
+  font-style: italic;
+}
+
+/* Responsive: Stack columns on mobile */
+@media (max-width: 768px) {
+  .recipe-ledger-content {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .recipe-ledger-title {
+    font-size: 2rem;
+  }
+
+  .recipe-ledger-card {
+    padding: 2rem 1.5rem;
+  }
+
+  .recipe-ledger-actions {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .btn-edit-ledger,
+  .btn-burn-card {
+    width: 100%;
+  }
+}
+
+/* ---------------------------------------------------
    BUTTONS - Cottagecore
 --------------------------------------------------- */
 .btn {
