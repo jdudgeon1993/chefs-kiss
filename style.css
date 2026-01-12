@@ -41,17 +41,19 @@ html {
 }
 
 body {
+    margin: 0; 
+    font-family: "Palatino", serif; 
+    color: var(--text-dark);
     background: var(--warm-white);
     background-image: 
-        /* The Vertical Stripes */
         linear-gradient(90deg, var(--gingham-green) 50%, transparent 50%), 
-        /* The Horizontal Stripes */
         linear-gradient(var(--gingham-green) 50%, transparent 50%);
-    
-    /* This controls the "tightness" of the pattern (50px squares) */
-    background-size: 50px 50px; 
+    /* Shrink this number to make the squares smaller */
+    background-size: 20px 20px; 
     background-attachment: fixed;
+    perspective: 1500px;
 }
+
 
 
 /* ---------------------------------------------------
