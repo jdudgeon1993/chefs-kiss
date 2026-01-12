@@ -217,56 +217,5 @@
     <!-- JS will inject modals here -->
   </div>
 
-  <!-- Simple header icon wiring -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Stats icon opens dashboard
-      const statsBtn = document.getElementById('btn-stats');
-      const dashboardModal = document.getElementById('dashboard-modal');
-      const dashboardClose = document.getElementById('dashboard-modal-close');
-      const dashboardOverlay = document.querySelector('.dashboard-modal-overlay');
-
-      if (statsBtn && dashboardModal) {
-        statsBtn.addEventListener('click', function() {
-          dashboardModal.style.display = 'block';
-        });
-      }
-
-      if (dashboardClose) {
-        dashboardClose.addEventListener('click', function() {
-          dashboardModal.style.display = 'none';
-        });
-      }
-
-      if (dashboardOverlay) {
-        dashboardOverlay.addEventListener('click', function(e) {
-          if (e.target === dashboardOverlay) {
-            dashboardModal.style.display = 'none';
-          }
-        });
-      }
-
-      // Household icon opens settings (since it's account/household settings)
-      const householdBtn = document.getElementById('btn-household');
-      if (householdBtn) {
-        householdBtn.addEventListener('click', function() {
-          if (window.openSettingsModal) {
-            window.openSettingsModal();
-          }
-        });
-      }
-
-      // New Pantry Entry button
-      const btnNewPantryEntry = document.getElementById('btn-new-pantry-entry');
-      if (btnNewPantryEntry) {
-        btnNewPantryEntry.addEventListener('click', function() {
-          if (window.openIngredientModal) {
-            window.openIngredientModal(null);
-          }
-        });
-      }
-    });
-  </script>
-
 </body>
 </html>
