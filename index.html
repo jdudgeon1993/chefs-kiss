@@ -102,18 +102,35 @@
         <h2>Recipe Box</h2>
       </div>
 
-      <!-- Recipe search and filters -->
+      <!-- Recipe search bar -->
       <div class="recipes-controls">
-        <input type="text" id="recipe-search" placeholder="Search recipes..." class="recipe-search-input">
-        <select id="filter-recipe-ready" class="recipe-filter-select">
-          <option value="">All recipes</option>
-          <option value="ready">Ready to Cook</option>
-          <option value="missing">Missing Ingredients</option>
-        </select>
+        <input type="text" id="recipe-search-ledger" placeholder="Search recipes..." class="recipe-search-input">
       </div>
 
-      <!-- App.js renders recipe cards here -->
-      <div id="recipe-list" class="recipe-list"></div>
+      <!-- Recipe index tabs -->
+      <div class="recipe-index-tabs" id="recipe-index-tabs">
+        <!-- Tabs will be rendered here -->
+      </div>
+
+      <!-- Single recipe card display with stack effect -->
+      <div class="recipe-card-stack-container">
+        <!-- Stack effect cards (visual only) -->
+        <div class="recipe-card-stack-back-3"></div>
+        <div class="recipe-card-stack-back-2"></div>
+        <div class="recipe-card-stack-back-1"></div>
+
+        <!-- Front card (active recipe) -->
+        <div class="recipe-card-stack-front" id="recipe-card-front">
+          <!-- Recipe details will be rendered here -->
+        </div>
+
+        <!-- Navigation buttons -->
+        <button class="recipe-nav-btn recipe-nav-prev" id="recipe-nav-prev" title="Previous Recipe">‹</button>
+        <button class="recipe-nav-btn recipe-nav-next" id="recipe-nav-next" title="Next Recipe">›</button>
+      </div>
+
+      <!-- Hidden: App.js renders recipe cards here (for data only) -->
+      <div id="recipe-list" class="recipe-list" style="display: none;"></div>
     </section>
 
     <!-- MASTER PANTRY SECTION -->
@@ -217,55 +234,162 @@
     <!-- JS will inject modals here -->
   </div>
 
-  <!-- Simple header icon wiring -->
+  <!-- Recipe Stack View Script -->
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Stats icon opens dashboard
-      const statsBtn = document.getElementById('btn-stats');
-      const dashboardModal = document.getElementById('dashboard-modal');
-      const dashboardClose = document.getElementById('dashboard-modal-close');
-      const dashboardOverlay = document.querySelector('.dashboard-modal-overlay');
+    (function() {
+      let currentRecipeIndex = 0;
+      let filteredRecipes = [];
 
-      if (statsBtn && dashboardModal) {
-        statsBtn.addEventListener('click', function() {
-          dashboardModal.style.display = 'block';
+      function initRecipeStackView() {
+        // Wait for window.recipes to be available
+        if (!window.recipes || window.recipes.length === 0) {
+          setTimeout(initRecipeStackView, 500);
+          return;
+        }
+
+        filteredRecipes = [...window.recipes];
+        renderIndexTabs();
+        renderCurrentRecipe();
+        setupNavigation();
+        setupSearch();
+      }
+
+      function renderIndexTabs() {
+        const tabsContainer = document.getElementById('recipe-index-tabs');
+        if (!tabsContainer) return;
+
+        tabsContainer.innerHTML = '';
+
+        if (filteredRecipes.length === 0) {
+          tabsContainer.innerHTML = '<p style="text-align: center; opacity: 0.6; padding: 1rem;">No recipes yet. Click + to add your first recipe!</p>';
+          return;
+        }
+
+        filteredRecipes.forEach((recipe, index) => {
+          const tab = document.createElement('button');
+          tab.className = 'recipe-index-tab';
+          if (index === currentRecipeIndex) tab.classList.add('active');
+          tab.textContent = recipe.name;
+          tab.onclick = () => {
+            currentRecipeIndex = index;
+            renderCurrentRecipe();
+            renderIndexTabs();
+          };
+          tabsContainer.appendChild(tab);
         });
       }
 
-      if (dashboardClose) {
-        dashboardClose.addEventListener('click', function() {
-          dashboardModal.style.display = 'none';
-        });
-      }
-
-      if (dashboardOverlay) {
-        dashboardOverlay.addEventListener('click', function(e) {
-          if (e.target === dashboardOverlay) {
-            dashboardModal.style.display = 'none';
+      function renderCurrentRecipe() {
+        const frontCard = document.getElementById('recipe-card-front');
+        if (!frontCard || filteredRecipes.length === 0) {
+          if (frontCard) {
+            frontCard.innerHTML = '<p style="text-align: center; opacity: 0.6; padding: 3rem;">No recipes to display</p>';
           }
+          return;
+        }
+
+        const recipe = filteredRecipes[currentRecipeIndex];
+
+        const ingredientsHTML = recipe.ingredients && recipe.ingredients.length > 0
+          ? recipe.ingredients.map(ing => `<li>${ing.qty || ''} ${ing.unit || ''} ${ing.name || ''}</li>`).join('')
+          : '<li style="opacity: 0.6;">No ingredients listed</li>';
+
+        const instructionsHTML = recipe.instructions || recipe.method || 'No instructions provided';
+
+        frontCard.innerHTML = `
+          <div class="recipe-card-id">№ ${recipe.id || ''}</div>
+          <h1 class="recipe-card-title">${recipe.name || 'Untitled Recipe'}</h1>
+
+          <div class="recipe-card-meta">
+            <span><strong>YIELD:</strong> ${recipe.servings || recipe.yield || '4'}</span>
+            <span class="meta-sep">|</span>
+            <span><strong>TIME:</strong> ${recipe.cookTime || recipe.time || '30min'}</span>
+          </div>
+
+          <div class="recipe-card-columns">
+            <div class="recipe-card-column">
+              <h3>INGREDIENTS</h3>
+              <ul>${ingredientsHTML}</ul>
+            </div>
+            <div class="recipe-card-column">
+              <h3>METHOD</h3>
+              <div class="recipe-method">${instructionsHTML}</div>
+            </div>
+          </div>
+
+          <div class="recipe-card-actions">
+            <button class="btn btn-edit-recipe" onclick="window.openRecipeModal(${JSON.stringify(recipe).replace(/"/g, '&quot;')})">EDIT LEDGER</button>
+            <button class="btn btn-delete-recipe" onclick="if(window.deleteRecipe) window.deleteRecipe(${JSON.stringify(recipe).replace(/"/g, '&quot;')})">[ BURN CARD ]</button>
+          </div>
+        `;
+      }
+
+      function setupNavigation() {
+        const prevBtn = document.getElementById('recipe-nav-prev');
+        const nextBtn = document.getElementById('recipe-nav-next');
+
+        if (prevBtn) {
+          prevBtn.onclick = () => {
+            if (filteredRecipes.length === 0) return;
+            currentRecipeIndex = (currentRecipeIndex - 1 + filteredRecipes.length) % filteredRecipes.length;
+            renderCurrentRecipe();
+            renderIndexTabs();
+          };
+        }
+
+        if (nextBtn) {
+          nextBtn.onclick = () => {
+            if (filteredRecipes.length === 0) return;
+            currentRecipeIndex = (currentRecipeIndex + 1) % filteredRecipes.length;
+            renderCurrentRecipe();
+            renderIndexTabs();
+          };
+        }
+      }
+
+      function setupSearch() {
+        const searchInput = document.getElementById('recipe-search-ledger');
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', function(e) {
+          const query = e.target.value.toLowerCase().trim();
+
+          if (!query) {
+            filteredRecipes = [...window.recipes];
+          } else {
+            filteredRecipes = window.recipes.filter(recipe =>
+              recipe.name.toLowerCase().includes(query) ||
+              (recipe.ingredients && recipe.ingredients.some(ing => ing.name.toLowerCase().includes(query)))
+            );
+          }
+
+          currentRecipeIndex = 0;
+          renderIndexTabs();
+          renderCurrentRecipe();
         });
       }
 
-      // Household icon opens settings (since it's account/household settings)
-      const householdBtn = document.getElementById('btn-household');
-      if (householdBtn) {
-        householdBtn.addEventListener('click', function() {
-          if (window.openSettingsModal) {
-            window.openSettingsModal();
+      // Watch for recipe changes
+      let lastRecipeCount = 0;
+      setInterval(() => {
+        if (window.recipes && window.recipes.length !== lastRecipeCount) {
+          lastRecipeCount = window.recipes.length;
+          filteredRecipes = [...window.recipes];
+          if (currentRecipeIndex >= filteredRecipes.length) {
+            currentRecipeIndex = Math.max(0, filteredRecipes.length - 1);
           }
-        });
-      }
+          renderIndexTabs();
+          renderCurrentRecipe();
+        }
+      }, 1000);
 
-      // New Pantry Entry button
-      const btnNewPantryEntry = document.getElementById('btn-new-pantry-entry');
-      if (btnNewPantryEntry) {
-        btnNewPantryEntry.addEventListener('click', function() {
-          if (window.openIngredientModal) {
-            window.openIngredientModal(null);
-          }
-        });
+      // Initialize when DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initRecipeStackView);
+      } else {
+        initRecipeStackView();
       }
-    });
+    })();
   </script>
 
 </body>

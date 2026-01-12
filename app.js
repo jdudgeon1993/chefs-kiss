@@ -4505,6 +4505,47 @@ async function init() {
     btnSettings.addEventListener("click", openSettingsModal);
   }
 
+  // Household button (opens settings since it's account/household settings)
+  const btnHousehold = document.getElementById("btn-household");
+  if (btnHousehold) {
+    btnHousehold.addEventListener("click", openSettingsModal);
+  }
+
+  // Stats button (opens dashboard modal)
+  const btnStats = document.getElementById("btn-stats");
+  const dashboardModal = document.getElementById("dashboard-modal");
+  if (btnStats && dashboardModal) {
+    btnStats.addEventListener("click", function() {
+      dashboardModal.style.display = 'block';
+    });
+  }
+
+  // Dashboard modal close handlers
+  const dashboardClose = document.getElementById("dashboard-modal-close");
+  const dashboardOverlay = document.querySelector(".dashboard-modal-overlay");
+
+  if (dashboardClose) {
+    dashboardClose.addEventListener("click", function() {
+      dashboardModal.style.display = 'none';
+    });
+  }
+
+  if (dashboardOverlay) {
+    dashboardOverlay.addEventListener("click", function(e) {
+      if (e.target === dashboardOverlay) {
+        dashboardModal.style.display = 'none';
+      }
+    });
+  }
+
+  // New Pantry Entry button
+  const btnNewPantryEntry = document.getElementById("btn-new-pantry-entry");
+  if (btnNewPantryEntry) {
+    btnNewPantryEntry.addEventListener("click", function() {
+      openIngredientModal(null);
+    });
+  }
+
   // Setup smooth scroll
   setupSmoothScroll();
 }
