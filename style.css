@@ -621,7 +621,8 @@ body {
 .unified-ledger {
   background: white;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: auto;
+  max-height: calc(100vh - 250px);
 }
 
 /* Unified Table Styling */
@@ -629,10 +630,11 @@ body {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
+  table-layout: fixed;
 }
 
 .unified-ledger-table thead th {
-  padding: 0.6rem 0.75rem;
+  padding: 0.5rem 0.5rem;
   font-size: 0.7rem;
   text-align: left;
   font-weight: 600;
@@ -646,6 +648,33 @@ body {
   z-index: 10;
 }
 
+/* Compact Column Widths to fit 850px */
+.unified-ledger-table .ledger-col-category {
+  width: 7%;
+}
+
+.unified-ledger-table .ledger-col-item {
+  width: 22%;
+}
+
+.unified-ledger-table .ledger-col-qty {
+  width: 8%;
+  text-align: center;
+}
+
+.unified-ledger-table .ledger-col-locations {
+  width: 20%;
+}
+
+.unified-ledger-table .ledger-col-expiry {
+  width: 10%;
+}
+
+.unified-ledger-table .ledger-col-actions {
+  width: 6%;
+  text-align: center;
+}
+
 /* Category Divider Rows */
 .ledger-category-divider {
   background: linear-gradient(135deg, #f8f4eb 0%, #f0ebe3 100%);
@@ -654,10 +683,13 @@ body {
 }
 
 .ledger-category-header-cell {
-  padding: 0.6rem 0.75rem !important;
+  padding: 0.5rem 0.5rem !important;
   font-size: 0.85rem;
   color: var(--color-pantry-header);
   font-family: "Libre Baskerville", Georgia, serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ledger-category-meta {
@@ -688,9 +720,12 @@ body {
 }
 
 .ledger-data-row td {
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 0.5rem;
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Low stock highlighting */
@@ -1897,6 +1932,24 @@ body {
     padding-top: 70px;
   }
 
+  /* Unified Ledger Tablet Adjustments */
+  .unified-ledger {
+    max-height: calc(100vh - 200px);
+    overflow: auto;
+  }
+
+  .unified-ledger-table {
+    font-size: 0.8rem;
+  }
+
+  .unified-ledger-table thead th {
+    padding: 0.5rem 0.4rem;
+  }
+
+  .ledger-data-row td {
+    padding: 0.5rem 0.4rem;
+  }
+
   .site-header {
     height: auto;
     min-height: 70px;
@@ -2075,12 +2128,21 @@ body {
   }
 
   /* Unified Ledger Mobile Adjustments */
+  .unified-ledger {
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .unified-ledger-table {
     font-size: 0.75rem;
+    min-width: 700px;
+    table-layout: auto;
   }
 
   .unified-ledger-table thead th {
-    padding: 0.5rem 0.4rem;
+    padding: 0.4rem 0.3rem;
     font-size: 0.65rem;
   }
 
@@ -2089,7 +2151,7 @@ body {
   }
 
   .ledger-category-header-cell {
-    padding: 0.5rem 0.4rem !important;
+    padding: 0.4rem 0.3rem !important;
     font-size: 0.8rem;
   }
 
