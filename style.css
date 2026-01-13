@@ -1816,8 +1816,8 @@ body {
 
   .shopping-sidebar {
     position: relative;
-    top: 0;
-    width: 100%;
+    ledt: 2.5%;
+    width: 95%;
     height: auto;
     border-right: none;
     border-top: 3px solid rgba(156,175,136,0.2);
