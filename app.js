@@ -2718,6 +2718,42 @@ window.addEventListener('resize', () => {
 });
 
 /* ---------------------------------------------------
+   PANTRY: POPULATE CATEGORY DROPDOWNS
+--------------------------------------------------- */
+
+// Dynamically populate category filter dropdown with all categories (including custom)
+async function populateCategoryDropdown() {
+  const filterDropdown = document.getElementById("filter-category-ledger");
+  if (!filterDropdown) return;
+
+  let categories = [];
+
+  if (window.db && window.auth && window.auth.isAuthenticated()) {
+    categories = await window.db.loadCategories();
+  } else {
+    // Fallback defaults if not authenticated
+    categories = ["Produce", "Dairy", "Meat", "Pantry", "Frozen", "Spices", "Bakery", "Beverages", "Other"];
+  }
+
+  // Save current selection
+  const currentValue = filterDropdown.value;
+
+  // Rebuild dropdown options
+  filterDropdown.innerHTML = '<option value="">All categories</option>';
+  categories.forEach(cat => {
+    const option = document.createElement('option');
+    option.value = cat;
+    option.textContent = cat;
+    filterDropdown.appendChild(option);
+  });
+
+  // Restore previous selection if it still exists
+  if (currentValue && categories.includes(currentValue)) {
+    filterDropdown.value = currentValue;
+  }
+}
+
+/* ---------------------------------------------------
    PANTRY FILTER
 --------------------------------------------------- */
 
@@ -3635,6 +3671,9 @@ async function loadUserData() {
 
     console.log('✅ User data loaded from database');
 
+    // Populate category dropdown with loaded categories
+    await populateCategoryDropdown();
+
     // Re-render everything
     renderPantry();
     renderRecipes();
@@ -3963,6 +4002,8 @@ async function openSettingsModal() {
       const success = await window.db.addCategory(newCategory, emoji);
       if (success) {
         showToast(`✅ Added category: ${emoji} ${newCategory}`);
+        // Refresh category dropdown to show new category
+        await populateCategoryDropdown();
         closeModal();
         setTimeout(() => openSettingsModal(), 100);
       } else {
@@ -4050,6 +4091,9 @@ async function removeCategory(categoryId, categoryName) {
       });
     }
   }
+
+  // Refresh category dropdown to remove deleted category
+  await populateCategoryDropdown();
 
   renderPantry();
   updateDashboard();
@@ -4388,6 +4432,9 @@ async function init() {
 
   // Load and display household name
   await loadHouseholdName();
+
+  // Populate category dropdown with all categories (including custom)
+  await populateCategoryDropdown();
 
   // Wire pantry filter
   const filterCategory = document.getElementById("filter-category");
