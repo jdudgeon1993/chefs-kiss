@@ -169,10 +169,10 @@ body {
    ------------------------------------------------------------------- */
 .shopping-sidebar {
   position: fixed;
-  left: 0;
-  top: 70px;
+  left: 25px;
+  top: 85px;
   width: 340px;
-  height: calc(100vh - 70px);
+  height: calc(87dvh);
   background: var(--color-card-bg);
   border-right: 2px solid rgba(139,147,118,0.3);
   box-shadow: 3px 0 20px rgba(0,0,0,0.08);
