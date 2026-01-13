@@ -2091,27 +2091,46 @@ function openCheckoutModal() {
     }
 
     return `
-    <div class="modal-ingredient-row">
-      <input type="text" value="${item.name}" disabled>
-      <input type="number" value="${item.actualQty}" placeholder="Qty">
-      <input type="text" value="${item.unit}" placeholder="Unit">
-      <select>
-        <option ${item.category === "Produce" ? "selected" : ""}>Produce</option>
-        <option ${item.category === "Dairy" ? "selected" : ""}>Dairy</option>
-        <option ${item.category === "Meat" ? "selected" : ""}>Meat</option>
-        <option ${item.category === "Pantry" ? "selected" : ""}>Pantry</option>
-        <option ${item.category === "Frozen" ? "selected" : ""}>Frozen</option>
-        <option ${item.category === "Spices" ? "selected" : ""}>Spices</option>
-        <option ${item.category === "Other" ? "selected" : ""}>Other</option>
-      </select>
-      <select>
-        <option>Pantry</option>
-        <option>Fridge</option>
-        <option>Freezer</option>
-        <option>Cellar</option>
-        <option>Other</option>
-      </select>
-      <input type="date">
+    <div class="checkout-item-card">
+      <div class="checkout-item-header">
+        <strong>${item.name}</strong>
+      </div>
+      <div class="checkout-item-fields">
+        <div class="checkout-field">
+          <label>Qty</label>
+          <input type="number" value="${item.actualQty}" placeholder="Qty">
+        </div>
+        <div class="checkout-field">
+          <label>Unit</label>
+          <input type="text" value="${item.unit}" placeholder="Unit">
+        </div>
+        <div class="checkout-field">
+          <label>Category</label>
+          <select>
+            <option ${item.category === "Produce" ? "selected" : ""}>Produce</option>
+            <option ${item.category === "Dairy" ? "selected" : ""}>Dairy</option>
+            <option ${item.category === "Meat" ? "selected" : ""}>Meat</option>
+            <option ${item.category === "Pantry" ? "selected" : ""}>Pantry</option>
+            <option ${item.category === "Frozen" ? "selected" : ""}>Frozen</option>
+            <option ${item.category === "Spices" ? "selected" : ""}>Spices</option>
+            <option ${item.category === "Other" ? "selected" : ""}>Other</option>
+          </select>
+        </div>
+        <div class="checkout-field">
+          <label>Storage</label>
+          <select>
+            <option>Pantry</option>
+            <option>Fridge</option>
+            <option>Freezer</option>
+            <option>Cellar</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="checkout-field">
+          <label>Expiry</label>
+          <input type="date">
+        </div>
+      </div>
     </div>
     `;
   }).join("");
@@ -2148,19 +2167,20 @@ function openCheckoutModal() {
 
 async function saveCheckoutItems() {
   const modal = document.querySelector(".modal-card");
-  const rows = modal.querySelectorAll(".modal-ingredient-row");
+  const rows = modal.querySelectorAll(".checkout-item-card");
 
   const itemsToSync = []; // Track items to sync to database
 
   rows.forEach((row) => {
+    const nameElement = row.querySelector(".checkout-item-header strong");
     const inputs = row.querySelectorAll("input, select");
 
-    const name = inputs[0].value.trim();
-    const qty = Number(inputs[1].value.trim() || 0);
-    const unit = inputs[2].value.trim();
-    const category = inputs[3].value.trim();
-    const storage = inputs[4].value.trim();
-    const expiry = inputs[5].value.trim();
+    const name = nameElement ? nameElement.textContent.trim() : "";
+    const qty = Number(inputs[0].value.trim() || 0);
+    const unit = inputs[1].value.trim();
+    const category = inputs[2].value.trim();
+    const storage = inputs[3].value.trim();
+    const expiry = inputs[4].value.trim();
 
     if (!name || qty <= 0) return;
 
