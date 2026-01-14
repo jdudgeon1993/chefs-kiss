@@ -196,6 +196,7 @@ async function handleRecipeChange(payload) {
     recipes = dbRecipes;
     localStorage.setItem("recipes", JSON.stringify(recipes));
     renderRecipes();
+    generateShoppingList(); // Regenerate shopping list since recipes changed
     updateDashboard();
     showRealtimeToast('Recipes updated by another user');
   }
@@ -211,6 +212,7 @@ async function handleMealPlanChange(payload) {
   if (dbPlanner) {
     planner = dbPlanner;
     localStorage.setItem("planner", JSON.stringify(planner));
+    generateShoppingList(); // Regenerate shopping list since meal plans changed
     updateDashboard();
     showRealtimeToast('Meal plan updated by another user');
   }
