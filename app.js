@@ -24,6 +24,9 @@ window.pantry = pantry; // Expose for bridge script
 // Track which categories are collapsed
 const pantryCollapsedCategories = new Set();
 
+// Cache for category objects (loaded once during init)
+let categoryObjectsCache = null;
+
 // Migrate old pantry data to new multi-location structure
 function migratePantryData() {
   let needsMigration = false;
@@ -515,9 +518,9 @@ async function openIngredientModal(existing = null) {
 function attachLocationRowListeners() {
   const removeButtons = document.querySelectorAll(".modal-remove-row");
   removeButtons.forEach(btn => {
-    btn.onclick = (e) => {
+    btn.addEventListener("click", (e) => {
       e.target.closest(".modal-location-row").remove();
-    };
+    });
   });
 }
 
@@ -790,12 +793,12 @@ function openRecipeModal(existing = null) {
 function attachIngredientRowListeners() {
   const removeButtons = document.querySelectorAll(".modal-ingredient-row .modal-remove-row");
   removeButtons.forEach(btn => {
-    btn.onclick = (e) => {
+    btn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       const row = e.target.closest(".modal-ingredient-row");
       if (row) row.remove();
-    };
+    });
   });
 }
 
@@ -1713,6 +1716,24 @@ function generateShoppingList() {
     }
   });
 
+  // Merge custom shopping items from database
+  if (window.customShoppingItems && Array.isArray(window.customShoppingItems)) {
+    window.customShoppingItems.forEach(dbItem => {
+      // Check if this custom item already exists in the shopping list
+      const existing = findShoppingItem(dbItem.name, dbItem.unit);
+      if (!existing) {
+        // Add custom item to shopping list
+        addShoppingItem({
+          name: dbItem.name,
+          qty: dbItem.quantity || 1,
+          unit: dbItem.unit || 'pcs',
+          category: "Other",
+          source: "Custom"
+        });
+      }
+    });
+  }
+
   saveShopping();
   renderShoppingList();
 }
@@ -1924,7 +1945,7 @@ function parseQuickAddInput(input) {
   return null;
 }
 
-function handleQuickAddShopping() {
+async function handleQuickAddShopping() {
   const input = document.getElementById("user-item-name");
   if (!input) return;
 
@@ -1947,6 +1968,20 @@ function handleQuickAddShopping() {
       source: "Custom",
       checked: false
     });
+
+    // Sync to database if authenticated - get the item we just added
+    if (window.db && window.auth && window.auth.isAuthenticated()) {
+      const addedItem = shopping[shopping.length - 1]; // Last added item
+      await window.db.saveShoppingItem({
+        id: addedItem.id,
+        name: addedItem.name,
+        qty: addedItem.actualQty,
+        unit: addedItem.unit,
+        checked: addedItem.checked || false
+      }).catch(err => {
+        console.error('Error syncing shopping item to database:', err);
+      });
+    }
 
     // Clear input
     input.value = '';
@@ -2045,7 +2080,7 @@ async function openCustomShoppingModal(prefillName = '') {
   }
 }
 
-function saveCustomShoppingItem() {
+async function saveCustomShoppingItem() {
   const modal = document.querySelector(".modal-card");
   const fields = modal.querySelectorAll(".modal-field input, .modal-field select");
   const values = Array.from(fields).map(f => f.value.trim());
@@ -2072,6 +2107,21 @@ function saveCustomShoppingItem() {
   });
 
   saveShopping();
+
+  // Sync to database if authenticated - get the item we just added
+  if (window.db && window.auth && window.auth.isAuthenticated()) {
+    const addedItem = shopping[shopping.length - 1]; // Last added item
+    await window.db.saveShoppingItem({
+      id: addedItem.id,
+      name: addedItem.name,
+      qty: addedItem.actualQty,
+      unit: addedItem.unit,
+      checked: addedItem.checked || false
+    }).catch(err => {
+      console.error('Error syncing shopping item to database:', err);
+    });
+  }
+
   renderShoppingList();
   closeModal();
 }
@@ -2331,30 +2381,7 @@ function updateDashboard() {
   }
 
   // Ready-to-cook recipes (recipes where all ingredients are available)
-  const reserved = calculateReservedIngredients();
-  const readyRecipes = recipes.filter(recipe => {
-    return recipe.ingredients.every(ing => {
-      // If recipe requires 0 quantity, it's considered missing
-      if (ing.qty <= 0) return false;
-
-      // Case-insensitive matching
-      const pantryItem = pantry.find(p =>
-        p.name.toLowerCase() === ing.name.toLowerCase() &&
-        p.unit.toLowerCase() === ing.unit.toLowerCase()
-      );
-      if (!pantryItem) return false;
-
-      // If pantry has 0 total, it's missing
-      if (pantryItem.totalQty <= 0) return false;
-
-      // Normalize to lowercase for case-insensitive matching
-      const key = `${ing.name.toLowerCase()}|${ing.unit.toLowerCase()}`;
-      const reservedQty = reserved[key] || 0;
-      const available = pantryItem.totalQty - reservedQty;
-
-      return available >= ing.qty;
-    });
-  });
+  const readyRecipes = calculateReadyRecipes();
 
   const readyEl = document.getElementById("dash-ready-recipes");
   if (readyEl) {
@@ -2470,21 +2497,7 @@ function renderReadyToCookRecipes() {
   if (!container) return;
 
   // Calculate ready recipes
-  const reserved = calculateReservedIngredients();
-  const readyRecipes = recipes.filter(recipe => {
-    return recipe.ingredients.every(ing => {
-      if (ing.qty <= 0) return false;
-      const pantryItem = pantry.find(p =>
-        p.name.toLowerCase() === ing.name.toLowerCase() &&
-        p.unit.toLowerCase() === ing.unit.toLowerCase()
-      );
-      if (!pantryItem || pantryItem.totalQty <= 0) return false;
-      const key = `${ing.name.toLowerCase()}|${ing.unit.toLowerCase()}`;
-      const reservedQty = reserved[key] || 0;
-      const available = pantryItem.totalQty - reservedQty;
-      return available >= ing.qty;
-    });
-  });
+  const readyRecipes = calculateReadyRecipes();
 
   // Only show if there are ready recipes (limit to 3)
   if (readyRecipes.length === 0) {
@@ -2790,7 +2803,7 @@ function getEarliestExpiryDays(item) {
   return earliest;
 }
 
-async function applyPantryFilter() {
+function applyPantryFilter() {
   const filterSelect = document.getElementById("filter-category");
   const searchInput = document.getElementById("pantry-search");
   const sortSelect = document.getElementById("sort-pantry");
@@ -2852,8 +2865,8 @@ async function applyPantryFilter() {
   // Calculate reserved quantities
   const reserved = calculateReservedIngredients();
 
-  // Load all categories (including custom ones) from database
-  const categoryObjects = await loadCategoryObjects();
+  // Use cached category objects (loaded during init)
+  const categoryObjects = categoryObjectsCache || [];
   const categoryMap = {};
   categoryObjects.forEach(cat => {
     categoryMap[cat.name] = cat.emoji || '📦';
@@ -3094,7 +3107,7 @@ function openQuickDepleteModal(item) {
   });
 }
 
-function saveQuickDeplete(item) {
+async function saveQuickDeplete(item) {
   const modal = document.querySelector(".modal-card");
   const inputs = modal.querySelectorAll(".deplete-qty-input");
 
@@ -3121,6 +3134,14 @@ function saveQuickDeplete(item) {
     item.totalQty = getTotalQty(item);
 
     savePantry();
+
+    // Sync to database if authenticated
+    if (window.db && window.auth && window.auth.isAuthenticated()) {
+      await window.db.savePantryItem(item).catch(err => {
+        console.error('Error syncing pantry item to database:', err);
+      });
+    }
+
     renderPantry();
     generateShoppingList();
     updateDashboard();
@@ -4464,6 +4485,11 @@ async function init() {
 
   // Populate category dropdown with all categories (including custom)
   await populateCategoryDropdown();
+
+  // Cache category objects for faster filtering
+  if (window.auth && window.auth.isAuthenticated()) {
+    categoryObjectsCache = await loadCategoryObjects();
+  }
 
   // Wire pantry filter
   const filterCategory = document.getElementById("filter-category");
