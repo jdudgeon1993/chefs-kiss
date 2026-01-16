@@ -308,7 +308,7 @@
         const instructionsHTML = recipe.instructions || recipe.method || 'No instructions provided';
 
         frontCard.innerHTML = `
-          <div class="recipe-card-id">№ ${recipe.id || ''}</div>
+          <div class="recipe-card-id">FROM THE ARCHIVE OF THE HEARTH</div>
           <h1 class="recipe-card-title">${recipe.name || 'Untitled Recipe'}</h1>
 
           <div class="recipe-card-meta">
@@ -319,11 +319,11 @@
 
           <div class="recipe-card-columns">
             <div class="recipe-card-column">
-              <h3>INGREDIENTS</h3>
+              <h3>Ingredients</h3>
               <ul>${ingredientsHTML}</ul>
             </div>
             <div class="recipe-card-column">
-              <h3>METHOD</h3>
+              <h3>Preparation</h3>
               <div class="recipe-method">${instructionsHTML}</div>
             </div>
           </div>
