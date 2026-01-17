@@ -2405,74 +2405,8 @@ function getDaysUntilExpiry(expiryDate) {
 }
 
 function updateDashboard() {
-  // Today's meals
-  const today = new Date().toISOString().split("T")[0];
-  const todayMeals = getPlannedMeals(today);
-  const todayMealEl = document.getElementById("dash-today-meal");
-  if (todayMealEl) {
-    if (todayMeals.length === 0) {
-      todayMealEl.textContent = "Not planned";
-    } else if (todayMeals.length === 1) {
-      const recipe = getRecipe(todayMeals[0].recipeId);
-      todayMealEl.textContent = recipe ? recipe.name : "Unknown";
-    } else {
-      todayMealEl.textContent = `${todayMeals.length} meals`;
-    }
-  }
-
-  // Ready-to-cook recipes (recipes where all ingredients are available)
-  const readyRecipes = calculateReadyRecipes();
-
-  const readyEl = document.getElementById("dash-ready-recipes");
-  if (readyEl) {
-    readyEl.textContent = readyRecipes.length;
-  }
-
-  // Pantry count
-  const pantryCountEl = document.getElementById("dash-pantry-count");
-  if (pantryCountEl) {
-    pantryCountEl.textContent = pantry.length;
-  }
-
-  // Expired ingredients (check across all locations)
-  const now = new Date();
-  const expired = pantry.filter(item => {
-    return item.locations.some(loc => {
-      if (!loc.expiry) return false;
-      const expiryDate = new Date(loc.expiry);
-      return expiryDate < now;
-    });
-  });
-
-  const expiredEl = document.getElementById("dash-expired-count");
-  if (expiredEl) {
-    expiredEl.textContent = expired.length;
-  }
-
-  // Meals planned this week (count total meals, not just days)
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 6); // Saturday
-
-  let weekPlanned = 0;
-  Object.keys(planner).forEach(dateStr => {
-    const date = new Date(dateStr);
-    if (date >= startOfWeek && date <= endOfWeek) {
-      weekPlanned += planner[dateStr].length;
-    }
-  });
-
-  const weekPlannedEl = document.getElementById("dash-week-planned");
-  if (weekPlannedEl) {
-    weekPlannedEl.textContent = weekPlanned;
-  }
-
-  // Render today's meals section
-  renderTodaysMeals();
-
-  // Render ready to cook recipes section
-  renderReadyToCookRecipes();
+  // Dashboard removed - this function is now a no-op
+  // Kept for backwards compatibility with existing code
 }
 
 function renderTodaysMeals() {
@@ -4668,33 +4602,6 @@ async function init() {
   const btnHousehold = document.getElementById("btn-household");
   if (btnHousehold) {
     btnHousehold.addEventListener("click", openSettingsModal);
-  }
-
-  // Stats button (opens dashboard modal)
-  const btnStats = document.getElementById("btn-stats");
-  const dashboardModal = document.getElementById("dashboard-modal");
-  if (btnStats && dashboardModal) {
-    btnStats.addEventListener("click", function() {
-      dashboardModal.style.display = 'block';
-    });
-  }
-
-  // Dashboard modal close handlers
-  const dashboardClose = document.getElementById("dashboard-modal-close");
-  const dashboardOverlay = document.querySelector(".dashboard-modal-overlay");
-
-  if (dashboardClose) {
-    dashboardClose.addEventListener("click", function() {
-      dashboardModal.style.display = 'none';
-    });
-  }
-
-  if (dashboardOverlay) {
-    dashboardOverlay.addEventListener("click", function(e) {
-      if (e.target === dashboardOverlay) {
-        dashboardModal.style.display = 'none';
-      }
-    });
   }
 
   // New Pantry Entry button
