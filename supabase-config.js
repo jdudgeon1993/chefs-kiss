@@ -18,14 +18,47 @@
 const SUPABASE_URL = 'https://exojuwforrrtewccqjfu.supabase.co';  // e.g., 'https://xxxxx.supabase.co'
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4b2p1d2ZvcnJydGV3Y2NxamZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5NjYwNzcsImV4cCI6MjA4MjU0MjA3N30.ZE-vLmDg9y4FxLby3AEOGYyJcYLk0Tvazwl94CdzjUI';  // Your anon/public key
 
-// Initialize Supabase client (using window.supabaseClient to avoid conflicts)
-window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
 // Helper to check if Supabase is configured
 window.isSupabaseConfigured = function() {
   return SUPABASE_URL !== 'YOUR_SUPABASE_PROJECT_URL' &&
          SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY';
 };
+
+// Clear any stale auth locks before initialization
+try {
+  const lockKey = 'supabase.auth.token';
+  const storageKeys = Object.keys(localStorage);
+  storageKeys.forEach(key => {
+    if (key.includes('lock') && key.includes('supabase')) {
+      localStorage.removeItem(key);
+    }
+  });
+} catch (err) {
+  console.warn('Could not clear stale locks:', err);
+}
+
+// Initialize Supabase client with proper configuration
+window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce',
+    // Reduce lock timeout to prevent hanging
+    lock: {
+      acquireTimeout: 5000, // 5 seconds instead of default 30
+      retryInterval: 100
+    }
+  },
+  db: {
+    schema: 'public'
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'chefs-kiss-app'
+    }
+  }
+});
 
 // Log configuration status
 if (window.isSupabaseConfigured()) {
