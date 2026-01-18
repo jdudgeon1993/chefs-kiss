@@ -14,8 +14,9 @@ let currentHouseholdId = null;
 
 /**
  * Initialize auth - Check for existing session on page load
+ * Includes retry logic for AbortError issues
  */
-async function initAuth() {
+async function initAuth(retryCount = 0) {
   if (!window.isSupabaseConfigured()) {
     console.log('⚠️ Supabase not configured - running in offline mode');
     updateAuthUI(null);
@@ -38,36 +39,72 @@ async function initAuth() {
       updateAuthUI(null);
     }
   } catch (err) {
+    // Handle AbortError with retry logic
+    if (err.name === 'AbortError' && retryCount < 3) {
+      console.warn(`⚠️ Auth lock error (attempt ${retryCount + 1}/3), retrying...`);
+
+      // Wait briefly before retry (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, 500 * (retryCount + 1)));
+
+      return initAuth(retryCount + 1);
+    }
+
     console.error('Error initializing auth:', err);
+
+    // If it's still an AbortError after retries, clear localStorage and try once more
+    if (err.name === 'AbortError' && retryCount >= 3) {
+      console.warn('🔧 Clearing auth storage and retrying...');
+      try {
+        // Clear all Supabase auth items from localStorage
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('sb-')) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+
+        // Force page reload to reinitialize cleanly
+        console.log('🔄 Reloading page to complete auth reset...');
+        setTimeout(() => window.location.reload(), 1000);
+        return;
+      } catch (clearErr) {
+        console.error('Failed to clear auth storage:', clearErr);
+      }
+    }
+
     updateAuthUI(null);
   }
 
-  // Listen for auth state changes
-  window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
-    console.log('Auth state changed:', event);
+  // Listen for auth state changes (only set up once)
+  if (retryCount === 0) {
+    window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event);
 
-    if (event === 'SIGNED_IN') {
-      currentSession = session;
-      currentUser = session.user;
-      await loadUserHousehold();
-      updateAuthUI(currentUser);
+      if (event === 'SIGNED_IN') {
+        currentSession = session;
+        currentUser = session.user;
+        await loadUserHousehold();
+        updateAuthUI(currentUser);
 
-      // Update household name in utility bar
-      if (window.loadHouseholdName) {
-        await window.loadHouseholdName();
+        // Update household name in utility bar
+        if (window.loadHouseholdName) {
+          await window.loadHouseholdName();
+        }
+      } else if (event === 'SIGNED_OUT') {
+        currentSession = null;
+        currentUser = null;
+        currentHouseholdId = null;
+        updateAuthUI(null);
+
+        // Update household name in utility bar
+        if (window.loadHouseholdName) {
+          await window.loadHouseholdName();
+        }
       }
-    } else if (event === 'SIGNED_OUT') {
-      currentSession = null;
-      currentUser = null;
-      currentHouseholdId = null;
-      updateAuthUI(null);
-
-      // Update household name in utility bar
-      if (window.loadHouseholdName) {
-        await window.loadHouseholdName();
-      }
-    }
-  });
+    });
+  }
 }
 
 /**
