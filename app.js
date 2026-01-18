@@ -124,6 +124,12 @@ function savePlanner() {
   // Save to localStorage (for offline mode)
   localStorage.setItem("planner", JSON.stringify(planner));
   window.planner = planner; // Update window reference for calendar
+
+  // Invalidate reserved ingredients cache since planner changed
+  if (typeof invalidateReservedIngredientsCache === 'function') {
+    invalidateReservedIngredientsCache();
+  }
+
   // Note: Individual meal plans are synced to database when modified
 }
 
@@ -2450,7 +2456,30 @@ async function saveCheckoutItems() {
    DASHBOARD CALCULATIONS
 --------------------------------------------------- */
 
+// Cache for reserved ingredients calculation
+let reservedIngredientsCache = null;
+let plannerVersion = 0; // Increments when planner changes
+
+/**
+ * Invalidate reserved ingredients cache
+ * Call this whenever the planner is modified
+ */
+function invalidateReservedIngredientsCache() {
+  reservedIngredientsCache = null;
+  plannerVersion++;
+}
+
+/**
+ * Calculate reserved ingredients with caching
+ * Returns cached result if planner hasn't changed since last calculation
+ * @returns {Object} Map of ingredient keys to reserved quantities
+ */
 function calculateReservedIngredients() {
+  // Return cached result if available
+  if (reservedIngredientsCache !== null) {
+    return reservedIngredientsCache;
+  }
+
   // Calculate how much of each ingredient is reserved for planned meals (not yet cooked)
   const reserved = {};
 
@@ -2476,6 +2505,8 @@ function calculateReservedIngredients() {
     });
   });
 
+  // Cache the result
+  reservedIngredientsCache = reserved;
   return reserved;
 }
 
