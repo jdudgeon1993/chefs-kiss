@@ -96,6 +96,7 @@ function getRecipe(id) {
 
 // Planner (YYYY-MM-DD → [{id, recipeId, mealType, cooked}])
 let planner = JSON.parse(localStorage.getItem("planner") || "{}");
+window.planner = planner; // Expose for calendar to access
 
 // Migrate old planner format (single recipeId) to new format (array of meals)
 function migratePlannerData() {
@@ -122,6 +123,7 @@ function migratePlannerData() {
 function savePlanner() {
   // Save to localStorage (for offline mode)
   localStorage.setItem("planner", JSON.stringify(planner));
+  window.planner = planner; // Update window reference for calendar
   // Note: Individual meal plans are synced to database when modified
 }
 
@@ -3880,7 +3882,7 @@ async function openSettingsModal() {
       <h3 style="margin:1.5rem 0 0.75rem 0;">App Info</h3>
       <div class="settings-info">
         <p><strong>Name:</strong> Chef's Kiss</p>
-        <p><strong>Version:</strong> 1.5.0</p>
+        <p><strong>Version:</strong> 4.0</p>
         <p><strong>Description:</strong> Cozy kitchen management for modern cooks</p>
         <p style="opacity:0.7; font-size:0.85rem; margin-top:0.5rem;">
           Track your pantry, plan meals, and build shopping lists—without the overwhelm.
@@ -4656,5 +4658,10 @@ function resetAllData() {
   // Reload page
   location.reload();
 }
+
+// Expose functions to window for calendar integration
+window.openDayModal = openDayModal;
+window.openCookNowModal = openCookNowModal;
+window.markMealCooked = markMealCooked;
 
 document.addEventListener("DOMContentLoaded", init);

@@ -76,7 +76,6 @@
         <span id="utility-time">09:39 AM</span>
       </div>
       <nav class="header-nav">
-        <button class="btn-header-icon" id="btn-household" title="Accounts & Households">📁</button>
         <button class="btn-header-icon" id="btn-settings" title="Settings">⚙️</button>
       </nav>
     </div>
@@ -1180,20 +1179,32 @@
       }
 
       async function loadScheduledMeals() {
-        // Load scheduled meals from Supabase or localStorage
-        // For now, check if mealPlan exists in window (from app.js)
-        if (window.mealPlan && Array.isArray(window.mealPlan)) {
-          scheduledMeals = {};
-          window.mealPlan.forEach(meal => {
-            const dateKey = meal.date;
-            if (!scheduledMeals[dateKey]) {
-              scheduledMeals[dateKey] = [];
+        // Load from app.js planner object (date keys -> meal arrays)
+        scheduledMeals = {};
+
+        if (window.planner && typeof window.planner === 'object') {
+          Object.keys(window.planner).forEach(dateKey => {
+            const meals = window.planner[dateKey];
+            if (Array.isArray(meals) && meals.length > 0) {
+              scheduledMeals[dateKey] = meals.map(meal => {
+                // Get recipe name from window.recipes
+                let recipeName = 'Unknown Recipe';
+                if (window.recipes) {
+                  const recipe = window.recipes.find(r => r.id === meal.recipeId);
+                  if (recipe) {
+                    recipeName = recipe.name;
+                  }
+                }
+
+                return {
+                  id: meal.id,
+                  recipeId: meal.recipeId,
+                  recipeName: recipeName,
+                  mealType: meal.mealType || 'Dinner',
+                  cooked: meal.cooked || false
+                };
+              });
             }
-            scheduledMeals[dateKey].push({
-              recipeId: meal.recipeId,
-              recipeName: meal.recipeName || 'Unknown Recipe',
-              cooked: meal.cooked || false
-            });
           });
         }
       }
@@ -1477,35 +1488,19 @@
           return;
         }
 
-        // Use existing Cook Now functionality from app.js
-        // This should deplete pantry ingredients
-        if (window.openCookingModal) {
-          window.openCookingModal(recipe);
+        // Use existing Cook Now modal from app.js
+        if (window.openCookNowModal) {
+          window.openCookNowModal(recipe, meal.dateKey, meal.id);
         } else {
-          alert('Cooking functionality not available. Please ensure app.js is loaded.');
+          alert('Cook Now functionality not available');
         }
-
-        // Mark as cooked
-        meal.cooked = true;
-        saveMealToStorage(meal);
-        renderScheduledRecipesList();
-        renderCalendar();
       }
 
+      // No longer needed - markMealCooked in app.js handles this
       function saveMealToStorage(meal) {
-        // Update mealPlan in storage
-        if (window.mealPlan) {
-          const mealIndex = window.mealPlan.findIndex(m =>
-            m.date === meal.dateKey && (m.recipeId === meal.recipeId || m.recipeName === meal.recipeName)
-          );
-          if (mealIndex !== -1) {
-            window.mealPlan[mealIndex].cooked = meal.cooked;
-
-            // Save to Supabase if available
-            if (window.saveMealPlan) {
-              window.saveMealPlan();
-            }
-          }
+        // This is now handled by markMealCooked in app.js
+        if (window.markMealCooked) {
+          window.markMealCooked(meal.dateKey, meal.id);
         }
       }
 
