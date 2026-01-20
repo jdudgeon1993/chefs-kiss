@@ -647,7 +647,7 @@ function initLandingPage() {
   }
 
   // Check initial state - show landing if not authenticated and not in demo
-  const isAuth = window.auth && window.auth.isAuthenticated ? window.auth.isAuthenticated() : false;
+  const isAuth = API.getToken() !== null;
   updateLandingPageVisibility(isAuth);
 
   // Show demo banner if in demo mode
@@ -673,3 +673,10 @@ window.landing = {
   isDemoMode,
   initLandingPage
 };
+
+// Initialize landing page when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initLandingPage);
+} else {
+  initLandingPage();
+}
