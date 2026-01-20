@@ -446,20 +446,24 @@ async function handleLandingSignIn() {
   signInBtn.textContent = 'Signing in...';
 
   try {
-    // Use the auth system
-    const result = await window.auth.signIn(email, password);
+    // Call the Python backend API
+    const response = await API.call('/auth/signin', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
 
-    if (result.success) {
-      // Success! Reload page to show app with fresh data
+    if (response.access_token) {
+      // Save token and reload
+      API.setToken(response.access_token);
       window.location.reload();
     } else {
-      errorDiv.textContent = result.error || 'Sign in failed';
+      errorDiv.textContent = 'Sign in failed';
       signInBtn.disabled = false;
       signInBtn.textContent = originalText;
     }
   } catch (err) {
     console.error('Sign in error:', err);
-    errorDiv.textContent = 'An error occurred. Please try again.';
+    errorDiv.textContent = err.message || 'An error occurred. Please try again.';
     signInBtn.disabled = false;
     signInBtn.textContent = originalText;
   }
@@ -509,20 +513,24 @@ async function handleLandingSignUp() {
   signUpBtn.textContent = 'Creating account...';
 
   try {
-    // Use the auth system
-    const result = await window.auth.signUp(email, password);
+    // Call the Python backend API
+    const response = await API.call('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
 
-    if (result.success) {
-      // Success! Reload page to show app with fresh data
+    if (response.access_token) {
+      // Save token and reload
+      API.setToken(response.access_token);
       window.location.reload();
     } else {
-      errorDiv.textContent = result.error || 'Sign up failed';
+      errorDiv.textContent = 'Sign up failed';
       signUpBtn.disabled = false;
       signUpBtn.textContent = originalText;
     }
   } catch (err) {
     console.error('Sign up error:', err);
-    errorDiv.textContent = 'An error occurred. Please try again.';
+    errorDiv.textContent = err.message || 'An error occurred. Please try again.';
     signUpBtn.disabled = false;
     signUpBtn.textContent = originalText;
   }
