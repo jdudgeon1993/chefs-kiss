@@ -6,7 +6,7 @@ pydantic==2.5.3
 pydantic-settings==2.1.0
 
 # Database & Supabase
-supabase==2.3.4
+supabase==2.9.0
 sqlalchemy==2.0.25
 
 # Caching
