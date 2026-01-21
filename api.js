@@ -9,7 +9,7 @@
  */
 
 // Get API base URL from config (update config.js with your Railway URL!)
-const API_BASE = window.CONFIG?.API_BASE || 'http://localhost:8000/api';
+const API_BASE = window.CONFIG?.API_BASE || 'https://chefs-kiss-production.up.railway.app';
 
 class API {
   /**
