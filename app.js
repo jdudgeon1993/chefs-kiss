@@ -123,7 +123,7 @@ const Views = {
     if (navEl) {
     navEl.classList.add('active');
 }
-};
+}
 const Pantry = {
   container: null,
 
