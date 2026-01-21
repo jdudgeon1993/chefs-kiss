@@ -116,14 +116,18 @@ const Views = {
     document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
     const viewEl = document.getElementById(`${name}-view`);
     if (viewEl) {
-    viewEl.style.display = 'block';
-}
+      viewEl.style.display = 'block';
+    }
 
     const navEl = document.querySelector(`[data-view="${name}"]`);
     if (navEl) {
-    navEl.classList.add('active');
-}
-}
+      navEl.classList.add('active');
+    }
+
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    navEl?.classList.add('active');
+  } // <-- CLOSES show()
+}; // <-- CLOSES Views object
 const Pantry = {
   container: null,
 
