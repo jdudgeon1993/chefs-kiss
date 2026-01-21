@@ -9,10 +9,5 @@
 // Copy the URL (e.g., https://chefs-kiss-production.up.railway.app)
 
 // STEP 2: Paste it here (replace the placeholder)
-const BACKEND_URL = 'https://chefs-kiss-production.up.railway.app';
-
-window.CONFIG = {
-  BACKEND_URL,
-  API_BASE: `${BACKEND_URL}/api`  // include /api here
-};
-
+const BACKEND_URL = 'https://chefs-kiss-production.up.railway.app';  // ✅ HTTPS
+window.CONFIG = { BACKEND_URL, API_BASE: `${BACKEND_URL}/api` };
