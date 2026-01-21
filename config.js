@@ -11,8 +11,7 @@
 // STEP 2: Paste it here (replace the placeholder)
 const BACKEND_URL = 'https://chefs-kiss-production.up.railway.app';  // ✅ Railway backend URL
 
-// Export for use in other files
 window.CONFIG = {
   BACKEND_URL,
-  API_BASE: `${BACKEND_URL}/api`
+  API_BASE: BACKEND_URL   // just the root, don't append /api here
 };
