@@ -30,6 +30,10 @@ app = FastAPI(
     version="5.0.0"
 )
 
+from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
+
+app.add_middleware(ProxyHeadersMiddleware)
+
 # CORS middleware - Allow frontend to call API
 cors_origins_raw = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8080")
 cors_origins = [origin.strip().rstrip('/') for origin in cors_origins_raw.split(",")]
