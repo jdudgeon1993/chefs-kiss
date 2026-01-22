@@ -53,7 +53,7 @@ const Dashboard = {
 
     try {
       // Make sure endpoint matches your backend
-      const data = await API.call('/api/alerts/dashboard');
+      const data = await API.call('/alerts/dashboard');
 
       const pantryCount = data?.pantry_count ?? 0;
       const recipeCount = data?.recipe_count ?? 0;
