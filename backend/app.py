@@ -30,9 +30,20 @@ app = FastAPI(
     version="5.0.0"
 )
 
-from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
-
-app.add_middleware(ProxyHeadersMiddleware)
+# ProxyHeadersMiddleware is optional (some installs may not have the exact starlette submodule).
+# Import defensively so the app doesn't crash at startup when the dependency isn't present.
+try:
+    from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
+    app.add_middleware(ProxyHeadersMiddleware)
+    logger.info("✅ ProxyHeadersMiddleware loaded and added")
+except Exception as exc:
+    ProxyHeadersMiddleware = None
+    logger.warning(
+        "⚠️ ProxyHeadersMiddleware not available. "
+        "Request forwarding headers (X-Forwarded-For / X-Forwarded-Proto) may not be parsed. "
+        "Install/upgrade starlette if you need this middleware. "
+        f"({exc})"
+    )
 
 # CORS middleware - Allow frontend to call API
 cors_origins_raw = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8080")
@@ -48,8 +59,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Import routes
-from routes import auth, pantry, recipes, meal_plans, shopping_list, alerts
+# Import routes (deferred after middleware setup)
+try:
+    from routes import auth, pantry, recipes, meal_plans, shopping_list, alerts
+except Exception as exc:
+    # Defensive: if route import fails, log the error but keep the startup trace clear for the logs.
+    logger.exception("Failed to import routes at startup. Check that backend routes exist and imports succeed.")
+    raise
 
 # Register routes
 app.include_router(auth.router)
