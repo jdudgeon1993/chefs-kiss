@@ -1,9 +1,11 @@
 // ===== HELPER =====
 function safeSetInnerHTMLById(id, html) {
-  const el = document.getElementById(id);
+  let el = document.getElementById(id);
   if (!el) {
-    console.warn(`safeSetInnerHTMLById: element with id="${id}" not found. Skipping update.`);
-    return false;
+    console.warn(`Element with id="${id}" not found. Creating one automatically.`);
+    el = document.createElement('div');
+    el.id = id;
+    document.body.appendChild(el);
   }
   el.innerHTML = html;
   return true;
@@ -14,15 +16,25 @@ const Dashboard = {
   container: null,
 
   init() {
+    // Try to find the dashboard container
     this.container = document.getElementById('dashboard');
 
-    // Bind buttons inside dashboard if needed
+    // If not found, create it automatically
+    if (!this.container) {
+      console.warn('Dashboard container not found during init. Creating automatically.');
+      this.container = document.createElement('div');
+      this.container.id = 'dashboard';
+      document.body.appendChild(this.container);
+    }
+
+    // Bind buttons (if any)
     this.bindButtons();
   },
 
   bindButtons() {
     if (!this.container) return;
 
+    // Example: dashboard refresh button
     const refreshBtn = this.container.querySelector('#dashboard-refresh-btn');
     if (refreshBtn) {
       refreshBtn.addEventListener('click', () => {
@@ -30,20 +42,18 @@ const Dashboard = {
       });
     }
 
-    // Add more button bindings here
+    // Add more button bindings here as needed
   },
 
   async load() {
-    if (!this.container) {
-      console.warn('Dashboard container missing; skipping load.');
-      return;
-    }
+    if (!this.container) return;
 
-    // Show loading placeholder immediately
+    // Show loading message immediately
     safeSetInnerHTMLById('dashboard', '<p>Loading dashboard...</p>');
 
     try {
-      const data = await API.call('/api/alerts/dashboard'); // <-- ensure correct endpoint
+      // Make sure endpoint matches your backend
+      const data = await API.call('/api/alerts/dashboard');
 
       const pantryCount = data?.pantry_count ?? 0;
       const recipeCount = data?.recipe_count ?? 0;
@@ -55,7 +65,7 @@ const Dashboard = {
 
       safeSetInnerHTMLById('dashboard', html);
 
-      // Re-bind buttons after content update (if needed)
+      // Re-bind buttons in case the container content changed
       this.bindButtons();
 
     } catch (err) {
@@ -66,11 +76,11 @@ const Dashboard = {
 };
 
 // ===== APP INIT =====
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
   console.log("APP INIT START");
 
   Dashboard.init();
-  Dashboard.load(); // no need to await, page can render while data loads
+  Dashboard.load(); // not awaiting so page renders immediately
 
   console.log("APP INIT COMPLETE");
 });
