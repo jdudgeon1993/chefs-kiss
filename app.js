@@ -1,5 +1,4 @@
-// Add helper near the top of app.js (after other helper functions or utilities)
-
+// ===== HELPER =====
 function safeSetInnerHTMLById(id, html) {
   const el = document.getElementById(id);
   if (!el) {
@@ -10,43 +9,68 @@ function safeSetInnerHTMLById(id, html) {
   return true;
 }
 
-// Example: update Dashboard.load to use safeSetInnerHTMLById
+// ===== DASHBOARD MODULE =====
 const Dashboard = {
   container: null,
 
   init() {
     this.container = document.getElementById('dashboard');
+
+    // Bind buttons inside dashboard if needed
+    this.bindButtons();
+  },
+
+  bindButtons() {
+    if (!this.container) return;
+
+    const refreshBtn = this.container.querySelector('#dashboard-refresh-btn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        this.load();
+      });
+    }
+
+    // Add more button bindings here
   },
 
   async load() {
+    if (!this.container) {
+      console.warn('Dashboard container missing; skipping load.');
+      return;
+    }
+
+    // Show loading placeholder immediately
+    safeSetInnerHTMLById('dashboard', '<p>Loading dashboard...</p>');
+
     try {
-      const data = await API.call('/alerts/dashboard');
+      const data = await API.call('/api/alerts/dashboard'); // <-- ensure correct endpoint
+
+      const pantryCount = data?.pantry_count ?? 0;
+      const recipeCount = data?.recipe_count ?? 0;
+
       const html = `
-        <p>Pantry: ${data.pantry_count}</p>
-        <p>Recipes: ${data.recipe_count}</p>
+        <p>Pantry: ${pantryCount}</p>
+        <p>Recipes: ${recipeCount}</p>
       `;
-      if (!safeSetInnerHTMLById('dashboard', html)) {
-        // If the element is missing, optionally fall back to a console-only display
-        console.info('Dashboard container missing; data:', data);
-      }
+
+      safeSetInnerHTMLById('dashboard', html);
+
+      // Re-bind buttons after content update (if needed)
+      this.bindButtons();
+
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
-      // Optionally render an error message if the container exists
       safeSetInnerHTMLById('dashboard', '<p>Unable to load dashboard</p>');
     }
   }
 };
 
+// ===== APP INIT =====
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("APP INIT START");
 
-  // Initialize components
   Dashboard.init();
-
-  // Load initial data
-  await Dashboard.load();
+  Dashboard.load(); // no need to await, page can render while data loads
 
   console.log("APP INIT COMPLETE");
 });
-
-// Also ensure other places that do direct `el.innerHTML = ...` are wrapped similarly.
