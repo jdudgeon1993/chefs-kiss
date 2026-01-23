@@ -1,8 +1,7 @@
 #!/bin/sh
 # Railway startup script for Chef's Kiss backend
 
-# Set Python path to include current directory
-export PYTHONPATH="${PYTHONPATH}:."
+echo "Starting uvicorn on port ${PORT:-8080}..."
 
-# Start uvicorn with backend module
-exec uvicorn backend.app:app --host 0.0.0.0 --port ${PORT:-8080}
+# Run app.py directly - it has uvicorn.run(app) which uses the loaded app object with routes
+exec python backend/app.py
