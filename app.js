@@ -731,18 +731,34 @@ function showView(viewName) {
 
 function showLandingPage() {
   const landing = document.getElementById('landing-page');
-  const app = document.getElementById('app');
+  const mainContent = document.querySelector('.main-content');
+  const siteHeader = document.querySelector('.site-header');
+  const sidebarNav = document.querySelector('.sidebar-nav');
+  const bottomNav = document.querySelector('.bottom-nav');
 
-  if (landing) landing.style.display = 'block';
-  if (app) app.style.display = 'none';
+  if (landing) landing.classList.add('show');
+  if (mainContent) mainContent.style.display = 'none';
+  if (siteHeader) siteHeader.style.display = 'none';
+  if (sidebarNav) sidebarNav.style.display = 'none';
+  if (bottomNav) bottomNav.style.display = 'none';
+
+  document.body.classList.add('landing-active');
 }
 
 function showApp() {
   const landing = document.getElementById('landing-page');
-  const app = document.getElementById('app');
+  const mainContent = document.querySelector('.main-content');
+  const siteHeader = document.querySelector('.site-header');
+  const sidebarNav = document.querySelector('.sidebar-nav');
+  const bottomNav = document.querySelector('.bottom-nav');
 
-  if (landing) landing.style.display = 'none';
-  if (app) app.style.display = 'block';
+  if (landing) landing.classList.remove('show');
+  if (mainContent) mainContent.style.display = 'block';
+  if (siteHeader) siteHeader.style.display = 'flex';
+  if (sidebarNav) sidebarNav.style.display = 'flex';
+  if (bottomNav) bottomNav.style.display = 'flex';
+
+  document.body.classList.remove('landing-active');
 
   showView('pantry'); // Default view
 }
