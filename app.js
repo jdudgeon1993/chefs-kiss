@@ -110,6 +110,7 @@ async function checkAuth() {
     const response = await API.call('/auth/me');
     return true;
   } catch (error) {
+    console.log('Authentication check failed, clearing token:', error.message);
     API.clearToken();
     return false;
   }
@@ -710,6 +711,8 @@ async function initApp() {
 
   // Check if user is authenticated
   const isAuthenticated = await checkAuth();
+
+  console.log('Authentication status:', isAuthenticated);
 
   if (isAuthenticated) {
     await loadApp();
