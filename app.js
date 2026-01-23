@@ -110,6 +110,7 @@ async function checkAuth() {
     const response = await API.call('/auth/me');
     return true;
   } catch (error) {
+    console.log('Authentication check failed, clearing token:', error.message);
     API.clearToken();
     return false;
   }
@@ -711,6 +712,8 @@ async function initApp() {
   // Check if user is authenticated
   const isAuthenticated = await checkAuth();
 
+  console.log('Authentication status:', isAuthenticated);
+
   if (isAuthenticated) {
     await loadApp();
   } else {
@@ -718,9 +721,29 @@ async function initApp() {
   }
 }
 
+// Sign out handler
+function handleSignOut() {
+  API.clearToken();
+  window.location.reload();
+}
+
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initApp);
+  document.addEventListener('DOMContentLoaded', () => {
+    initApp();
+
+    // Wire up sign out button
+    const signOutBtn = document.getElementById('btn-signout');
+    if (signOutBtn) {
+      signOutBtn.addEventListener('click', handleSignOut);
+    }
+  });
 } else {
   initApp();
+
+  // Wire up sign out button
+  const signOutBtn = document.getElementById('btn-signout');
+  if (signOutBtn) {
+    signOutBtn.addEventListener('click', handleSignOut);
+  }
 }
