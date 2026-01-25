@@ -506,18 +506,37 @@ class StateManager:
         else:
             recipes = []
 
-        # Load meal plans (only future/today)
+        # Load meal plans
         logger.debug("Loading meal plans...")
-        meals_response = supabase.table('meal_plans')\
-            .select('*')\
-            .eq('household_id', household_id)\
-            .gte('date', date.today().isoformat())\
-            .execute()
+        try:
+            # Try to load with date filter, fall back to loading all
+            try:
+                meals_response = supabase.table('meal_plans')\
+                    .select('*')\
+                    .eq('household_id', household_id)\
+                    .gte('scheduled_date', date.today().isoformat())\
+                    .execute()
+            except:
+                # Column might be named differently, try without date filter
+                logger.debug("Date filter failed, loading all meal plans")
+                meals_response = supabase.table('meal_plans')\
+                    .select('*')\
+                    .eq('household_id', household_id)\
+                    .execute()
 
-        meal_plans = [
-            MealPlan.from_supabase(meal_data)
-            for meal_data in meals_response.data
-        ]
+            meal_plans = []
+            for meal_data in meals_response.data:
+                try:
+                    # Map scheduled_date to date if needed
+                    if 'scheduled_date' in meal_data and 'date' not in meal_data:
+                        meal_data['date'] = meal_data['scheduled_date']
+                    meal_plans.append(MealPlan.from_supabase(meal_data))
+                except Exception as e:
+                    logger.warning(f"Could not parse meal plan: {e}")
+                    continue
+        except Exception as e:
+            logger.warning(f"Could not load meal plans: {e}")
+            meal_plans = []
 
         # Load manual shopping items
         logger.debug("Loading manual shopping items...")
