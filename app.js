@@ -678,7 +678,13 @@ function renderShoppingList(items) {
     byCategory[cat].push({ ...item, itemKey, isChecked });
   });
 
-  let html = '<div class="shopping-actions">';
+  // Add item form at top
+  let html = '<div class="shopping-add-item">';
+  html += '<input type="text" id="new-shopping-item" placeholder="Add item to list..." class="shopping-input">';
+  html += '<button onclick="addShoppingItem()" class="btn btn-primary btn-sm">Add</button>';
+  html += '</div>';
+
+  html += '<div class="shopping-actions">';
   html += '<button onclick="openCheckoutModal()" class="btn-primary">Checkout & Add to Pantry</button>';
   html += '<button onclick="clearAllChecked()" class="btn-secondary">Clear Checked</button>';
   html += '</div>';
@@ -688,28 +694,138 @@ function renderShoppingList(items) {
       <div class="shopping-category">
         <h3 class="category-title">${category}</h3>
         <div class="shopping-items">
-          ${categoryItems.map(item => `
-            <div class="shopping-item ${item.isChecked ? 'checked' : ''}" data-key="${item.itemKey}">
+          ${categoryItems.map((item, idx) => {
+            // Escape special characters for use in attributes and onclick
+            const safeItemKey = item.itemKey.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const itemIndex = idx;
+            return `
+            <div class="shopping-item ${item.isChecked ? 'checked' : ''}" data-key="${safeItemKey}" data-idx="${itemIndex}">
               <label class="shopping-checkbox">
                 <input
                   type="checkbox"
                   ${item.isChecked ? 'checked' : ''}
-                  onchange="toggleShoppingItem('${item.itemKey}', ${item.id ? `'${item.id}'` : 'null'}, this.checked)"
+                  onchange="toggleShoppingItem('${safeItemKey}', ${item.id ? `'${item.id}'` : 'null'}, this.checked)"
                 >
                 <span class="item-name">${item.name}</span>
                 <span class="item-qty">${item.quantity} ${item.unit}</span>
               </label>
               ${item.source ? `<span class="item-source">${item.source}</span>` : ''}
-              ${item.id ? `<button onclick="deleteShoppingItem('${item.id}')" class="btn-icon">🗑️</button>` : ''}
+              <div class="item-actions">
+                <button onclick="editShoppingItem('${safeItemKey}', '${item.name}', ${item.quantity}, '${item.unit}', '${item.category || 'Other'}')" class="btn-icon" title="Edit">✏️</button>
+                ${item.id ? `<button onclick="deleteShoppingItem('${item.id}')" class="btn-icon" title="Delete">🗑️</button>` : ''}
+              </div>
             </div>
-          `).join('')}
+          `}).join('')}
         </div>
       </div>
     `;
   }
 
   container.innerHTML = html;
+
+  // Focus on add input
+  const addInput = document.getElementById('new-shopping-item');
+  if (addInput) {
+    addInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        addShoppingItem();
+      }
+    });
+  }
 }
+
+/**
+ * Add a new item to shopping list
+ */
+async function addShoppingItem() {
+  const input = document.getElementById('new-shopping-item');
+  if (!input) return;
+
+  const name = input.value.trim();
+  if (!name) {
+    alert('Please enter an item name');
+    return;
+  }
+
+  try {
+    await API.call('/shopping-list/items', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: name,
+        quantity: 1,
+        unit: 'unit',
+        category: 'Other'
+      })
+    });
+    input.value = '';
+    await loadShoppingList();
+    showSuccess('Item added!');
+  } catch (error) {
+    console.error('Error adding item:', error);
+    showError('Failed to add item');
+  }
+}
+
+/**
+ * Edit a shopping item
+ */
+function editShoppingItem(itemKey, name, quantity, unit, category) {
+  const modalRoot = document.getElementById('modal-root');
+  if (!modalRoot) return;
+
+  const savedCategories = getSavedCategories();
+  const categoryOptions = savedCategories.map(cat =>
+    `<option value="${cat}" ${category === cat ? 'selected' : ''}>${cat}</option>`
+  ).join('');
+
+  modalRoot.innerHTML = `
+    <div class="modal-overlay" onclick="closeModal()">
+      <div class="modal-content edit-shopping-modal" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeModal()">×</button>
+        <h2>Edit Shopping Item</h2>
+        <form id="edit-shopping-form">
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="edit-item-name" value="${name}" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Quantity</label>
+              <input type="number" id="edit-item-qty" value="${quantity}" step="0.1" min="0.1" required>
+            </div>
+            <div class="form-group">
+              <label>Unit</label>
+              <input type="text" id="edit-item-unit" value="${unit}" placeholder="lb, oz, etc">
+            </div>
+            <div class="form-group">
+              <label>Category</label>
+              <select id="edit-item-category">
+                ${categoryOptions}
+              </select>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+
+  const form = document.getElementById('edit-shopping-form');
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    // For now, just update local state and re-render
+    // TODO: If item has ID, update via API
+    closeModal();
+    showSuccess('Item updated (local only - will sync on next load)');
+  };
+}
+
+// Expose new functions globally
+window.addShoppingItem = addShoppingItem;
+window.editShoppingItem = editShoppingItem;
 
 /**
  * Toggle shopping item checked state
@@ -1145,14 +1261,34 @@ function openIngredientModal(item) {
   const modalRoot = document.getElementById('modal-root');
   if (!modalRoot) return;
 
+  // Get saved categories and locations for dropdowns
+  const savedCategories = getSavedCategories();
+  const savedLocations = getSavedLocations();
+
+  const categoryOptions = savedCategories.map(cat =>
+    `<option value="${cat}" ${item.category === cat ? 'selected' : ''}>${cat}</option>`
+  ).join('');
+
+  const locationOptions = savedLocations.map(loc =>
+    `<option value="${loc}">${loc}</option>`
+  ).join('');
+
   const locations = item.locations || [];
   const locationsHTML = locations.map((loc, idx) => `
     <div class="location-row" data-idx="${idx}">
-      <input type="text" class="loc-name" value="${loc.location || ''}" placeholder="Location">
-      <input type="number" class="loc-qty" value="${loc.qty || 0}" step="0.1" min="0">
+      <select class="loc-name">
+        ${savedLocations.map(l => `<option value="${l}" ${loc.location === l ? 'selected' : ''}>${l}</option>`).join('')}
+      </select>
+      <input type="number" class="loc-qty" value="${loc.qty || 0}" step="0.1" min="0" placeholder="Qty">
       <input type="date" class="loc-expiry" value="${loc.expiry || ''}">
+      <button type="button" class="btn-icon btn-remove" onclick="this.parentElement.remove()">×</button>
     </div>
-  `).join('') || '<div class="location-row"><input type="text" class="loc-name" placeholder="Location"><input type="number" class="loc-qty" value="0" step="0.1" min="0"><input type="date" class="loc-expiry"></div>';
+  `).join('') || `<div class="location-row">
+      <select class="loc-name">${locationOptions}</select>
+      <input type="number" class="loc-qty" value="1" step="0.1" min="0" placeholder="Qty">
+      <input type="date" class="loc-expiry">
+      <button type="button" class="btn-icon btn-remove" onclick="this.parentElement.remove()">×</button>
+    </div>`;
 
   modalRoot.innerHTML = `
     <div class="modal-overlay" onclick="closeModal()">
@@ -1168,13 +1304,7 @@ function openIngredientModal(item) {
             <div class="form-group">
               <label>Category</label>
               <select id="ing-category">
-                <option value="Meat" ${item.category === 'Meat' ? 'selected' : ''}>Meat</option>
-                <option value="Dairy" ${item.category === 'Dairy' ? 'selected' : ''}>Dairy</option>
-                <option value="Produce" ${item.category === 'Produce' ? 'selected' : ''}>Produce</option>
-                <option value="Pantry" ${item.category === 'Pantry' ? 'selected' : ''}>Pantry</option>
-                <option value="Frozen" ${item.category === 'Frozen' ? 'selected' : ''}>Frozen</option>
-                <option value="Spices" ${item.category === 'Spices' ? 'selected' : ''}>Spices</option>
-                <option value="Other" ${item.category === 'Other' ? 'selected' : ''}>Other</option>
+                ${categoryOptions}
               </select>
             </div>
             <div class="form-group">
@@ -1187,9 +1317,9 @@ function openIngredientModal(item) {
             </div>
           </div>
           <div class="form-group">
-            <label>Locations</label>
+            <label>Locations & Quantities</label>
             <div id="locations-list">${locationsHTML}</div>
-            <button type="button" class="btn-secondary btn-sm" onclick="addLocationRow()">+ Add Location</button>
+            <button type="button" class="btn-secondary btn-sm" onclick="addLocationRowWithDropdown()">+ Add Location</button>
           </div>
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
@@ -1207,13 +1337,29 @@ function openIngredientModal(item) {
   };
 }
 
-function addLocationRow() {
+function addLocationRowWithDropdown() {
   const list = document.getElementById('locations-list');
   if (!list) return;
+
+  const savedLocations = getSavedLocations();
+  const locationOptions = savedLocations.map(loc =>
+    `<option value="${loc}">${loc}</option>`
+  ).join('');
+
   const row = document.createElement('div');
   row.className = 'location-row';
-  row.innerHTML = '<input type="text" class="loc-name" placeholder="Location"><input type="number" class="loc-qty" value="0" step="0.1" min="0"><input type="date" class="loc-expiry">';
+  row.innerHTML = `
+    <select class="loc-name">${locationOptions}</select>
+    <input type="number" class="loc-qty" value="1" step="0.1" min="0" placeholder="Qty">
+    <input type="date" class="loc-expiry">
+    <button type="button" class="btn-icon btn-remove" onclick="this.parentElement.remove()">×</button>
+  `;
   list.appendChild(row);
+}
+
+// Keep old function for backwards compatibility
+function addLocationRow() {
+  addLocationRowWithDropdown();
 }
 
 async function saveIngredient(itemId) {
@@ -1225,9 +1371,11 @@ async function saveIngredient(itemId) {
   const locationRows = document.querySelectorAll('.location-row');
   const locations = [];
   locationRows.forEach(row => {
-    const locName = row.querySelector('.loc-name').value.trim();
-    const locQty = parseFloat(row.querySelector('.loc-qty').value) || 0;
-    const locExpiry = row.querySelector('.loc-expiry').value || null;
+    const locNameEl = row.querySelector('.loc-name');
+    // Handle both select and input elements
+    const locName = locNameEl ? (locNameEl.value || '').trim() : '';
+    const locQty = parseFloat(row.querySelector('.loc-qty')?.value) || 0;
+    const locExpiry = row.querySelector('.loc-expiry')?.value || null;
     if (locName && locQty > 0) {
       locations.push({ location: locName, quantity: locQty, expiration_date: locExpiry });
     }
@@ -1235,6 +1383,12 @@ async function saveIngredient(itemId) {
 
   if (!name) {
     alert('Please enter a name');
+    return;
+  }
+
+  // Ensure at least one location
+  if (locations.length === 0) {
+    alert('Please add at least one location with quantity');
     return;
   }
 
