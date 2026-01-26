@@ -4085,3 +4085,137 @@ body.dark-theme .form-group textarea {
     max-height: 40vh;
   }
 }
+
+/* -------------------------------------------------------------------
+   14. SHOPPING LIST IMPROVEMENTS
+   ------------------------------------------------------------------- */
+
+.shopping-add-item {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: rgba(255,255,255,0.5);
+  border-radius: 8px;
+}
+
+.shopping-input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(0,0,0,0.2);
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.shopping-input:focus {
+  border-color: #F1C338;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(241,195,56,0.2);
+}
+
+.shopping-item .item-actions {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.shopping-item .item-actions .btn-icon {
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.shopping-item:hover .item-actions .btn-icon {
+  opacity: 1;
+}
+
+.edit-shopping-modal {
+  max-width: 450px;
+}
+
+/* -------------------------------------------------------------------
+   15. RECIPE MODAL SIZE FIX
+   ------------------------------------------------------------------- */
+
+.recipe-detail-modal {
+  max-width: 90vw !important;
+  max-height: 90vh !important;
+  overflow: hidden;
+}
+
+.recipe-detail-modal-content {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+/* Make vintage recipe card fit better */
+.vintage-recipe-card {
+  max-width: 100%;
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+.vintage-recipe-card .recipe-image {
+  max-height: 200px;
+  object-fit: cover;
+}
+
+/* Pantry location row improvements */
+.location-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  align-items: center;
+}
+
+.location-row select,
+.location-row input {
+  padding: 0.5rem;
+  border: 1px solid rgba(0,0,0,0.2);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.location-row select.loc-name {
+  flex: 2;
+  min-width: 100px;
+}
+
+.location-row input.loc-qty {
+  flex: 1;
+  max-width: 80px;
+}
+
+.location-row input.loc-expiry {
+  flex: 1.5;
+}
+
+.location-row .btn-remove {
+  flex-shrink: 0;
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+  .recipe-detail-modal {
+    max-width: 95vw !important;
+    padding: 0.5rem !important;
+  }
+
+  .vintage-recipe-card {
+    padding: 1rem;
+    max-height: 70vh;
+  }
+
+  .location-row {
+    flex-wrap: wrap;
+  }
+
+  .location-row select.loc-name {
+    flex: 1 1 100%;
+    margin-bottom: 0.25rem;
+  }
+
+  .location-row input.loc-qty,
+  .location-row input.loc-expiry {
+    flex: 1;
+  }
+}
