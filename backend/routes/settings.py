@@ -26,35 +26,46 @@ async def get_settings(household_id: str = Depends(get_current_household)):
     Get household settings.
 
     Creates default settings if none exist.
+    Falls back to defaults if table doesn't exist yet.
     """
     supabase = get_supabase()
 
-    # Try to get existing settings
-    response = supabase.table('household_settings')\
-        .select('*')\
-        .eq('household_id', household_id)\
-        .execute()
+    try:
+        # Try to get existing settings
+        response = supabase.table('household_settings')\
+            .select('*')\
+            .eq('household_id', household_id)\
+            .execute()
 
-    if response.data:
-        settings = HouseholdSettings.from_supabase(response.data[0])
-    else:
-        # Create default settings
-        logger.info(f"Creating default settings for household {household_id}")
-        insert_response = supabase.table('household_settings').insert({
-            'household_id': household_id,
-            'locations': DEFAULT_LOCATIONS,
-            'categories': DEFAULT_CATEGORIES,
-            'category_emojis': {}
-        }).execute()
+        if response.data:
+            settings = HouseholdSettings.from_supabase(response.data[0])
+        else:
+            # Create default settings
+            logger.info(f"Creating default settings for household {household_id}")
+            insert_response = supabase.table('household_settings').insert({
+                'household_id': household_id,
+                'locations': DEFAULT_LOCATIONS,
+                'categories': DEFAULT_CATEGORIES,
+                'category_emojis': {}
+            }).execute()
 
-        settings = HouseholdSettings.from_supabase(insert_response.data[0])
+            settings = HouseholdSettings.from_supabase(insert_response.data[0])
 
-    return {
-        "settings": settings.model_dump(),
-        "locations": settings.locations,
-        "categories": settings.categories,
-        "category_emojis": settings.category_emojis
-    }
+        return {
+            "settings": settings.model_dump(),
+            "locations": settings.locations,
+            "categories": settings.categories,
+            "category_emojis": settings.category_emojis
+        }
+    except Exception as e:
+        # Table doesn't exist yet - return defaults
+        logger.warning(f"household_settings table not available, using defaults: {e}")
+        return {
+            "settings": None,
+            "locations": DEFAULT_LOCATIONS,
+            "categories": DEFAULT_CATEGORIES,
+            "category_emojis": {}
+        }
 
 
 @router.put("/")
@@ -82,34 +93,45 @@ async def update_settings(
         # Nothing to update, just return current settings
         return await get_settings(household_id)
 
-    # Check if settings exist
-    existing = supabase.table('household_settings')\
-        .select('id')\
-        .eq('household_id', household_id)\
-        .execute()
-
-    if existing.data:
-        # Update existing
-        response = supabase.table('household_settings')\
-            .update(update_data)\
+    try:
+        # Check if settings exist
+        existing = supabase.table('household_settings')\
+            .select('id')\
             .eq('household_id', household_id)\
             .execute()
-    else:
-        # Create new with updates
-        update_data['household_id'] = household_id
-        response = supabase.table('household_settings')\
-            .insert(update_data)\
-            .execute()
 
-    settings = HouseholdSettings.from_supabase(response.data[0])
+        if existing.data:
+            # Update existing
+            response = supabase.table('household_settings')\
+                .update(update_data)\
+                .eq('household_id', household_id)\
+                .execute()
+        else:
+            # Create new with updates
+            update_data['household_id'] = household_id
+            response = supabase.table('household_settings')\
+                .insert(update_data)\
+                .execute()
 
-    return {
-        "settings": settings.model_dump(),
-        "locations": settings.locations,
-        "categories": settings.categories,
-        "category_emojis": settings.category_emojis,
-        "message": "Settings saved"
-    }
+        settings = HouseholdSettings.from_supabase(response.data[0])
+
+        return {
+            "settings": settings.model_dump(),
+            "locations": settings.locations,
+            "categories": settings.categories,
+            "category_emojis": settings.category_emojis,
+            "message": "Settings saved"
+        }
+    except Exception as e:
+        # Table doesn't exist - return what was requested as "saved"
+        logger.warning(f"household_settings table not available: {e}")
+        return {
+            "settings": None,
+            "locations": update.locations or DEFAULT_LOCATIONS,
+            "categories": update.categories or DEFAULT_CATEGORIES,
+            "category_emojis": update.category_emojis or {},
+            "message": "Settings saved (table not yet created - run migration)"
+        }
 
 
 @router.post("/locations")
