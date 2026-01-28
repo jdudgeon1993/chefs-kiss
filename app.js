@@ -1502,7 +1502,12 @@ function openRecipeModal(recipeId) {
             <div class="form-group">
               <label>Category</label>
               <select id="recipe-category">
-                ${['Breakfast', 'Lunch', 'Dinner', 'Appetizer', 'Side', 'Dessert', 'Snack', 'Beverage', 'Other'].map(c =>
+                ${[
+                  'Breakfast', 'Brunch', 'Lunch', 'Dinner', 'Lunch & Dinner',
+                  'Breakfast & Lunch', 'Appetizer', 'Side', 'Dessert',
+                  'Snack', 'Beverage', 'Sauce & Dressing', 'Soup & Stew',
+                  'Salad', 'Baked Goods', 'Meal Prep', 'Other'
+                ].map(c =>
                   `<option value="${c}" ${(recipe.category || '') === c ? 'selected' : ''}>${c}</option>`
                 ).join('')}
               </select>
@@ -2368,8 +2373,10 @@ function openSettingsModal() {
     </div>
   `).join('');
 
+  const emojis = (window.householdSettings && window.householdSettings.category_emojis) || {};
   const categoriesHTML = categories.map((cat, idx) => `
     <div class="setting-item" data-idx="${idx}">
+      <button type="button" class="btn-emoji-pick" data-idx="${idx}" onclick="openEmojiPicker(this)" title="Pick icon">${emojis[cat] || getCategoryDefaultEmoji(cat)}</button>
       <input type="text" value="${cat}" class="category-input">
       <button type="button" class="btn-icon btn-remove" onclick="removeCategory(${idx})">×</button>
     </div>
@@ -2455,6 +2462,53 @@ function removeLocation(idx) {
   if (item) item.remove();
 }
 
+const FOOD_EMOJI_OPTIONS = [
+  '🥩','🧈','🥬','🫙','🧊','🌶️','🥤','🍿','🌾','🧁','🥫','🫗','🐟','🥪',
+  '🍎','🥕','🥚','🍞','🧀','🍗','🥦','🌽','🍋','🫒','🍯','🥜','🍝','🍚',
+  '🫘','🥥','🍫','🧃','🍵','☕','🧂','🫧','🛒','📦'
+];
+
+function getCategoryDefaultEmoji(category) {
+  const defaults = {
+    'Meat': '🥩', 'Dairy': '🧈', 'Produce': '🥬', 'Pantry': '🫙',
+    'Frozen': '🧊', 'Spices': '🌶️', 'Beverages': '🥤', 'Snacks': '🍿',
+    'Grains': '🌾', 'Baking': '🧁', 'Canned Goods': '🥫', 'Condiments': '🫗',
+    'Seafood': '🐟', 'Deli': '🥪', 'Other': '📦'
+  };
+  return defaults[category] || '📦';
+}
+
+function openEmojiPicker(btn) {
+  // Close any existing picker
+  document.querySelectorAll('.emoji-picker-dropdown').forEach(el => el.remove());
+
+  const picker = document.createElement('div');
+  picker.className = 'emoji-picker-dropdown';
+  picker.innerHTML = FOOD_EMOJI_OPTIONS.map(e =>
+    `<button type="button" class="emoji-option" onclick="selectEmoji(this, '${e}')">${e}</button>`
+  ).join('');
+  btn.style.position = 'relative';
+  btn.parentElement.style.position = 'relative';
+  btn.parentElement.appendChild(picker);
+
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('click', function closePicker(e) {
+      if (!picker.contains(e.target) && e.target !== btn) {
+        picker.remove();
+        document.removeEventListener('click', closePicker);
+      }
+    });
+  }, 0);
+}
+
+function selectEmoji(optionBtn, emoji) {
+  const settingItem = optionBtn.closest('.setting-item');
+  const emojiBtn = settingItem.querySelector('.btn-emoji-pick');
+  emojiBtn.textContent = emoji;
+  settingItem.querySelector('.emoji-picker-dropdown').remove();
+}
+
 function addCategory() {
   const list = document.getElementById('categories-list');
   if (!list) return;
@@ -2463,6 +2517,7 @@ function addCategory() {
   div.className = 'setting-item';
   div.dataset.idx = idx;
   div.innerHTML = `
+    <button type="button" class="btn-emoji-pick" data-idx="${idx}" onclick="openEmojiPicker(this)" title="Pick icon">📦</button>
     <input type="text" value="" class="category-input" placeholder="New category">
     <button type="button" class="btn-icon btn-remove" onclick="removeCategory(${idx})">×</button>
   `;
@@ -2516,12 +2571,20 @@ async function saveSettings() {
     if (val) locations.push(val);
   });
 
-  // Collect categories
-  const categoryInputs = document.querySelectorAll('.category-input');
+  // Collect categories and their emoji mappings
+  const categoryItems = document.querySelectorAll('#categories-list .setting-item');
   const categories = [];
-  categoryInputs.forEach(input => {
-    const val = input.value.trim();
-    if (val) categories.push(val);
+  const category_emojis = {};
+  categoryItems.forEach(item => {
+    const input = item.querySelector('.category-input');
+    const emojiBtn = item.querySelector('.btn-emoji-pick');
+    const val = input ? input.value.trim() : '';
+    if (val) {
+      categories.push(val);
+      if (emojiBtn) {
+        category_emojis[val] = emojiBtn.textContent.trim();
+      }
+    }
   });
 
   // Save expiration days (still local - per-user preference)
@@ -2543,12 +2606,13 @@ async function saveSettings() {
     // Save to API
     const response = await API.call('/settings/', {
       method: 'PUT',
-      body: JSON.stringify({ locations, categories })
+      body: JSON.stringify({ locations, categories, category_emojis })
     });
 
     // Update local cache
     window.householdSettings.locations = response.locations || locations;
     window.householdSettings.categories = response.categories || categories;
+    window.householdSettings.category_emojis = response.category_emojis || category_emojis;
 
     // Save expiration days locally (user preference)
     localStorage.setItem('expirationDays', expirationDays);
@@ -2573,6 +2637,9 @@ window.addLocation = addLocation;
 window.removeLocation = removeLocation;
 window.addCategory = addCategory;
 window.removeCategory = removeCategory;
+window.openEmojiPicker = openEmojiPicker;
+window.selectEmoji = selectEmoji;
+window.getCategoryDefaultEmoji = getCategoryDefaultEmoji;
 window.resetSettingsToDefaults = resetSettingsToDefaults;
 window.saveSettings = saveSettings;
 window.loadSettings = loadSettings;
