@@ -4061,6 +4061,62 @@ body.dark-theme .form-group textarea {
   background: #f1b0b7;
 }
 
+/* Emoji picker for category icons */
+.btn-emoji-pick {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.15);
+  background: #f9f9f9;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.btn-emoji-pick:hover {
+  border-color: #F1C338;
+  background: #fff8e1;
+}
+
+.emoji-picker-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  padding: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  width: 280px;
+  margin-top: 4px;
+}
+
+.emoji-option {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.emoji-option:hover {
+  background: #fff3cd;
+}
+
 /* Account Status Badge */
 .status-badge {
   display: inline-block;

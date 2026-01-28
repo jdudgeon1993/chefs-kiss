@@ -676,7 +676,8 @@
         const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
         filteredRecipes = window.recipes.filter(recipe => {
-          const matchesCategory = currentFilter === 'All' || (recipe.category || 'Uncategorized') === currentFilter;
+          const recipeCat = recipe.category || 'Uncategorized';
+          const matchesCategory = currentFilter === 'All' || recipeCat === currentFilter || recipeCat.split(' & ').includes(currentFilter);
           const matchesSearch = !query ||
             recipe.name.toLowerCase().includes(query) ||
             (recipe.ingredients && recipe.ingredients.some(ing => ing.name.toLowerCase().includes(query)));
@@ -1070,19 +1071,10 @@
       let collapsedCategories = new Set();
       let categoryEmojiMap = {}; // Cache for category emojis
 
-      // Load category emojis from database
-      async function loadCategoryEmojis() {
-        if (window.db && window.auth && window.auth.isAuthenticated()) {
-          try {
-            const categoryObjects = await window.db.loadCategoryObjects();
-            categoryEmojiMap = {};
-            categoryObjects.forEach(cat => {
-              categoryEmojiMap[cat.name] = cat.emoji || '📦';
-            });
-          } catch (err) {
-            console.error('Error loading category emojis:', err);
-          }
-        }
+      // Load category emojis from household settings
+      function loadCategoryEmojis() {
+        const emojis = (window.householdSettings && window.householdSettings.category_emojis) || {};
+        categoryEmojiMap = { ...emojis };
       }
 
       async function initPantryLedger() {
@@ -1409,11 +1401,19 @@
         // Fallback to default emojis for standard categories
         const emojis = {
           'Meat': '🥩',
-          'Dairy': '🥛',
+          'Dairy': '🧈',
           'Produce': '🥬',
-          'Pantry': '🏺',
+          'Pantry': '🫙',
           'Frozen': '🧊',
           'Spices': '🌶️',
+          'Beverages': '🥤',
+          'Snacks': '🍿',
+          'Grains': '🌾',
+          'Baking': '🧁',
+          'Canned Goods': '🥫',
+          'Condiments': '🫗',
+          'Seafood': '🐟',
+          'Deli': '🥪',
           'Other': '📦'
         };
         return emojis[category] || '📦';
