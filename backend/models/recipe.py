@@ -19,6 +19,7 @@ class Recipe(BaseModel):
     id: str
     household_id: str
     name: str
+    category: str = "Uncategorized"
     tags: List[str] = []
     photo_url: Optional[str] = None
     instructions: Optional[str] = None
@@ -46,6 +47,7 @@ class Recipe(BaseModel):
             id=recipe_data['id'],
             household_id=recipe_data['household_id'],
             name=recipe_data['name'],
+            category=recipe_data.get('category') or 'Uncategorized',
             tags=recipe_data.get('tags', []),
             photo_url=recipe_data.get('photo', recipe_data.get('photo_url', recipe_data.get('image_url'))),
             instructions=recipe_data.get('instructions'),
@@ -56,6 +58,7 @@ class Recipe(BaseModel):
 class RecipeCreate(BaseModel):
     """Create new recipe"""
     name: str = Field(..., min_length=1, max_length=200)
+    category: str = Field(default="Uncategorized")
     tags: List[str] = Field(default=[])
     instructions: Optional[str] = None
     ingredients: List[dict] = Field(..., min_items=1)
@@ -79,6 +82,7 @@ class RecipeCreate(BaseModel):
 class RecipeUpdate(BaseModel):
     """Update existing recipe"""
     name: Optional[str] = Field(None, min_length=1, max_length=200)
+    category: Optional[str] = None
     tags: Optional[List[str]] = None
     instructions: Optional[str] = None
     ingredients: Optional[List[dict]] = None

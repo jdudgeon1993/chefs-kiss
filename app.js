@@ -280,7 +280,7 @@ function renderRecipeList(recipes) {
       name: recipe.name || 'Untitled Recipe',
       servings: recipe.servings || recipe.yield || 4,
       cookTime: recipe.cook_time || recipe.cookTime || recipe.time || '30min',
-      category: recipe.category || 'Main',
+      category: recipe.category || 'Uncategorized',
       photo: recipe.photo_url || recipe.photo || '',
       tags: recipe.tags || [],
       isFavorite: recipe.is_favorite || recipe.isFavorite || false,
@@ -1291,6 +1291,7 @@ function openIngredientModal(item) {
             <button type="button" class="btn-secondary btn-sm" onclick="addLocationRowWithDropdown()">+ Add Location</button>
           </div>
           <div class="form-actions">
+            ${item.id ? '<button type="button" class="btn btn-danger" onclick="deleteIngredientFromModal(\'' + item.id + '\')">Delete</button>' : ''}
             <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
             <button type="submit" class="btn btn-primary">Save</button>
           </div>
@@ -1304,6 +1305,20 @@ function openIngredientModal(item) {
     e.preventDefault();
     await saveIngredient(item.id);
   };
+}
+
+async function deleteIngredientFromModal(itemId) {
+  if (!confirm('Delete this pantry item? This cannot be undone.')) return;
+
+  try {
+    await API.call(`/pantry/${itemId}`, { method: 'DELETE' });
+    closeModal();
+    showSuccess('Item deleted');
+    await loadPantry();
+  } catch (error) {
+    console.error('Error deleting item:', error);
+    showError('Failed to delete item');
+  }
 }
 
 function addLocationRowWithDropdown() {
@@ -1452,7 +1467,7 @@ async function quickDepleteItem(item, amount) {
  * Open modal to add/edit a recipe
  */
 function openRecipeModal(recipeId) {
-  const recipe = recipeId ? window.recipes.find(r => r.id === recipeId) : { name: '', servings: 4, ingredients: [], instructions: '', tags: [] };
+  const recipe = recipeId ? window.recipes.find(r => r.id === recipeId) : { name: '', servings: 4, ingredients: [], instructions: '', tags: [], category: '' };
   if (!recipe && recipeId) {
     alert('Recipe not found');
     return;
@@ -1483,6 +1498,14 @@ function openRecipeModal(recipeId) {
             <div class="form-group">
               <label>Servings</label>
               <input type="number" id="recipe-servings" value="${recipe.servings || 4}" min="1">
+            </div>
+            <div class="form-group">
+              <label>Category</label>
+              <select id="recipe-category">
+                ${['Breakfast', 'Lunch', 'Dinner', 'Appetizer', 'Side', 'Dessert', 'Snack', 'Beverage', 'Other'].map(c =>
+                  `<option value="${c}" ${(recipe.category || '') === c ? 'selected' : ''}>${c}</option>`
+                ).join('')}
+              </select>
             </div>
             <div class="form-group">
               <label>Tags (comma separated)</label>
@@ -1526,6 +1549,7 @@ function addIngredientRow() {
 async function saveRecipe(recipeId) {
   const name = document.getElementById('recipe-name').value.trim();
   const servings = parseInt(document.getElementById('recipe-servings').value) || 4;
+  const category = document.getElementById('recipe-category').value;
   const tagsStr = document.getElementById('recipe-tags').value;
   const tags = tagsStr.split(',').map(t => t.trim()).filter(t => t);
   const instructions = document.getElementById('recipe-instructions').value.trim();
@@ -1550,12 +1574,12 @@ async function saveRecipe(recipeId) {
     if (recipeId) {
       await API.call(`/recipes/${recipeId}`, {
         method: 'PUT',
-        body: JSON.stringify({ name, tags, instructions, ingredients })
+        body: JSON.stringify({ name, category, tags, instructions, ingredients })
       });
     } else {
       await API.call('/recipes/', {
         method: 'POST',
-        body: JSON.stringify({ name, tags, instructions, ingredients })
+        body: JSON.stringify({ name, category, tags, instructions, ingredients })
       });
     }
     closeModal();
@@ -1727,6 +1751,7 @@ function saveRecipes() {
 
 // Expose functions globally for inline scripts
 window.openIngredientModal = openIngredientModal;
+window.deleteIngredientFromModal = deleteIngredientFromModal;
 window.openQuickDepleteModal = openQuickDepleteModal;
 window.openRecipeModal = openRecipeModal;
 window.openDayModal = openDayModal;
