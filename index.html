@@ -688,9 +688,15 @@
           return matchesCategory && matchesSearch && matchesTags;
         });
 
-        renderFilterPills();
-        renderTagFilterPills();
-        renderRecipesGrid();
+        // Set guard so the MutationObserver doesn't reset our filtered results
+        _recipeRenderInProgress = true;
+        try {
+          renderFilterPills();
+          renderTagFilterPills();
+          renderRecipesGrid();
+        } finally {
+          Promise.resolve().then(() => { _recipeRenderInProgress = false; });
+        }
       }
 
       function renderRecipesGrid() {
