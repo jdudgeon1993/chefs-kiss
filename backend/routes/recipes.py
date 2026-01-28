@@ -111,6 +111,7 @@ async def add_recipe(
         recipe_response = supabase.table('recipes').insert({
             'household_id': household_id,
             'name': recipe.name,
+            'category': recipe.category,
             'tags': recipe.tags,
             'instructions': recipe.instructions,
             'ingredients': recipe.ingredients  # Store as JSONB
@@ -147,6 +148,8 @@ async def update_recipe(
         update_data = {}
         if recipe.name is not None:
             update_data['name'] = recipe.name
+        if recipe.category is not None:
+            update_data['category'] = recipe.category
         if recipe.tags is not None:
             update_data['tags'] = recipe.tags
         if recipe.instructions is not None:
