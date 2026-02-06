@@ -565,6 +565,7 @@ async function loadShoppingList() {
     renderShoppingList(list);
 
     // Notify focus mode (or any listener) that shopping list updated
+    console.log('📢 Dispatching shopping-list-updated event with', list.length, 'items');
     window.dispatchEvent(new CustomEvent('shopping-list-updated', { detail: list }));
   } catch (error) {
     showError('Failed to load shopping list');
@@ -2805,11 +2806,13 @@ function handleRealtimeEvent(section, payload) {
 }
 
 async function reloadSection(section, eventType) {
+  console.log(`🔄 reloadSection called: ${section} (${eventType})`);
   const actionLabel = eventType === 'DELETE' ? 'removed' : 'updated';
   try {
     switch (section) {
       case 'pantry':
         // Pantry changes affect shopping list (threshold items)
+        console.log('  ↳ Reloading pantry + shopping list');
         await Promise.all([loadPantry(), loadShoppingList()]);
         showToast(`Pantry ${actionLabel} by another user`, 'sync', 3000);
         break;
@@ -2819,10 +2822,12 @@ async function reloadSection(section, eventType) {
         break;
       case 'meals':
         // Meal changes affect shopping list (ingredient needs)
+        console.log('  ↳ Reloading meals + shopping list');
         await Promise.all([loadMealPlans(), loadShoppingList()]);
         showToast(`Meal plan ${actionLabel} by another user`, 'sync', 3000);
         break;
       case 'shopping':
+        console.log('  ↳ Reloading shopping list');
         await loadShoppingList();
         showToast(`Shopping list ${actionLabel} by another user`, 'sync', 3000);
         break;

@@ -547,10 +547,16 @@ class ShoppingFocusMode {
    */
   subscribeToUpdates() {
     this._updateHandler = (event) => {
-      if (!this.isActive) return;
+      console.log('🛒 Focus mode received shopping-list-updated event', event.detail?.length, 'items');
+
+      if (!this.isActive) {
+        console.log('  ↳ Ignored - focus mode not active');
+        return;
+      }
 
       // Update our local list from the event data
       this.shoppingList = event.detail || [];
+      console.log('  ↳ Updating focus mode list and re-rendering');
       this.render();
 
       if (window.showToast) {
@@ -559,7 +565,7 @@ class ShoppingFocusMode {
     };
 
     window.addEventListener('shopping-list-updated', this._updateHandler);
-    console.log('Focus mode: Listening for shopping list updates');
+    console.log('Focus mode: Subscribed to shopping-list-updated events');
   }
 
   /**
