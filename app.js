@@ -2809,7 +2809,8 @@ async function reloadSection(section, eventType) {
   try {
     switch (section) {
       case 'pantry':
-        await loadPantry();
+        // Pantry changes affect shopping list (threshold items)
+        await Promise.all([loadPantry(), loadShoppingList()]);
         showToast(`Pantry ${actionLabel} by another user`, 'sync', 3000);
         break;
       case 'recipes':
@@ -2817,7 +2818,8 @@ async function reloadSection(section, eventType) {
         showToast(`Recipes ${actionLabel} by another user`, 'sync', 3000);
         break;
       case 'meals':
-        await loadMealPlans();
+        // Meal changes affect shopping list (ingredient needs)
+        await Promise.all([loadMealPlans(), loadShoppingList()]);
         showToast(`Meal plan ${actionLabel} by another user`, 'sync', 3000);
         break;
       case 'shopping':
