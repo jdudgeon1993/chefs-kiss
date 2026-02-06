@@ -350,7 +350,8 @@ function calculateReservedIngredients() {
 
   // Iterate through planner (object with date keys)
   Object.keys(window.planner).forEach(dateKey => {
-    const mealDate = new Date(dateKey);
+    // Parse date at noon to avoid timezone issues
+    const mealDate = new Date(dateKey + 'T12:00:00');
     mealDate.setHours(0, 0, 0, 0);
 
     // Skip past dates
@@ -696,16 +697,7 @@ function renderShoppingList(items) {
     byCategory[cat].push({ ...item, itemKey, isChecked });
   });
 
-  // Add item form at top
-  let html = '<div class="shopping-add-item">';
-  html += '<input type="text" id="new-shopping-item" placeholder="Add item to list..." class="shopping-input">';
-  html += '<button onclick="addShoppingItem()" class="btn btn-primary btn-sm">Add</button>';
-  html += '</div>';
-
-  html += '<div class="shopping-actions">';
-  html += '<button onclick="openCheckoutModal()" class="btn-primary">Checkout & Add to Pantry</button>';
-  html += '<button onclick="clearAllChecked()" class="btn-secondary">Clear Checked</button>';
-  html += '</div>';
+  let html = '';
 
   for (const [category, categoryItems] of Object.entries(byCategory)) {
     html += `
@@ -740,30 +732,17 @@ function renderShoppingList(items) {
   }
 
   container.innerHTML = html;
-
-  // Focus on add input
-  const addInput = document.getElementById('new-shopping-item');
-  if (addInput) {
-    addInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        addShoppingItem();
-      }
-    });
-  }
 }
 
 /**
  * Add a new item to shopping list
  */
 async function addShoppingItem() {
-  const input = document.getElementById('new-shopping-item');
+  const input = document.getElementById('user-item-name');
   if (!input) return;
 
   const name = input.value.trim();
-  if (!name) {
-    alert('Please enter an item name');
-    return;
-  }
+  if (!name) return;
 
   try {
     await API.call('/shopping-list/items', {
@@ -1716,10 +1695,11 @@ async function addMealToDay(dateKey) {
       body: JSON.stringify({ date: dateKey, recipe_id: recipeId, serving_multiplier: 1 })
     });
     closeModal();
-    await loadMealPlans();
+    await Promise.all([loadMealPlans(), loadShoppingList()]);
+    showSuccess('Meal planned!');
   } catch (error) {
     console.error('Error adding meal:', error);
-    alert('Failed to add meal: ' + error.message);
+    showError('Failed to add meal: ' + error.message);
   }
 }
 
@@ -1729,10 +1709,11 @@ async function removeMealFromDay(dateKey, mealId) {
   try {
     await API.call(`/meal-plans/${mealId}`, { method: 'DELETE' });
     closeModal();
-    await loadMealPlans();
+    await Promise.all([loadMealPlans(), loadShoppingList()]);
+    showSuccess('Meal removed!');
   } catch (error) {
     console.error('Error removing meal:', error);
-    alert('Failed to remove: ' + error.message);
+    showError('Failed to remove: ' + error.message);
   }
 }
 
@@ -1771,11 +1752,11 @@ async function markMealCooked(dateKey, mealId) {
   try {
     await API.call(`/meal-plans/${mealId}/cook`, { method: 'POST' });
     closeModal();
-    await loadMealPlans();
-    await loadPantry();
+    await Promise.all([loadMealPlans(), loadPantry(), loadShoppingList()]);
+    showSuccess('Meal cooked! Ingredients deducted from pantry.');
   } catch (error) {
     console.error('Error marking meal as cooked:', error);
-    alert('Failed to cook meal: ' + error.message);
+    showError('Failed to cook meal: ' + error.message);
   }
 }
 
@@ -1895,7 +1876,7 @@ function wireUpButtons() {
   const btnAddCustomItem = document.getElementById('btn-add-custom-item');
   const userItemName = document.getElementById('user-item-name');
   if (btnAddCustomItem && userItemName) {
-    btnAddCustomItem.addEventListener('click', async () => {
+    const addCustomItem = async () => {
       const name = userItemName.value.trim();
       if (name) {
         try {
@@ -1905,10 +1886,16 @@ function wireUpButtons() {
           });
           userItemName.value = '';
           await loadShoppingList();
+          showSuccess('Item added!');
         } catch (error) {
           console.error('Error adding shopping item:', error);
+          showError('Failed to add item');
         }
       }
+    };
+    btnAddCustomItem.addEventListener('click', addCustomItem);
+    userItemName.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') addCustomItem();
     });
   }
 
