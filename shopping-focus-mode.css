@@ -62,10 +62,35 @@
   color: #666;
 }
 
-.focus-exit-btn {
+/* Quick Add */
+.focus-quick-add {
+  display: flex;
+  gap: 10px;
   margin-top: 15px;
-  padding: 12px 30px;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.focus-input {
+  flex: 1;
+  padding: 12px 15px;
   font-size: 1em;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.focus-input:focus {
+  border-color: #2d8a4e;
+}
+
+.focus-btn-add {
+  width: 48px;
+  height: 48px;
+  font-size: 1.5em;
+  font-weight: bold;
   background: #2d8a4e;
   color: white;
   border: none;
@@ -74,7 +99,7 @@
   transition: background 0.2s;
 }
 
-.focus-exit-btn:hover {
+.focus-btn-add:hover {
   background: #236b3d;
 }
 
@@ -241,6 +266,191 @@
   background: #555;
 }
 
+/* Category Groups */
+.focus-category {
+  margin-bottom: 20px;
+}
+
+.focus-category-header {
+  font-size: 1em;
+  font-weight: 600;
+  color: #555;
+  padding: 8px 12px;
+  background: #f0f0f0;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+/* Item Styles (updated) */
+.focus-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  transition: all 0.2s;
+  margin-bottom: 8px;
+}
+
+.focus-item:hover {
+  border-color: #2d8a4e;
+  background: #f9fff9;
+}
+
+.focus-item.checked {
+  opacity: 0.7;
+  background: #f5f5f5;
+  border-color: #ccc;
+}
+
+.focus-item-checkbox {
+  display: flex;
+  align-items: center;
+  margin-right: 12px;
+}
+
+.focus-item-checkbox input[type="checkbox"] {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  accent-color: #2d8a4e;
+}
+
+.focus-item-content {
+  flex: 1;
+  cursor: pointer;
+}
+
+.focus-item-name {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #333;
+}
+
+.focus-item.checked .focus-item-name {
+  text-decoration: line-through;
+  color: #888;
+}
+
+.focus-item-details {
+  display: flex;
+  gap: 10px;
+  font-size: 0.85em;
+  color: #666;
+  margin-top: 3px;
+}
+
+.focus-item-qty {
+  font-weight: 600;
+  color: #2d8a4e;
+}
+
+.focus-item-source {
+  font-style: italic;
+  color: #888;
+}
+
+/* Footer Buttons (updated) */
+.focus-btn.primary {
+  background: #2d8a4e;
+}
+
+.focus-btn.primary:hover {
+  background: #236b3d;
+}
+
+.focus-btn.danger {
+  background: #d32f2f;
+}
+
+.focus-btn.danger:hover {
+  background: #b71c1c;
+}
+
+.focus-btn.exit {
+  background: #666;
+}
+
+.focus-btn.exit:hover {
+  background: #555;
+}
+
+/* Edit Modal */
+.focus-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+}
+
+.focus-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+}
+
+.focus-modal h3 {
+  margin: 0 0 20px 0;
+  font-size: 1.3em;
+  color: #333;
+}
+
+.focus-modal-field {
+  margin-bottom: 15px;
+}
+
+.focus-modal-field label {
+  display: block;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 5px;
+}
+
+.focus-modal-field .focus-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.focus-modal-field select.focus-input {
+  width: 100%;
+  background: white;
+  cursor: pointer;
+}
+
+.focus-modal-row {
+  display: flex;
+  gap: 15px;
+}
+
+.focus-modal-row .focus-modal-field {
+  flex: 1;
+}
+
+.focus-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: flex-end;
+}
+
+.focus-modal-actions .focus-btn {
+  min-width: auto;
+  max-width: none;
+  flex: none;
+  padding: 10px 20px;
+}
+
 /* Mobile Responsive */
 @media (max-width: 600px) {
   .focus-container {
@@ -251,16 +461,39 @@
     font-size: 1.5em;
   }
 
-  .item-name {
+  .focus-quick-add {
+    max-width: 100%;
+  }
+
+  .focus-item-name {
     font-size: 1em;
   }
 
-  .item-details {
+  .focus-item-details {
     font-size: 0.8em;
   }
 
   .focus-btn {
     min-width: 100%;
     max-width: 100%;
+  }
+
+  .focus-modal {
+    width: 95%;
+    padding: 20px;
+  }
+
+  .focus-modal-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .focus-modal-actions {
+    flex-wrap: wrap;
+  }
+
+  .focus-modal-actions .focus-btn {
+    flex: 1;
+    min-width: 80px;
   }
 }
