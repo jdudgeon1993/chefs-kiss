@@ -1725,7 +1725,8 @@
         today.setHours(0, 0, 0, 0);
 
         Object.keys(scheduledMeals).forEach(dateKey => {
-          const date = new Date(dateKey);
+          // Parse date at noon to avoid timezone issues
+          const date = new Date(dateKey + 'T12:00:00');
           scheduledMeals[dateKey].forEach(meal => {
             allMeals.push({
               date: date,
