@@ -18,6 +18,7 @@ class ShoppingFocusMode {
     this.shoppingList = [];
     this.overlay = null;
     this._updateHandler = null;
+    this._pollInterval = null;
   }
 
   /**
@@ -43,6 +44,9 @@ class ShoppingFocusMode {
     // Listen for shopping list updates from main app
     this.subscribeToUpdates();
 
+    // Start polling for updates as backup sync
+    this.startPolling();
+
     if (window.showToast) {
       window.showToast('Focus mode active', 'info', 2000);
     }
@@ -55,6 +59,9 @@ class ShoppingFocusMode {
     if (!this.isActive) return;
 
     this.isActive = false;
+
+    // Stop polling
+    this.stopPolling();
 
     // Remove overlay
     if (this.overlay) {
@@ -577,6 +584,49 @@ class ShoppingFocusMode {
     if (this._updateHandler) {
       window.removeEventListener('shopping-list-updated', this._updateHandler);
       this._updateHandler = null;
+    }
+  }
+
+  /**
+   * Start polling for updates (backup sync mechanism)
+   * Polls every 5 seconds to catch any missed realtime events
+   */
+  startPolling() {
+    this._pollInterval = setInterval(async () => {
+      if (!this.isActive) return;
+
+      try {
+        const data = await API.call('/shopping-list/');
+        const newList = data.shopping_list || data || [];
+
+        // Check if list has changed (simple length + stringify comparison)
+        const oldHash = JSON.stringify(this.shoppingList.map(i => `${i.name}|${i.checked}`).sort());
+        const newHash = JSON.stringify(newList.map(i => `${i.name}|${i.checked}`).sort());
+
+        if (oldHash !== newHash) {
+          console.log('🔄 Focus mode: Detected changes via polling');
+          this.shoppingList = newList;
+          this.render();
+          if (window.showToast) {
+            window.showToast('List synced', 'sync', 2000);
+          }
+        }
+      } catch (error) {
+        console.warn('Focus mode: Poll failed', error);
+      }
+    }, 5000); // Poll every 5 seconds
+
+    console.log('Focus mode: Started polling (5s interval)');
+  }
+
+  /**
+   * Stop polling
+   */
+  stopPolling() {
+    if (this._pollInterval) {
+      clearInterval(this._pollInterval);
+      this._pollInterval = null;
+      console.log('Focus mode: Stopped polling');
     }
   }
 
