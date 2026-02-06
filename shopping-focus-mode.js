@@ -543,6 +543,7 @@ class ShoppingFocusMode {
 
   /**
    * Subscribe to Realtime updates
+   * Shopping list is computed from pantry, meals, AND manual items
    */
   subscribeToRealtime() {
     // Use the existing Supabase client if available
@@ -554,17 +555,36 @@ class ShoppingFocusMode {
     try {
       this.realtimeChannel = window._supabaseClient
         .channel('focus-shopping-sync')
+        // Manual shopping list items
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'shopping_list_items', filter: `household_id=eq.${householdId}` },
           () => this.handleRealtimeUpdate()
         )
+        // Checked status
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'shopping_list_checked', filter: `household_id=eq.${householdId}` },
           () => this.handleRealtimeUpdate()
         )
-        .subscribe();
+        // Pantry changes affect threshold-based items
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'pantry_items', filter: `household_id=eq.${householdId}` },
+          () => this.handleRealtimeUpdate()
+        )
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'pantry_locations', filter: `household_id=eq.${householdId}` },
+          () => this.handleRealtimeUpdate()
+        )
+        // Meal plan changes affect meal-based items
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'meal_plans', filter: `household_id=eq.${householdId}` },
+          () => this.handleRealtimeUpdate()
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('Focus mode: Realtime subscribed to all shopping sources');
+          }
+        });
 
-      console.log('Focus mode: Realtime subscribed');
     } catch (error) {
       console.warn('Focus mode: Realtime subscription failed', error);
     }
