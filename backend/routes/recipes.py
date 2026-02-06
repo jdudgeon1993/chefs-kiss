@@ -111,6 +111,7 @@ async def add_recipe(
         recipe_response = supabase.table('recipes').insert({
             'household_id': household_id,
             'name': recipe.name,
+            'servings': recipe.servings,
             'category': recipe.category,
             'tags': recipe.tags,
             'instructions': recipe.instructions,
@@ -144,33 +145,27 @@ async def update_recipe(
     supabase = get_supabase()
 
     def update():
-        # Build update dict
+        # Build update dict with all provided fields
         update_data = {}
         if recipe.name is not None:
             update_data['name'] = recipe.name
+        if recipe.servings is not None:
+            update_data['servings'] = recipe.servings
         if recipe.category is not None:
             update_data['category'] = recipe.category
         if recipe.tags is not None:
             update_data['tags'] = recipe.tags
         if recipe.instructions is not None:
             update_data['instructions'] = recipe.instructions
+        if recipe.ingredients is not None:
+            update_data['ingredients'] = recipe.ingredients
 
+        # Single atomic update with all fields
         if update_data:
             supabase.table('recipes').update(update_data)\
                 .eq('id', recipe_id)\
                 .eq('household_id', household_id)\
                 .execute()
-
-        # Update ingredients if provided (stored as JSONB)
-        if recipe.ingredients is not None:
-            if 'ingredients' not in update_data:
-                update_data['ingredients'] = recipe.ingredients
-            # Re-run update if ingredients were provided separately
-            if update_data and 'ingredients' in update_data:
-                supabase.table('recipes').update({'ingredients': update_data['ingredients']})\
-                    .eq('id', recipe_id)\
-                    .eq('household_id', household_id)\
-                    .execute()
 
     StateManager.update_and_invalidate(household_id, update)
 

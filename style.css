@@ -374,6 +374,9 @@ body.compact {
 }
 
 .shopping-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1.5rem;
 }
 
@@ -382,6 +385,24 @@ body.compact {
   color: var(--color-text-primary);
   font-family: "Libre Baskerville", Georgia, serif;
   margin: 0;
+}
+
+.btn-refresh {
+  background: transparent;
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.btn-refresh:hover {
+  background: rgba(241, 195, 56, 0.15);
+}
+
+.btn-refresh:active {
+  transform: rotate(180deg);
 }
 
 /* Shopping List Add Input */
