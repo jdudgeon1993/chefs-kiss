@@ -4,10 +4,12 @@
  * "The shopping list is what makes everything beat!"
  *
  * Focus mode: Full-screen shopping list for when you're at the store.
+ * - Items grouped by category for easy store navigation
  * - Check off items as you shop
- * - Add items on the fly
+ * - Quick add items on the fly
+ * - Edit items for more details
+ * - Live sync with Realtime
  * - Clean, distraction-free interface
- * - Exit back to main app when done
  */
 
 class ShoppingFocusMode {
@@ -15,6 +17,7 @@ class ShoppingFocusMode {
     this.isActive = false;
     this.shoppingList = [];
     this.overlay = null;
+    this.realtimeChannel = null;
   }
 
   /**
@@ -36,6 +39,13 @@ class ShoppingFocusMode {
 
     // Add keyboard shortcuts
     this.addKeyboardShortcuts();
+
+    // Subscribe to Realtime updates
+    this.subscribeToRealtime();
+
+    if (window.showToast) {
+      window.showToast('Focus mode active', 'info', 2000);
+    }
   }
 
   /**
@@ -55,9 +65,15 @@ class ShoppingFocusMode {
     // Remove keyboard shortcuts
     this.removeKeyboardShortcuts();
 
+    // Unsubscribe from Realtime
+    this.unsubscribeFromRealtime();
+
+    // Restore body scrolling
+    document.body.style.overflow = '';
+
     // Trigger app refresh
-    if (window.app && window.app.loadAllData) {
-      window.app.loadAllData();
+    if (window.loadShoppingList) {
+      window.loadShoppingList();
     }
   }
 
@@ -66,7 +82,7 @@ class ShoppingFocusMode {
    */
   async loadShoppingList() {
     try {
-      const data = await API.getShoppingList();
+      const data = await API.call('/shopping-list/');
       this.shoppingList = data.shopping_list || [];
     } catch (error) {
       console.error('Failed to load shopping list:', error);
@@ -83,7 +99,33 @@ class ShoppingFocusMode {
     this.overlay.className = 'shopping-focus-overlay';
 
     document.body.appendChild(this.overlay);
-    document.body.style.overflow = 'hidden';  // Prevent background scrolling
+    document.body.style.overflow = 'hidden';
+  }
+
+  /**
+   * Group items by category, sorted A-Z within each category
+   */
+  groupByCategory(items) {
+    const groups = {};
+
+    items.forEach(item => {
+      const cat = item.category || 'Other';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(item);
+    });
+
+    // Sort items A-Z within each category
+    Object.keys(groups).forEach(cat => {
+      groups[cat].sort((a, b) => a.name.localeCompare(b.name));
+    });
+
+    // Sort categories A-Z
+    const sortedGroups = {};
+    Object.keys(groups).sort().forEach(cat => {
+      sortedGroups[cat] = groups[cat];
+    });
+
+    return sortedGroups;
   }
 
   /**
@@ -95,6 +137,9 @@ class ShoppingFocusMode {
     const unchecked = this.shoppingList.filter(item => !item.checked);
     const checked = this.shoppingList.filter(item => item.checked);
 
+    const uncheckedByCategory = this.groupByCategory(unchecked);
+    const checkedByCategory = this.groupByCategory(checked);
+
     const progress = this.shoppingList.length > 0
       ? Math.round((checked.length / this.shoppingList.length) * 100)
       : 0;
@@ -103,103 +148,134 @@ class ShoppingFocusMode {
       <div class="focus-container">
         <!-- Header -->
         <div class="focus-header">
-          <h1>🛒 Shopping List</h1>
+          <h1>Shopping List</h1>
           <div class="focus-progress">
             <div class="progress-bar">
               <div class="progress-fill" style="width: ${progress}%"></div>
             </div>
             <div class="progress-text">
-              ${checked.length} / ${this.shoppingList.length} items
+              ${checked.length} of ${this.shoppingList.length} items checked
             </div>
           </div>
-          <button class="focus-exit-btn" onclick="window.shoppingFocus.exit()">
-            Done Shopping
-          </button>
+
+          <!-- Quick Add -->
+          <div class="focus-quick-add">
+            <input
+              type="text"
+              id="focus-quick-add-input"
+              placeholder="Quick add item..."
+              class="focus-input"
+            >
+            <button class="focus-btn-add" onclick="window.shoppingFocus.quickAdd()">+</button>
+          </div>
         </div>
 
-        <!-- Shopping List -->
+        <!-- Shopping List Content -->
         <div class="focus-content">
-          ${unchecked.length === 0 && checked.length === 0 ? `
+          ${this.shoppingList.length === 0 ? `
             <div class="focus-empty">
-              <div class="empty-icon">✅</div>
-              <h2>All set!</h2>
-              <p>Your shopping list is empty.</p>
-              <p>Add items below or exit focus mode.</p>
+              <div class="empty-icon">🛒</div>
+              <h2>Your list is empty!</h2>
+              <p>Add items using the input above.</p>
             </div>
           ` : ''}
 
           ${unchecked.length > 0 ? `
             <div class="focus-section">
               <h2>To Buy (${unchecked.length})</h2>
-              <div class="focus-items">
-                ${unchecked.map(item => this.renderItem(item, false)).join('')}
-              </div>
+              ${Object.entries(uncheckedByCategory).map(([category, items]) => `
+                <div class="focus-category">
+                  <div class="focus-category-header">${this.getCategoryEmoji(category)} ${category}</div>
+                  <div class="focus-items">
+                    ${items.map(item => this.renderItem(item, false)).join('')}
+                  </div>
+                </div>
+              `).join('')}
             </div>
           ` : ''}
 
           ${checked.length > 0 ? `
             <div class="focus-section checked-section">
-              <h2>✓ Checked Off (${checked.length})</h2>
-              <div class="focus-items">
-                ${checked.map(item => this.renderItem(item, true)).join('')}
-              </div>
+              <h2>In Cart (${checked.length})</h2>
+              ${Object.entries(checkedByCategory).map(([category, items]) => `
+                <div class="focus-category">
+                  <div class="focus-category-header">${this.getCategoryEmoji(category)} ${category}</div>
+                  <div class="focus-items">
+                    ${items.map(item => this.renderItem(item, true)).join('')}
+                  </div>
+                </div>
+              `).join('')}
             </div>
           ` : ''}
         </div>
 
         <!-- Footer Actions -->
         <div class="focus-footer">
-          <button class="focus-btn" onclick="window.shoppingFocus.showAddItemDialog()">
-            ➕ Add Item
-          </button>
           ${checked.length > 0 ? `
-            <button class="focus-btn secondary" onclick="window.shoppingFocus.addCheckedToPantry()">
-              📦 Add Checked to Pantry
+            <button class="focus-btn primary" onclick="window.shoppingFocus.checkout()">
+              Checkout (${checked.length})
             </button>
             <button class="focus-btn secondary" onclick="window.shoppingFocus.clearChecked()">
-              🗑️ Clear Checked
+              Clear Checked
             </button>
           ` : ''}
+          <button class="focus-btn exit" onclick="window.shoppingFocus.exit()">
+            Exit Focus Mode
+          </button>
         </div>
       </div>
     `;
 
-    // Add event listeners
-    this.attachEventListeners();
+    // Wire up quick add input
+    const quickAddInput = document.getElementById('focus-quick-add-input');
+    if (quickAddInput) {
+      quickAddInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') this.quickAdd();
+      });
+      // Auto-focus the input
+      setTimeout(() => quickAddInput.focus(), 100);
+    }
+  }
+
+  /**
+   * Get emoji for category
+   */
+  getCategoryEmoji(category) {
+    const emojis = {
+      'Meat': '🥩', 'Dairy': '🧈', 'Produce': '🥬', 'Pantry': '🫙',
+      'Frozen': '🧊', 'Spices': '🌶️', 'Beverages': '🥤', 'Snacks': '🍿',
+      'Grains': '🌾', 'Baking': '🧁', 'Canned Goods': '🥫', 'Condiments': '🫗',
+      'Seafood': '🐟', 'Deli': '🥪', 'Other': '📦'
+    };
+    return emojis[category] || '📦';
   }
 
   /**
    * Render single shopping item
    */
   renderItem(item, isChecked) {
-    const itemKey = item.id || `${item.name}-${item.unit}`;
+    const itemKey = item.id || `${item.name}|${item.unit}`;
+    const safeKey = itemKey.replace(/'/g, "\\'");
 
     return `
       <div class="focus-item ${isChecked ? 'checked' : ''}" data-item-key="${itemKey}">
-        <div class="item-checkbox">
+        <label class="focus-item-checkbox">
           <input
             type="checkbox"
             ${isChecked ? 'checked' : ''}
-            onchange="window.shoppingFocus.toggleItem('${itemKey}', this.checked)"
+            onchange="window.shoppingFocus.toggleItem('${safeKey}', this.checked)"
           >
-        </div>
-        <div class="item-content">
-          <div class="item-name">${item.name}</div>
-          <div class="item-details">
-            <span class="item-quantity">${item.quantity} ${item.unit}</span>
-            <span class="item-category">${item.category}</span>
-            <span class="item-source">${item.source}</span>
+          <span class="checkmark"></span>
+        </label>
+        <div class="focus-item-content" onclick="window.shoppingFocus.openEditModal('${safeKey}')">
+          <div class="focus-item-name">${item.name}</div>
+          <div class="focus-item-details">
+            <span class="focus-item-qty">${item.quantity} ${item.unit}</span>
+            ${item.source ? `<span class="focus-item-source">${item.source}</span>` : ''}
           </div>
         </div>
       </div>
     `;
-  }
-
-  /**
-   * Attach event listeners
-   */
-  attachEventListeners() {
-    // Already handled via inline onclick
   }
 
   /**
@@ -209,15 +285,18 @@ class ShoppingFocusMode {
     try {
       // Find item
       const item = this.shoppingList.find(i =>
-        (i.id && i.id === itemKey) ||
-        `${i.name}-${i.unit}` === itemKey
+        (i.id && String(i.id) === String(itemKey)) ||
+        `${i.name}|${i.unit}` === itemKey
       );
 
       if (!item) return;
 
-      // Only update if it's a manual item (has ID)
+      // Update backend if it's a manual item with ID
       if (item.id) {
-        await API.updateShoppingItem(item.id, { checked });
+        await API.call(`/shopping-list/items/${item.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ checked })
+        });
       }
 
       // Update local state
@@ -228,39 +307,173 @@ class ShoppingFocusMode {
 
     } catch (error) {
       console.error('Failed to toggle item:', error);
-      alert('Failed to update item. Please try again.');
+      if (window.showToast) window.showToast('Failed to update item', 'error');
     }
   }
 
   /**
-   * Show add item dialog
+   * Quick add item (name only, defaults for rest)
    */
-  showAddItemDialog() {
-    const name = prompt('Item name:');
+  async quickAdd() {
+    const input = document.getElementById('focus-quick-add-input');
+    if (!input) return;
+
+    const name = input.value.trim();
     if (!name) return;
 
-    const quantity = parseFloat(prompt('Quantity:', '1'));
-    if (!quantity || quantity <= 0) return;
+    try {
+      await API.call('/shopping-list/items', {
+        method: 'POST',
+        body: JSON.stringify({
+          name,
+          quantity: 1,
+          unit: 'unit',
+          category: 'Other'
+        })
+      });
 
-    const unit = prompt('Unit:', 'unit');
-    if (!unit) return;
+      input.value = '';
+      await this.loadShoppingList();
+      this.render();
 
-    const category = prompt('Category (optional):', 'Other');
+      if (window.showToast) window.showToast('Item added!', 'success', 2000);
 
-    this.addItem({ name, quantity, unit, category: category || 'Other' });
+    } catch (error) {
+      console.error('Failed to add item:', error);
+      if (window.showToast) window.showToast('Failed to add item', 'error');
+    }
   }
 
   /**
-   * Add item to shopping list
+   * Open edit modal for item
    */
-  async addItem(item) {
+  openEditModal(itemKey) {
+    const item = this.shoppingList.find(i =>
+      (i.id && String(i.id) === String(itemKey)) ||
+      `${i.name}|${i.unit}` === itemKey
+    );
+
+    if (!item) return;
+
+    // Get categories from household settings or use defaults
+    const categories = (window.householdSettings && window.householdSettings.categories) ||
+      ['Meat', 'Dairy', 'Produce', 'Pantry', 'Frozen', 'Spices', 'Beverages', 'Snacks', 'Other'];
+
+    const modal = document.createElement('div');
+    modal.className = 'focus-modal-overlay';
+    modal.innerHTML = `
+      <div class="focus-modal">
+        <h3>Edit Item</h3>
+        <div class="focus-modal-field">
+          <label>Name</label>
+          <input type="text" id="edit-item-name" value="${item.name}" class="focus-input">
+        </div>
+        <div class="focus-modal-row">
+          <div class="focus-modal-field">
+            <label>Quantity</label>
+            <input type="number" id="edit-item-qty" value="${item.quantity}" min="0" step="0.5" class="focus-input">
+          </div>
+          <div class="focus-modal-field">
+            <label>Unit</label>
+            <input type="text" id="edit-item-unit" value="${item.unit}" class="focus-input" list="focus-unit-list">
+            <datalist id="focus-unit-list">
+              ${(window.cachedUnits || ['each', 'lb', 'oz', 'cup', 'gallon']).map(u => `<option value="${u}">`).join('')}
+            </datalist>
+          </div>
+        </div>
+        <div class="focus-modal-field">
+          <label>Category</label>
+          <select id="edit-item-category" class="focus-input">
+            ${categories.map(c => `<option value="${c}" ${c === item.category ? 'selected' : ''}>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div class="focus-modal-actions">
+          ${item.id ? `<button class="focus-btn danger" onclick="window.shoppingFocus.deleteItem('${item.id}')">Delete</button>` : ''}
+          <button class="focus-btn secondary" onclick="window.shoppingFocus.closeEditModal()">Cancel</button>
+          <button class="focus-btn primary" onclick="window.shoppingFocus.saveEdit('${itemKey}')">Save</button>
+        </div>
+      </div>
+    `;
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) this.closeEditModal();
+    });
+
+    this.overlay.appendChild(modal);
+  }
+
+  /**
+   * Close edit modal
+   */
+  closeEditModal() {
+    const modal = this.overlay.querySelector('.focus-modal-overlay');
+    if (modal) modal.remove();
+  }
+
+  /**
+   * Save edited item
+   */
+  async saveEdit(itemKey) {
+    const item = this.shoppingList.find(i =>
+      (i.id && String(i.id) === String(itemKey)) ||
+      `${i.name}|${i.unit}` === itemKey
+    );
+
+    if (!item) return;
+
+    const name = document.getElementById('edit-item-name').value.trim();
+    const quantity = parseFloat(document.getElementById('edit-item-qty').value) || 1;
+    const unit = document.getElementById('edit-item-unit').value.trim() || 'unit';
+    const category = document.getElementById('edit-item-category').value;
+
+    if (!name) {
+      if (window.showToast) window.showToast('Name is required', 'error');
+      return;
+    }
+
     try {
-      await API.addManualShoppingItem(item);
+      if (item.id) {
+        await API.call(`/shopping-list/items/${item.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ name, quantity, unit, category })
+        });
+      }
+
+      // Update local state
+      item.name = name;
+      item.quantity = quantity;
+      item.unit = unit;
+      item.category = category;
+
+      this.closeEditModal();
+      this.render();
+
+      if (window.showToast) window.showToast('Item updated!', 'success', 2000);
+
+    } catch (error) {
+      console.error('Failed to update item:', error);
+      if (window.showToast) window.showToast('Failed to update item', 'error');
+    }
+  }
+
+  /**
+   * Delete item
+   */
+  async deleteItem(itemId) {
+    if (!confirm('Delete this item?')) return;
+
+    try {
+      await API.call(`/shopping-list/items/${itemId}`, { method: 'DELETE' });
+
+      this.closeEditModal();
       await this.loadShoppingList();
       this.render();
+
+      if (window.showToast) window.showToast('Item deleted', 'success', 2000);
+
     } catch (error) {
-      console.error('Failed to add item:', error);
-      alert('Failed to add item. Please try again.');
+      console.error('Failed to delete item:', error);
+      if (window.showToast) window.showToast('Failed to delete item', 'error');
     }
   }
 
@@ -271,29 +484,113 @@ class ShoppingFocusMode {
     if (!confirm('Remove all checked items from the list?')) return;
 
     try {
-      await API.clearCheckedItems();
+      await API.call('/shopping-list/clear-checked', { method: 'POST' });
       await this.loadShoppingList();
       this.render();
+
+      if (window.showToast) window.showToast('Checked items cleared!', 'success');
+
+      // If list is now empty, prompt to exit
+      if (this.shoppingList.length === 0) {
+        this.promptExitIfEmpty();
+      }
+
     } catch (error) {
       console.error('Failed to clear checked items:', error);
-      alert('Failed to clear items. Please try again.');
+      if (window.showToast) window.showToast('Failed to clear items', 'error');
     }
   }
 
   /**
-   * Add checked items to pantry
+   * Checkout - add checked items to pantry
    */
-  async addCheckedToPantry() {
-    if (!confirm('Add all checked items to your pantry?')) return;
+  async checkout() {
+    const checked = this.shoppingList.filter(item => item.checked);
+    if (checked.length === 0) return;
+
+    if (!confirm(`Add ${checked.length} item(s) to your pantry?`)) return;
 
     try {
-      const result = await API.addCheckedToPantry();
-      alert(`✓ Added ${result.added_count} items to pantry!`);
+      await API.call('/shopping-list/checkout', { method: 'POST' });
       await this.loadShoppingList();
       this.render();
+
+      if (window.showToast) window.showToast(`${checked.length} items added to pantry!`, 'success');
+
+      // If list is now empty, prompt to exit
+      if (this.shoppingList.length === 0) {
+        this.promptExitIfEmpty();
+      }
+
     } catch (error) {
-      console.error('Failed to add to pantry:', error);
-      alert('Failed to add items to pantry. Please try again.');
+      console.error('Failed to checkout:', error);
+      if (window.showToast) window.showToast('Failed to checkout', 'error');
+    }
+  }
+
+  /**
+   * Prompt user to exit if list is empty
+   */
+  promptExitIfEmpty() {
+    setTimeout(() => {
+      if (this.shoppingList.length === 0 && this.isActive) {
+        if (confirm('Your shopping list is empty! Ready to exit focus mode?')) {
+          this.exit();
+        }
+      }
+    }, 500);
+  }
+
+  /**
+   * Subscribe to Realtime updates
+   */
+  subscribeToRealtime() {
+    // Use the existing Supabase client if available
+    if (!window._supabaseClient) return;
+
+    const householdId = API.getActiveHouseholdId();
+    if (!householdId) return;
+
+    try {
+      this.realtimeChannel = window._supabaseClient
+        .channel('focus-shopping-sync')
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'shopping_list_items', filter: `household_id=eq.${householdId}` },
+          () => this.handleRealtimeUpdate()
+        )
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'shopping_list_checked', filter: `household_id=eq.${householdId}` },
+          () => this.handleRealtimeUpdate()
+        )
+        .subscribe();
+
+      console.log('Focus mode: Realtime subscribed');
+    } catch (error) {
+      console.warn('Focus mode: Realtime subscription failed', error);
+    }
+  }
+
+  /**
+   * Handle Realtime update
+   */
+  async handleRealtimeUpdate() {
+    // Debounce rapid updates
+    if (this._realtimeTimeout) clearTimeout(this._realtimeTimeout);
+
+    this._realtimeTimeout = setTimeout(async () => {
+      await this.loadShoppingList();
+      this.render();
+      if (window.showToast) window.showToast('List updated', 'sync', 2000);
+    }, 500);
+  }
+
+  /**
+   * Unsubscribe from Realtime
+   */
+  unsubscribeFromRealtime() {
+    if (this.realtimeChannel && window._supabaseClient) {
+      window._supabaseClient.removeChannel(this.realtimeChannel);
+      this.realtimeChannel = null;
     }
   }
 
@@ -304,7 +601,13 @@ class ShoppingFocusMode {
     this.keyHandler = (e) => {
       // ESC to exit
       if (e.key === 'Escape') {
-        this.exit();
+        // If modal is open, close it instead of exiting
+        const modal = this.overlay?.querySelector('.focus-modal-overlay');
+        if (modal) {
+          this.closeEditModal();
+        } else {
+          this.exit();
+        }
       }
     };
 
@@ -324,3 +627,6 @@ class ShoppingFocusMode {
 
 // Create global instance
 window.shoppingFocus = new ShoppingFocusMode();
+
+// Expose enter function for easy access
+window.enterShoppingFocusMode = () => window.shoppingFocus.enter();

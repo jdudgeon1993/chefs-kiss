@@ -405,6 +405,24 @@ body.compact {
   transform: rotate(180deg);
 }
 
+/* Focus Mode Button */
+.btn-focus-mode {
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.btn-focus-mode:hover {
+  background: #236b3d;
+  transform: translateY(-1px);
+}
+
 /* Shopping List Add Input */
 .shopping-add-inline {
   display: flex;
