@@ -83,7 +83,9 @@ class ShoppingFocusMode {
   async loadShoppingList() {
     try {
       const data = await API.call('/shopping-list/');
-      this.shoppingList = data.shopping_list || [];
+      // Backend returns {shopping_list: [...]} or just the array
+      this.shoppingList = data.shopping_list || data || [];
+      console.log('Focus mode: Loaded', this.shoppingList.length, 'items from API');
     } catch (error) {
       console.error('Failed to load shopping list:', error);
       this.shoppingList = [];
