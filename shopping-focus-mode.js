@@ -8,7 +8,7 @@
  * - Check off items as you shop
  * - Quick add items on the fly
  * - Edit items for more details
- * - Live sync with Realtime
+ * - Live sync via main app's realtime events
  * - Clean, distraction-free interface
  */
 
@@ -17,7 +17,7 @@ class ShoppingFocusMode {
     this.isActive = false;
     this.shoppingList = [];
     this.overlay = null;
-    this.realtimeChannel = null;
+    this._updateHandler = null;
   }
 
   /**
@@ -40,8 +40,8 @@ class ShoppingFocusMode {
     // Add keyboard shortcuts
     this.addKeyboardShortcuts();
 
-    // Subscribe to Realtime updates
-    this.subscribeToRealtime();
+    // Listen for shopping list updates from main app
+    this.subscribeToUpdates();
 
     if (window.showToast) {
       window.showToast('Focus mode active', 'info', 2000);
@@ -65,8 +65,8 @@ class ShoppingFocusMode {
     // Remove keyboard shortcuts
     this.removeKeyboardShortcuts();
 
-    // Unsubscribe from Realtime
-    this.unsubscribeFromRealtime();
+    // Unsubscribe from updates
+    this.unsubscribeFromUpdates();
 
     // Restore body scrolling
     document.body.style.overflow = '';
@@ -542,75 +542,33 @@ class ShoppingFocusMode {
   }
 
   /**
-   * Subscribe to Realtime updates
-   * Shopping list is computed from pantry, meals, AND manual items
+   * Subscribe to shopping list updates from main app
+   * The main app handles all realtime complexity - we just listen for its updates
    */
-  subscribeToRealtime() {
-    // Use the existing Supabase client if available
-    if (!window._supabaseClient) return;
+  subscribeToUpdates() {
+    this._updateHandler = (event) => {
+      if (!this.isActive) return;
 
-    const householdId = API.getActiveHouseholdId();
-    if (!householdId) return;
-
-    try {
-      this.realtimeChannel = window._supabaseClient
-        .channel('focus-shopping-sync')
-        // Manual shopping list items
-        .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'shopping_list_items', filter: `household_id=eq.${householdId}` },
-          () => this.handleRealtimeUpdate()
-        )
-        // Checked status
-        .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'shopping_list_checked', filter: `household_id=eq.${householdId}` },
-          () => this.handleRealtimeUpdate()
-        )
-        // Pantry changes affect threshold-based items
-        .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'pantry_items', filter: `household_id=eq.${householdId}` },
-          () => this.handleRealtimeUpdate()
-        )
-        .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'pantry_locations', filter: `household_id=eq.${householdId}` },
-          () => this.handleRealtimeUpdate()
-        )
-        // Meal plan changes affect meal-based items
-        .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'meal_plans', filter: `household_id=eq.${householdId}` },
-          () => this.handleRealtimeUpdate()
-        )
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            console.log('Focus mode: Realtime subscribed to all shopping sources');
-          }
-        });
-
-    } catch (error) {
-      console.warn('Focus mode: Realtime subscription failed', error);
-    }
-  }
-
-  /**
-   * Handle Realtime update
-   */
-  async handleRealtimeUpdate() {
-    // Debounce rapid updates
-    if (this._realtimeTimeout) clearTimeout(this._realtimeTimeout);
-
-    this._realtimeTimeout = setTimeout(async () => {
-      await this.loadShoppingList();
+      // Update our local list from the event data
+      this.shoppingList = event.detail || [];
       this.render();
-      if (window.showToast) window.showToast('List updated', 'sync', 2000);
-    }, 500);
+
+      if (window.showToast) {
+        window.showToast('List synced', 'sync', 2000);
+      }
+    };
+
+    window.addEventListener('shopping-list-updated', this._updateHandler);
+    console.log('Focus mode: Listening for shopping list updates');
   }
 
   /**
-   * Unsubscribe from Realtime
+   * Unsubscribe from updates
    */
-  unsubscribeFromRealtime() {
-    if (this.realtimeChannel && window._supabaseClient) {
-      window._supabaseClient.removeChannel(this.realtimeChannel);
-      this.realtimeChannel = null;
+  unsubscribeFromUpdates() {
+    if (this._updateHandler) {
+      window.removeEventListener('shopping-list-updated', this._updateHandler);
+      this._updateHandler = null;
     }
   }
 

@@ -561,7 +561,11 @@ async function loadShoppingList() {
     showLoading();
     const shoppingData = await API.call('/shopping-list/');
     // Backend returns {shopping_list: [...], total_items: ..., checked_items: ...}
-    renderShoppingList(shoppingData.shopping_list || shoppingData);
+    const list = shoppingData.shopping_list || shoppingData;
+    renderShoppingList(list);
+
+    // Notify focus mode (or any listener) that shopping list updated
+    window.dispatchEvent(new CustomEvent('shopping-list-updated', { detail: list }));
   } catch (error) {
     showError('Failed to load shopping list');
     console.error('Shopping list load error:', error);
