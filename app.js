@@ -446,7 +446,7 @@ async function addMealPlan(mealData) {
       body: JSON.stringify(mealData)
     });
 
-    await loadMealPlans();
+    await Promise.all([loadMealPlans(), loadShoppingList()]);
     showSuccess('Meal added to calendar!');
     return newMeal;
   } catch (error) {
@@ -464,7 +464,7 @@ async function updateMealPlan(mealId, mealData) {
       body: JSON.stringify(mealData)
     });
 
-    await loadMealPlans();
+    await Promise.all([loadMealPlans(), loadShoppingList()]);
     showSuccess('Meal updated!');
   } catch (error) {
     showError('Failed to update meal');
@@ -482,7 +482,7 @@ async function deleteMealPlan(mealId) {
       method: 'DELETE'
     });
 
-    await loadMealPlans();
+    await Promise.all([loadMealPlans(), loadShoppingList()]);
     showSuccess('Meal removed!');
   } catch (error) {
     showError('Failed to remove meal');
@@ -500,8 +500,7 @@ async function cookMeal(mealId) {
       method: 'POST'
     });
 
-    await loadMealPlans();
-    await loadPantry(); // Refresh pantry (ingredients were used)
+    await Promise.all([loadMealPlans(), loadPantry(), loadShoppingList()]);
     showSuccess('Meal marked as cooked!');
   } catch (error) {
     showError('Failed to cook meal');
@@ -567,6 +566,15 @@ async function loadShoppingList() {
     console.error('Shopping list load error:', error);
   } finally {
     hideLoading();
+  }
+}
+
+async function refreshShoppingList() {
+  try {
+    await loadShoppingList();
+    showToast('Shopping list refreshed', 'sync', 2000);
+  } catch (error) {
+    showError('Failed to refresh shopping list');
   }
 }
 
@@ -1345,7 +1353,7 @@ async function deleteIngredientFromModal(itemId) {
     await API.call(`/pantry/${itemId}`, { method: 'DELETE' });
     closeModal();
     showSuccess('Item deleted');
-    await loadPantry();
+    await Promise.all([loadPantry(), loadShoppingList()]);
   } catch (error) {
     console.error('Error deleting item:', error);
     showError('Failed to delete item');
@@ -1410,17 +1418,19 @@ async function saveIngredient(itemId) {
         method: 'PUT',
         body: JSON.stringify({ name, category, unit, min_threshold: min, locations })
       });
+      showSuccess('Pantry item updated!');
     } else {
       await API.call('/pantry/', {
         method: 'POST',
         body: JSON.stringify({ name, category, unit, min_threshold: min, locations })
       });
+      showSuccess('Pantry item added!');
     }
     closeModal();
-    await loadPantry();
+    await Promise.all([loadPantry(), loadShoppingList()]);
   } catch (error) {
     console.error('Error saving ingredient:', error);
-    alert('Failed to save: ' + error.message);
+    showError('Failed to save: ' + error.message);
   }
 }
 
@@ -1487,10 +1497,11 @@ async function quickDepleteItem(item, amount) {
       body: JSON.stringify({ locations: updatedLocations })
     });
     closeModal();
-    await loadPantry();
+    showSuccess('Item used!');
+    await Promise.all([loadPantry(), loadShoppingList()]);
   } catch (error) {
     console.error('Error depleting item:', error);
-    alert('Failed to update: ' + error.message);
+    showError('Failed to update: ' + error.message);
   }
 }
 
@@ -1610,19 +1621,21 @@ async function saveRecipe(recipeId) {
     if (recipeId) {
       await API.call(`/recipes/${recipeId}`, {
         method: 'PUT',
-        body: JSON.stringify({ name, category, tags, instructions, ingredients })
+        body: JSON.stringify({ name, servings, category, tags, instructions, ingredients })
       });
+      showSuccess('Recipe updated!');
     } else {
       await API.call('/recipes/', {
         method: 'POST',
-        body: JSON.stringify({ name, category, tags, instructions, ingredients })
+        body: JSON.stringify({ name, servings, category, tags, instructions, ingredients })
       });
+      showSuccess('Recipe created!');
     }
     closeModal();
     await loadRecipes();
   } catch (error) {
     console.error('Error saving recipe:', error);
-    alert('Failed to save: ' + error.message);
+    showError('Failed to save recipe: ' + error.message);
   }
 }
 
@@ -2695,6 +2708,7 @@ window.updateBulkEntryCount = updateBulkEntryCount;
 window.loadPantry = loadPantry;
 window.loadRecipes = loadRecipes;
 window.loadShoppingList = loadShoppingList;
+window.refreshShoppingList = refreshShoppingList;
 window.loadMealPlans = loadMealPlans;
 window.loadUnits = loadUnits;
 window.markLocalWrite = markLocalWrite;
@@ -2764,6 +2778,10 @@ async function initRealtime() {
         console.log('Realtime subscription status:', status);
         if (status === 'SUBSCRIBED') {
           console.log('✅ Realtime connected — live sync active');
+          showToast('Live sync connected', 'success', 2000);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Realtime channel error - check Supabase Realtime settings');
+          showToast('Live sync unavailable', 'error', 3000);
         }
       });
 
@@ -2776,8 +2794,13 @@ async function initRealtime() {
 const _realtimeReloadTimers = {};
 
 function handleRealtimeEvent(section, payload) {
+  console.log(`📡 Realtime event: ${section} - ${payload.eventType}`, payload);
+
   // Skip if this was our own write (within debounce window)
-  if (Date.now() - _lastLocalWrite < LOCAL_WRITE_DEBOUNCE) return;
+  if (Date.now() - _lastLocalWrite < LOCAL_WRITE_DEBOUNCE) {
+    console.log('  ↳ Skipped (local write debounce)');
+    return;
+  }
 
   // Debounce: if multiple events fire for the same section within 500ms, batch them
   if (_realtimeReloadTimers[section]) {
