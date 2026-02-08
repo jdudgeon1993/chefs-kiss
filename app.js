@@ -78,6 +78,9 @@ const Dashboard = {
    UTILITY FUNCTIONS
 ============================================================================ */
 
+function showLoading(message = 'Loading...') {}
+function hideLoading() {}
+
 // ── Toast Notification System ──
 function _getToastContainer() {
   let container = document.getElementById('toast-container');
