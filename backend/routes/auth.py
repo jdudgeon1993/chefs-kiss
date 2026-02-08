@@ -7,9 +7,11 @@ Proxy to Supabase auth (keeping what works!)
 from fastapi import APIRouter, HTTPException, status, Header
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+import logging
 from utils.supabase_client import get_supabase
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
+logger = logging.getLogger(__name__)
 
 
 class SignUpRequest(BaseModel):
@@ -68,10 +70,13 @@ async def signup(request: SignUpRequest):
             "session": auth_response.session.model_dump() if auth_response.session else None
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Signup failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            detail="Failed to create account. Please try again."
         )
 
 
@@ -131,9 +136,10 @@ async def signout():
         supabase.auth.sign_out()
         return {"message": "Signed out successfully"}
     except Exception as e:
+        logger.error(f"Signout failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            detail="Failed to sign out"
         )
 
 
@@ -182,7 +188,8 @@ async def get_current_user_info(authorization: Optional[str] = Header(None)):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Auth check failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e)
+            detail="Authentication failed"
         )

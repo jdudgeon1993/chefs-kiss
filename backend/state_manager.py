@@ -496,12 +496,6 @@ class StateManager:
             meal_plans = []
             for meal_data in meals_response.data:
                 try:
-                    # Map planned_date to date for model compatibility
-                    if 'planned_date' in meal_data:
-                        meal_data['date'] = meal_data['planned_date']
-                    # Map is_cooked to cooked for model compatibility
-                    if 'is_cooked' in meal_data:
-                        meal_data['cooked'] = meal_data['is_cooked']
                     meal_plans.append(MealPlan.from_supabase(meal_data))
                 except Exception as e:
                     logger.warning(f"Could not parse meal plan: {e}")

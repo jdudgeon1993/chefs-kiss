@@ -78,14 +78,6 @@ const Dashboard = {
    UTILITY FUNCTIONS
 ============================================================================ */
 
-function showLoading(message = 'Loading...') {
-  // Future: loading spinner
-}
-
-function hideLoading() {
-  // Future: hide loading spinner
-}
-
 // ── Toast Notification System ──
 function _getToastContainer() {
   let container = document.getElementById('toast-container');
@@ -1363,10 +1355,6 @@ function addLocationRowWithDropdown() {
   list.appendChild(row);
 }
 
-// Keep old function for backwards compatibility
-function addLocationRow() {
-  addLocationRowWithDropdown();
-}
 
 async function saveIngredient(itemId) {
   const name = document.getElementById('ing-name').value.trim();
@@ -1774,15 +1762,6 @@ function closeModal() {
   }
 }
 
-/**
- * Save recipes to localStorage (for persistence)
- */
-function saveRecipes() {
-  if (window.recipes) {
-    localStorage.setItem('recipes', JSON.stringify(window.recipes));
-  }
-}
-
 // Expose functions globally for inline scripts
 window.openIngredientModal = openIngredientModal;
 window.deleteIngredientFromModal = deleteIngredientFromModal;
@@ -1792,8 +1771,7 @@ window.openDayModal = openDayModal;
 window.openCookNowModal = openCookNowModal;
 window.markMealCooked = markMealCooked;
 window.closeModal = closeModal;
-window.saveRecipes = saveRecipes;
-window.addLocationRow = addLocationRow;
+window.addLocationRowWithDropdown = addLocationRowWithDropdown;
 window.addIngredientRow = addIngredientRow;
 window.removeMealFromDay = removeMealFromDay;
 

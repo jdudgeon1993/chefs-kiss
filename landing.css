@@ -589,18 +589,7 @@ body.landing-active .main-content {
   right: 0;
   width: 100%;
   z-index: 10002; /* Above modal (10001) */
-  animation: slideDown 0.3s ease;
-}
-
-@keyframes slideDown {
-  from {
-    transform: translateY(-100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  animation: slideDown 0.3s ease; /* slideDown keyframes defined in style.css */
 }
 
 .demo-banner-text {
