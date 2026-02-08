@@ -18,14 +18,25 @@ class MealPlan(BaseModel):
 
     @classmethod
     def from_supabase(cls, meal_data: dict):
-        """Convert Supabase data to model"""
+        """Convert Supabase data to model.
+
+        Handles both DB column names (planned_date, is_cooked) and
+        model field names (date, cooked).
+        """
+        # DB uses planned_date, model uses date
+        raw_date = meal_data.get('date') or meal_data.get('planned_date')
+        parsed_date = raw_date if isinstance(raw_date, date) else date.fromisoformat(str(raw_date))
+
+        # DB uses is_cooked, model uses cooked
+        cooked = meal_data.get('cooked') if 'cooked' in meal_data else meal_data.get('is_cooked', False)
+
         return cls(
             id=meal_data['id'],
             household_id=meal_data['household_id'],
-            date=meal_data['date'] if isinstance(meal_data['date'], date) else date.fromisoformat(meal_data['date']),
+            date=parsed_date,
             recipe_id=meal_data['recipe_id'],
             serving_multiplier=meal_data.get('serving_multiplier', 1.0),
-            cooked=meal_data.get('cooked', False)
+            cooked=cooked or False
         )
 
 

@@ -31,21 +31,6 @@ app = FastAPI(
 )
 app.router.redirect_slashes = False
 
-# ProxyHeadersMiddleware is optional (some installs may not have the exact starlette submodule).
-# Import defensively so the app doesn't crash at startup when the dependency isn't present.
-try:
-    # from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
-    # app.add_middleware(ProxyHeadersMiddleware)
-    logger.info("✅ ProxyHeadersMiddleware loaded and added")
-except Exception as exc:
-    ProxyHeadersMiddleware = None
-    logger.warning(
-        "⚠️ ProxyHeadersMiddleware not available. "
-        "Request forwarding headers (X-Forwarded-For / X-Forwarded-Proto) may not be parsed. "
-        "Install/upgrade starlette if you need this middleware. "
-        f"({exc})"
-    )
-
 # CORS middleware - Allow frontend to call API
 cors_origins_raw = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8080")
 cors_origins = [origin.strip().rstrip('/') for origin in cors_origins_raw.split(",")]
@@ -56,8 +41,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Household-Id"],
     expose_headers=["X-Household-Id"],
 )
 

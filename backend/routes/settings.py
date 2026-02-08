@@ -5,7 +5,7 @@ Household settings for categories, locations, etc.
 Replaces localStorage with proper database storage.
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 import logging
 
 from models.settings import HouseholdSettings, SettingsUpdate
@@ -142,7 +142,7 @@ async def add_location(
     """Add a new location."""
     name = location.get('name', '').strip()
     if not name:
-        return {"error": "Location name required"}, 400
+        raise HTTPException(status_code=400, detail="Location name required")
 
     supabase = get_supabase()
 
@@ -210,7 +210,7 @@ async def add_category(
     emoji = category.get('emoji', '')
 
     if not name:
-        return {"error": "Category name required"}, 400
+        raise HTTPException(status_code=400, detail="Category name required")
 
     supabase = get_supabase()
 

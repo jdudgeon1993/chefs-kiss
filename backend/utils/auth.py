@@ -6,16 +6,10 @@ Validates Supabase JWT tokens and extracts user/household info.
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
 from typing import Optional
-import os
-from dotenv import load_dotenv
 
 from .supabase_client import get_supabase
 
-load_dotenv()
-
-JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", os.getenv("JWT_SECRET_KEY"))
 security = HTTPBearer()
 
 

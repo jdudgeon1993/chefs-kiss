@@ -48,6 +48,7 @@ async def add_meal_plan(
             'household_id': household_id,
             'planned_date': meal.date.isoformat(),
             'recipe_id': meal.recipe_id,
+            'serving_multiplier': meal.serving_multiplier,
             'is_cooked': False
         }).execute()
 
@@ -83,6 +84,8 @@ async def update_meal_plan(
             update_data['planned_date'] = meal.date.isoformat()
         if meal.recipe_id is not None:
             update_data['recipe_id'] = meal.recipe_id
+        if meal.serving_multiplier is not None:
+            update_data['serving_multiplier'] = meal.serving_multiplier
         if meal.cooked is not None:
             update_data['is_cooked'] = meal.cooked
 
@@ -194,33 +197,49 @@ async def mark_meal_cooked(
             raise HTTPException(404, "Meal not found")
 
         meal = meal_response.data[0]
+        serving_multiplier = meal.get('serving_multiplier', 1.0) or 1.0
 
-        # Get the recipe with ingredients
+        # Get the recipe (ingredients stored as JSONB in recipes table)
         recipe_response = supabase.table('recipes')\
-            .select('*, recipes_ingredients(*)')\
+            .select('*')\
             .eq('id', meal['recipe_id'])\
             .execute()
 
+        if not recipe_response.data:
+            raise HTTPException(404, "Recipe not found")
+
         recipe = recipe_response.data[0]
+        ingredients = recipe.get('ingredients', []) or []
 
         # Deplete pantry for each ingredient
-        for ingredient in recipe['recipes_ingredients']:
-            qty_needed = ingredient['quantity'] * meal['serving_multiplier']
+        for ingredient in ingredients:
+            ing_name = ingredient.get('name', '')
+            ing_unit = ingredient.get('unit', '')
+            ing_qty = ingredient.get('quantity', 0) or 0
+            qty_needed = ing_qty * serving_multiplier
 
-            # Find pantry item
+            if not ing_name or qty_needed <= 0:
+                continue
+
+            # Find pantry item by name (case-insensitive) and unit
             pantry_response = supabase.table('pantry_items')\
                 .select('*, pantry_locations(*)')\
                 .eq('household_id', household_id)\
-                .eq('name', ingredient['name'])\
-                .eq('unit', ingredient['unit'])\
+                .ilike('name', ing_name)\
                 .execute()
 
-            if pantry_response.data:
-                pantry_item = pantry_response.data[0]
+            # Filter by unit match
+            matching_items = [
+                item for item in pantry_response.data
+                if item.get('unit', '').lower() == ing_unit.lower()
+            ]
+
+            if matching_items:
+                pantry_item = matching_items[0]
 
                 # Deplete from locations (FIFO - oldest expiration first)
                 locations = sorted(
-                    pantry_item['pantry_locations'],
+                    pantry_item.get('pantry_locations', []),
                     key=lambda loc: loc.get('expiration_date') or '9999-12-31'
                 )
 
@@ -229,17 +248,16 @@ async def mark_meal_cooked(
                     if remaining <= 0:
                         break
 
-                    if location['quantity'] >= remaining:
-                        # This location has enough
-                        new_qty = location['quantity'] - remaining
+                    loc_qty = location.get('quantity', 0) or 0
+                    if loc_qty >= remaining:
+                        new_qty = loc_qty - remaining
                         supabase.table('pantry_locations')\
                             .update({'quantity': new_qty})\
                             .eq('id', location['id'])\
                             .execute()
                         remaining = 0
                     else:
-                        # Use all from this location
-                        remaining -= location['quantity']
+                        remaining -= loc_qty
                         supabase.table('pantry_locations')\
                             .update({'quantity': 0})\
                             .eq('id', location['id'])\
