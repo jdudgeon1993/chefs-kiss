@@ -51,7 +51,6 @@ async def add_meal_plan(
             'household_id': household_id,
             'planned_date': meal.date.isoformat(),
             'recipe_id': meal.recipe_id,
-            'serving_multiplier': meal.serving_multiplier,
             'is_cooked': False
         }
         logger.info(f"Inserting meal plan: {insert_data}")
@@ -100,8 +99,6 @@ async def update_meal_plan(
             update_data['planned_date'] = meal.date.isoformat()
         if meal.recipe_id is not None:
             update_data['recipe_id'] = meal.recipe_id
-        if meal.serving_multiplier is not None:
-            update_data['serving_multiplier'] = meal.serving_multiplier
         if meal.cooked is not None:
             update_data['is_cooked'] = meal.cooked
 
