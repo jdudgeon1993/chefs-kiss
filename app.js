@@ -2731,7 +2731,7 @@ async function initRealtime() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pantry_items', filter: `household_id=eq.${householdId}` }, (payload) => {
         handleRealtimeEvent('pantry', payload);
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pantry_locations', filter: `household_id=eq.${householdId}` }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pantry_locations' }, (payload) => {
         handleRealtimeEvent('pantry', payload);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'recipes', filter: `household_id=eq.${householdId}` }, (payload) => {
@@ -2740,10 +2740,7 @@ async function initRealtime() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'meal_plans', filter: `household_id=eq.${householdId}` }, (payload) => {
         handleRealtimeEvent('meals', payload);
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_list_items', filter: `household_id=eq.${householdId}` }, (payload) => {
-        handleRealtimeEvent('shopping', payload);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_list_checked', filter: `household_id=eq.${householdId}` }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_list_manual', filter: `household_id=eq.${householdId}` }, (payload) => {
         handleRealtimeEvent('shopping', payload);
       })
       .subscribe((status) => {

@@ -41,7 +41,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Household-Id"],
     expose_headers=["X-Household-Id"],
 )
@@ -125,15 +125,21 @@ async def health():
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
-    """Global exception handler"""
+    """Global exception handler - includes CORS headers so browsers can read errors"""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    return JSONResponse(
+    response = JSONResponse(
         status_code=500,
         content={
             "detail": "Internal server error",
             "error": str(exc) if os.getenv("ENVIRONMENT") == "development" else "An error occurred"
         }
     )
+    # Manually add CORS headers - exception handler responses can bypass CORSMiddleware
+    origin = request.headers.get("origin", "")
+    if origin in cors_origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 
 if __name__ == "__main__":
