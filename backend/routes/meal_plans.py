@@ -6,11 +6,14 @@ Plan your meals, and everything syncs automatically.
 
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import date
+import logging
 
 from models.meal_plan import MealPlanCreate, MealPlanUpdate
 from utils.auth import get_current_household
 from utils.supabase_client import get_supabase
 from state_manager import StateManager
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/meal-plans", tags=["meal_plans"])
 
@@ -44,24 +47,37 @@ async def add_meal_plan(
     supabase = get_supabase()
 
     def update():
-        response = supabase.table('meal_plans').insert({
+        insert_data = {
             'household_id': household_id,
             'planned_date': meal.date.isoformat(),
             'recipe_id': meal.recipe_id,
             'serving_multiplier': meal.serving_multiplier,
             'is_cooked': False
-        }).execute()
+        }
+        logger.info(f"Inserting meal plan: {insert_data}")
+
+        response = supabase.table('meal_plans').insert(insert_data).execute()
+
+        if not response.data:
+            logger.error(f"Meal plan insert returned no data")
+            raise HTTPException(500, "Failed to create meal plan")
 
         return response.data[0]['id']
 
-    meal_id = StateManager.update_and_invalidate(household_id, update)
+    try:
+        meal_id = StateManager.update_and_invalidate(household_id, update)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to add meal plan: {e}", exc_info=True)
+        raise HTTPException(500, "Failed to add meal plan")
 
     # Return fresh state
     state = StateManager.get_state(household_id)
 
     return {
         "id": meal_id,
-        "meal_plans": [meal.model_dump() for meal in state.meal_plans],
+        "meal_plans": [m.model_dump() for m in state.meal_plans],
         "reserved_ingredients": state.reserved_ingredients,
         "shopping_list": [item.model_dump() for item in state.shopping_list]
     }
