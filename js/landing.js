@@ -301,7 +301,7 @@ function loadDemoAccount() {
     console.log('✅ Demo mode activated — redirecting to app');
 
     // Navigate to the app (auth-guard allows demo mode through)
-    window.location.href = '/pantry/';
+    window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/pantry/';
   } catch (err) {
     console.error('Error loading demo account:', err);
     if (window.showError) {
@@ -324,7 +324,7 @@ function exitDemoMode() {
     console.log('✅ Demo mode exited — redirecting to landing');
 
     // Navigate back to landing page
-    window.location.href = '/index.html';
+    window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/index.html';
   }
 }
 
@@ -402,7 +402,7 @@ async function handleLandingSignIn() {
     if (response.session && response.session.access_token) {
       // Save token and navigate to the app
       API.setToken(response.session.access_token);
-      window.location.href = '/pantry/';
+      window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/pantry/';
     } else {
       errorDiv.textContent = 'Sign in failed';
       signInBtn.disabled = false;
@@ -469,7 +469,7 @@ async function handleLandingSignUp() {
     if (response.session && response.session.access_token) {
       // Save token and navigate to the app
       API.setToken(response.session.access_token);
-      window.location.href = '/pantry/';
+      window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/pantry/';
     } else {
       errorDiv.textContent = 'Sign up failed';
       signUpBtn.disabled = false;
@@ -596,13 +596,13 @@ function initLandingPage() {
   // If already authenticated, redirect to the app immediately
   const isAuth = API.getToken() !== null;
   if (isAuth) {
-    window.location.href = '/pantry/';
+    window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/pantry/';
     return;
   }
 
   // If in demo mode, redirect to the app
   if (isDemoMode()) {
-    window.location.href = '/pantry/';
+    window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/pantry/';
     return;
   }
 

@@ -444,7 +444,7 @@ async function handleLogout() {
     cleanupRealtime();
     await API.signOut();
     // Navigate to landing page (multi-page architecture)
-    window.location.href = '/index.html';
+    window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/index.html';
   } catch (error) {
     console.error('Logout error:', error);
     showError('Failed to sign out');

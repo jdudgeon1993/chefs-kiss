@@ -1877,7 +1877,7 @@ async function initApp() {
   } else if (section) {
     // Not authenticated on a section page — redirect to landing
     // (auth-guard.js should have caught this, but just in case)
-    window.location.href = '/index.html';
+    window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/index.html';
   } else {
     // On landing page, not authenticated — landing.js handles display
     showLandingPage();
