@@ -443,9 +443,8 @@ async function handleLogout() {
   try {
     cleanupRealtime();
     await API.signOut();
-    showSuccess('Signed out successfully');
-    closeModal();
-    showLandingPage();
+    // Navigate to landing page (multi-page architecture)
+    window.location.href = '/index.html';
   } catch (error) {
     console.error('Logout error:', error);
     showError('Failed to sign out');

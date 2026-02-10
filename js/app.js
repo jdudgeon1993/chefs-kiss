@@ -1797,11 +1797,14 @@ function wireUpButtons() {
     btnCheckout.addEventListener('click', openCheckoutModal);
   }
 
-  // Onboarding/bulk entry buttons
+  // Onboarding/bulk entry buttons (toggle via CSS classes on multi-page)
   const btnOnboarding = document.getElementById('btn-onboarding');
   if (btnOnboarding) {
     btnOnboarding.addEventListener('click', () => {
-      document.getElementById('nav-onboarding').checked = true;
+      const pantrySection = document.getElementById('pantry-section');
+      const onboardingSection = document.getElementById('onboarding-section');
+      if (pantrySection) pantrySection.classList.add('section-hidden');
+      if (onboardingSection) onboardingSection.classList.add('section-visible');
       initBulkEntry();
     });
   }
@@ -1809,7 +1812,10 @@ function wireUpButtons() {
   const btnExitOnboarding = document.getElementById('btn-exit-onboarding');
   if (btnExitOnboarding) {
     btnExitOnboarding.addEventListener('click', () => {
-      document.getElementById('nav-pantry').checked = true;
+      const pantrySection = document.getElementById('pantry-section');
+      const onboardingSection = document.getElementById('onboarding-section');
+      if (onboardingSection) onboardingSection.classList.remove('section-visible');
+      if (pantrySection) pantrySection.classList.remove('section-hidden');
     });
   }
 
@@ -1844,6 +1850,8 @@ window.loadRecipes = loadRecipes;
 window.loadShoppingList = loadShoppingList;
 window.refreshShoppingList = refreshShoppingList;
 window.loadMealPlans = loadMealPlans;
+window.deleteRecipe = deleteRecipe;
+window.updateRecipe = updateRecipe;
 
 async function initApp() {
   console.log('🍳 Chef\'s Kiss - Python Age 5.0');
@@ -1852,33 +1860,65 @@ async function initApp() {
   // Apply compact mode if enabled
   applyDisplayMode();
 
-  // Check if there was a token before auth check (since checkAuth clears invalid tokens)
-  const hadTokenBeforeCheck = API.getToken() !== null;
+  // Detect if we're on a section page (multi-page architecture)
+  const section = document.body.dataset.section;
+  const isDemoMode = localStorage.getItem('demo-mode') === 'true';
 
   // Check if user is authenticated
   const isAuthenticated = await checkAuth();
 
-  console.log('Authentication status:', isAuthenticated);
+  console.log('Authentication status:', isAuthenticated, section ? `(section: ${section})` : '(landing)');
 
   if (isAuthenticated) {
     await loadApp();
+  } else if (isDemoMode && section) {
+    // Demo mode on a section page — load demo data from localStorage
+    await loadDemoApp();
+  } else if (section) {
+    // Not authenticated on a section page — redirect to landing
+    // (auth-guard.js should have caught this, but just in case)
+    window.location.href = '/index.html';
   } else {
+    // On landing page, not authenticated — landing.js handles display
     showLandingPage();
-
-    // If there was a token but auth failed, show helpful message
-    if (hadTokenBeforeCheck) {
-      console.log('⚠️ Your authentication token was invalid or expired and has been cleared.');
-      console.log('ℹ️ Please sign in again to continue.');
-      console.log('');
-      console.log('If you continue to see authentication errors:');
-      console.log('1. Make sure the backend is deployed and running');
-      console.log('2. Check that SUPABASE_JWT_SECRET is configured correctly in Railway');
-      console.log('3. Try signing up for a new account');
-      console.log('4. Or use the "Try Demo" option to test without authentication');
-    } else {
-      console.log('ℹ️ Welcome! Please sign in or create an account to get started.');
-    }
   }
+}
+
+/**
+ * Load demo data from localStorage (no API calls)
+ */
+async function loadDemoApp() {
+  console.log('🎮 Loading demo mode from localStorage');
+
+  try {
+    window.pantry = JSON.parse(localStorage.getItem('pantry') || '[]');
+    window.recipes = JSON.parse(localStorage.getItem('recipes') || '[]');
+    window.planner = JSON.parse(localStorage.getItem('planner') || '{}');
+    window.shoppingList = [];
+  } catch (e) {
+    console.error('Error parsing demo data:', e);
+    window.pantry = [];
+    window.recipes = [];
+    window.planner = {};
+    window.shoppingList = [];
+  }
+
+  // Load settings defaults (no API call needed for demo)
+  if (typeof loadSettings === 'function') {
+    try { await loadSettings(); } catch (e) { /* ignore API errors in demo */ }
+  }
+  if (typeof createUnitDatalist === 'function') createUnitDatalist();
+
+  // Trigger renders by touching data attributes
+  const pantryDisplay = document.getElementById('pantry-display');
+  if (pantryDisplay) pantryDisplay.setAttribute('data-updated', Date.now());
+
+  const recipesGrid = document.getElementById('recipes-grid');
+  if (recipesGrid) recipesGrid.setAttribute('data-updated', Date.now());
+
+  if (window.reloadCalendar) window.reloadCalendar();
+
+  wireUpButtons();
 }
 
 // Initialize when DOM is ready

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chef's Kiss — Pantry</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/css/shared.css">
+  <link rel="stylesheet" href="/pantry/pantry.css">
+  <link rel="icon" type="image/png" href="/assets/favicon.png" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/js/config.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/validation.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/auth-guard.js"></script>
+  <script src="/js/settings.js"></script>
+  <script src="/js/realtime.js"></script>
+  <script defer src="/js/app.js"></script>
+  <script defer src="/pantry/pantry.js"></script>
+
+  <style>
+    .main-content > section { display: block !important; }
+    .main-content > section.section-hidden { display: none !important; }
+    .main-content > .onboarding-section { display: none !important; }
+    .main-content > .onboarding-section.section-visible { display: block !important; }
+    .landing-page { display: none !important; }
+  </style>
+</head>
+<body data-section="pantry">
+
+  <header class="site-header">
+    <div class="header-left">
+      <h1 class="header-brand">
+        Chef's Kiss
+        <span class="header-brand-underline"></span>
+      </h1>
+    </div>
+    <div class="header-right">
+      <div class="header-datetime">
+        <span id="utility-date"></span>
+        <span class="datetime-separator">•</span>
+        <span id="utility-time"></span>
+      </div>
+      <nav class="header-nav">
+        <button class="btn-header-icon" id="btn-account" title="Account & Households">👤</button>
+        <button class="btn-header-icon" id="btn-onboarding" title="Quick Setup">📋</button>
+        <button class="btn-header-icon" id="btn-settings" title="Settings">⚙️</button>
+      </nav>
+    </div>
+  </header>
+
+  <nav class="sidebar-nav" aria-label="Main navigation">
+    <a href="/recipes/" class="nav-btn" title="Recipes" aria-label="Recipes">🍳</a>
+    <a href="/pantry/" class="nav-btn active" title="Pantry" aria-label="Pantry">🏺</a>
+    <a href="/shopping/" class="nav-btn" title="Shopping" aria-label="Shopping">🛒</a>
+    <a href="/meals/" class="nav-btn" title="Meal Planning" aria-label="Meal Planning">📅</a>
+  </nav>
+
+  <nav class="bottom-nav" aria-label="Main navigation">
+    <a href="/recipes/" class="nav-btn" title="Recipes" aria-label="Recipes">🍳</a>
+    <a href="/pantry/" class="nav-btn active" title="Pantry" aria-label="Pantry">🏺</a>
+    <a href="/shopping/" class="nav-btn" title="Shopping" aria-label="Shopping">🛒</a>
+    <a href="/meals/" class="nav-btn" title="Meal Planning" aria-label="Meal Planning">📅</a>
+  </nav>
+
+  <div class="main-content">
+    <div class="floating-action-menu fab-pantry" id="fab-pantry">
+      <button class="floating-action-btn" id="fab-btn-pantry" title="Add Pantry Item" onclick="if(window.openIngredientModal) window.openIngredientModal({})">+</button>
+    </div>
+
+    <section class="pantry-section" id="pantry-section">
+      <div class="pantry-header">
+        <h2>PANTRY LEDGER</h2>
+      </div>
+
+      <div class="pantry-controls">
+        <input type="text" id="pantry-search-ledger" placeholder="Search ingredients..." class="pantry-search-input">
+        <select id="filter-category-ledger" class="pantry-filter-select">
+          <option value="">All categories</option>
+          <option value="Meat">Meat</option>
+          <option value="Dairy">Dairy</option>
+          <option value="Produce">Produce</option>
+          <option value="Pantry">Pantry staples</option>
+          <option value="Frozen">Frozen</option>
+          <option value="Spices">Spices</option>
+          <option value="Other">Other</option>
+        </select>
+        <select id="sort-pantry-ledger" class="pantry-sort-select">
+          <option value="alpha">A-Z</option>
+          <option value="lowStock">Low Stock First</option>
+          <option value="expiring">Expiring Soon</option>
+          <option value="recent">Recently Added</option>
+        </select>
+      </div>
+
+      <div id="pantry-ledger-display" class="pantry-ledger-display"></div>
+      <div id="pantry-display" class="pantry-display" style="display: none;"></div>
+
+      <button class="btn btn-new-entry" id="btn-new-pantry-entry">+ NEW ENTRY</button>
+    </section>
+
+    <!-- ONBOARDING SECTION (Bulk Entry) -->
+    <section class="onboarding-section" id="onboarding-section">
+      <div class="onboarding-header">
+        <div class="onboarding-title-row">
+          <h2>BULK PANTRY ENTRY</h2>
+          <div class="onboarding-status">
+            <span id="onboarding-draft-status">Draft auto-saved</span>
+            <span id="onboarding-item-count">0 items entered</span>
+          </div>
+        </div>
+        <button class="btn-exit-onboarding" id="btn-exit-onboarding" title="Exit Bulk Entry">
+          ← Back to Pantry
+        </button>
+      </div>
+
+      <div class="onboarding-content">
+        <div class="onboarding-instructions">
+          <p>💡 <strong>Tips:</strong> Press Tab to move between cells • Enter to go to next row • Paste from Excel works!</p>
+        </div>
+
+        <div class="bulk-entry-table-wrapper">
+          <table id="bulk-entry-table-live" class="bulk-entry-table">
+            <thead>
+              <tr>
+                <th style="width: 30%;">Item Name</th>
+                <th style="width: 10%;">Quantity</th>
+                <th style="width: 10%;">Unit</th>
+                <th style="width: 20%;">Category</th>
+                <th style="width: 20%;">Location</th>
+                <th style="width: 10%;"></th>
+              </tr>
+            </thead>
+            <tbody id="bulk-entry-tbody-live"></tbody>
+          </table>
+        </div>
+
+        <div class="onboarding-actions">
+          <div class="onboarding-actions-left">
+            <button class="btn btn-secondary" id="btn-add-rows-live">+ Add 5 Rows</button>
+            <button class="btn btn-secondary" id="btn-clear-all-live">Clear All</button>
+          </div>
+          <div class="onboarding-actions-right">
+            <button class="btn btn-primary" id="btn-save-all-items">
+              <span id="btn-save-text">Save & Add All Items</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="modal-root"></div>
+</body>
+</html>

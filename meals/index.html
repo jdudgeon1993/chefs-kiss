@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chef's Kiss — Meal Planner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/css/shared.css">
+  <link rel="stylesheet" href="/meals/meals.css">
+  <link rel="icon" type="image/png" href="/assets/favicon.png" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/js/config.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/validation.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/auth-guard.js"></script>
+  <script src="/js/settings.js"></script>
+  <script src="/js/realtime.js"></script>
+  <script defer src="/js/app.js"></script>
+  <script defer src="/meals/meals.js"></script>
+
+  <style>
+    .main-content > section { display: block !important; }
+    .landing-page { display: none !important; }
+  </style>
+</head>
+<body data-section="meals">
+
+  <header class="site-header">
+    <div class="header-left">
+      <h1 class="header-brand">
+        Chef's Kiss
+        <span class="header-brand-underline"></span>
+      </h1>
+    </div>
+    <div class="header-right">
+      <div class="header-datetime">
+        <span id="utility-date"></span>
+        <span class="datetime-separator">•</span>
+        <span id="utility-time"></span>
+      </div>
+      <nav class="header-nav">
+        <button class="btn-header-icon" id="btn-account" title="Account & Households">👤</button>
+        <button class="btn-header-icon" id="btn-settings" title="Settings">⚙️</button>
+      </nav>
+    </div>
+  </header>
+
+  <nav class="sidebar-nav" aria-label="Main navigation">
+    <a href="/recipes/" class="nav-btn" title="Recipes" aria-label="Recipes">🍳</a>
+    <a href="/pantry/" class="nav-btn" title="Pantry" aria-label="Pantry">🏺</a>
+    <a href="/shopping/" class="nav-btn" title="Shopping" aria-label="Shopping">🛒</a>
+    <a href="/meals/" class="nav-btn active" title="Meal Planning" aria-label="Meal Planning">📅</a>
+  </nav>
+
+  <nav class="bottom-nav" aria-label="Main navigation">
+    <a href="/recipes/" class="nav-btn" title="Recipes" aria-label="Recipes">🍳</a>
+    <a href="/pantry/" class="nav-btn" title="Pantry" aria-label="Pantry">🏺</a>
+    <a href="/shopping/" class="nav-btn" title="Shopping" aria-label="Shopping">🛒</a>
+    <a href="/meals/" class="nav-btn active" title="Meal Planning" aria-label="Meal Planning">📅</a>
+  </nav>
+
+  <div class="main-content">
+    <section class="meal-planning-section" id="meal-planning-section">
+      <div class="meal-planning-header">
+        <h2>MEAL PLANNER</h2>
+      </div>
+
+      <div class="calendar-nav">
+        <button class="btn-calendar-nav" id="btn-prev-period">← Prev</button>
+        <h3 class="calendar-period-label" id="calendar-period-label">Loading...</h3>
+        <button class="btn-calendar-nav" id="btn-next-period">Next →</button>
+      </div>
+
+      <div class="calendar-container" id="calendar-container"></div>
+
+      <div class="scheduled-recipes-section">
+        <h3>Scheduled Meals</h3>
+        <div id="scheduled-recipes-list" class="scheduled-recipes-list"></div>
+      </div>
+    </section>
+  </div>
+
+  <div id="modal-root"></div>
+</body>
+</html>

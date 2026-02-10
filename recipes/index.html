@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chef's Kiss — Recipes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/css/shared.css">
+  <link rel="stylesheet" href="/recipes/recipes.css">
+  <link rel="icon" type="image/png" href="/assets/favicon.png" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/js/config.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/validation.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/auth-guard.js"></script>
+  <script src="/js/settings.js"></script>
+  <script src="/js/realtime.js"></script>
+  <script defer src="/js/app.js"></script>
+  <script defer src="/recipes/recipes.js"></script>
+
+  <style>
+    /* Override CSS radio-button navigation — always show this section */
+    .main-content > section { display: block !important; }
+    .landing-page { display: none !important; }
+  </style>
+</head>
+<body data-section="recipes">
+
+  <!-- UNIFIED PURPLE HEADER BAR -->
+  <header class="site-header">
+    <div class="header-left">
+      <h1 class="header-brand">
+        Chef's Kiss
+        <span class="header-brand-underline"></span>
+      </h1>
+    </div>
+    <div class="header-right">
+      <div class="header-datetime">
+        <span id="utility-date"></span>
+        <span class="datetime-separator">•</span>
+        <span id="utility-time"></span>
+      </div>
+      <nav class="header-nav">
+        <button class="btn-header-icon" id="btn-account" title="Account & Households">👤</button>
+        <button class="btn-header-icon" id="btn-settings" title="Settings">⚙️</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- SIDEBAR NAVIGATION (Desktop) -->
+  <nav class="sidebar-nav" aria-label="Main navigation">
+    <a href="/recipes/" class="nav-btn active" title="Recipes" aria-label="Recipes">🍳</a>
+    <a href="/pantry/" class="nav-btn" title="Pantry" aria-label="Pantry">🏺</a>
+    <a href="/shopping/" class="nav-btn" title="Shopping" aria-label="Shopping">🛒</a>
+    <a href="/meals/" class="nav-btn" title="Meal Planning" aria-label="Meal Planning">📅</a>
+  </nav>
+
+  <!-- BOTTOM NAVIGATION (Mobile) -->
+  <nav class="bottom-nav" aria-label="Main navigation">
+    <a href="/recipes/" class="nav-btn active" title="Recipes" aria-label="Recipes">🍳</a>
+    <a href="/pantry/" class="nav-btn" title="Pantry" aria-label="Pantry">🏺</a>
+    <a href="/shopping/" class="nav-btn" title="Shopping" aria-label="Shopping">🛒</a>
+    <a href="/meals/" class="nav-btn" title="Meal Planning" aria-label="Meal Planning">📅</a>
+  </nav>
+
+  <!-- MAIN CONTENT AREA -->
+  <div class="main-content">
+    <!-- FLOATING ACTION BUTTON -->
+    <div class="floating-action-menu fab-recipes" id="fab-recipes">
+      <button class="floating-action-btn" id="fab-btn-recipe" title="Add Recipe" onclick="if(window.openRecipeModal) window.openRecipeModal(null)">+</button>
+    </div>
+
+    <div style="position: absolute; opacity: 0; pointer-events: none;">
+      <button id="fab-add-recipe" style="display: none;"></button>
+    </div>
+
+    <!-- RECIPES SECTION -->
+    <section class="recipes-section" id="recipes-section">
+      <div class="recipes-header">
+        <h2>RECIPE BOX</h2>
+      </div>
+
+      <div class="recipes-controls" style="display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; margin-bottom: 1rem;">
+        <input type="text" id="recipe-search-ledger" placeholder="Search recipes..." class="recipe-search-input">
+        <select id="recipe-sort-select" class="recipe-sort-select" style="padding: 0.75rem 1rem; border: 1px solid rgba(197,184,165,0.3); border-radius: 8px; font-size: 0.9rem; background: white; color: var(--color-text-primary); font-family: inherit; cursor: pointer;">
+          <option value="a-z">Sort: A-Z</option>
+          <option value="z-a">Sort: Z-A</option>
+          <option value="favorites">Sort: Favorites First</option>
+          <option value="recent">Sort: Recent</option>
+        </select>
+      </div>
+
+      <div class="recipe-filters-container">
+        <div class="recipe-filter-pills" id="recipe-filter-pills"></div>
+      </div>
+
+      <div class="recipe-tag-filters-container" style="margin-bottom: 1rem;">
+        <div class="recipe-tag-filter-pills" id="recipe-tag-filter-pills" style="display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
+      </div>
+
+      <div class="recipes-grid" id="recipes-grid"></div>
+
+      <div id="recipe-list" class="recipe-list" style="display: none;"></div>
+    </section>
+  </div>
+
+  <div id="modal-root"></div>
+</body>
+</html>

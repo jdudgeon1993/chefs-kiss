@@ -335,17 +335,16 @@
     );
 
     if (recipeIndex !== -1) {
-      window.recipes[recipeIndex].isFavorite = !window.recipes[recipeIndex].isFavorite;
+      const recipe = window.recipes[recipeIndex];
+      recipe.isFavorite = !recipe.isFavorite;
 
-      // Save to storage if function exists
-      if (window.saveRecipes) {
-        window.saveRecipes();
-      }
-
-      // Sync to database if authenticated
-      if (window.db && window.auth && window.auth.isAuthenticated()) {
-        window.db.saveRecipe(window.recipes[recipeIndex]).catch(err => {
-          console.error('Error syncing recipe to database:', err);
+      // Persist via API (quiet — no toast or full reload)
+      if (typeof API !== 'undefined') {
+        API.call('/recipes/' + recipe.id, {
+          method: 'PUT',
+          body: JSON.stringify({ is_favorite: recipe.isFavorite })
+        }).catch(err => {
+          console.error('Error saving favorite:', err);
         });
       }
 
@@ -353,7 +352,7 @@
       const modal = document.querySelector('.recipe-detail-modal');
       if (modal) {
         modal.remove();
-        openRecipeDetailModal(window.recipes[recipeIndex]);
+        openRecipeDetailModal(recipe);
       }
       renderRecipesGrid();
     }
@@ -375,23 +374,22 @@
     );
 
     if (recipeIndex !== -1) {
-      if (!window.recipes[recipeIndex].tags) {
-        window.recipes[recipeIndex].tags = [];
+      const recipe = window.recipes[recipeIndex];
+      if (!recipe.tags) {
+        recipe.tags = [];
       }
 
       // Don't add duplicate tags
-      if (!window.recipes[recipeIndex].tags.includes(tag)) {
-        window.recipes[recipeIndex].tags.push(tag);
+      if (!recipe.tags.includes(tag)) {
+        recipe.tags.push(tag);
 
-        // Save to storage if function exists
-        if (window.saveRecipes) {
-          window.saveRecipes();
-        }
-
-        // Sync to database if authenticated
-        if (window.db && window.auth && window.auth.isAuthenticated()) {
-          window.db.saveRecipe(window.recipes[recipeIndex]).catch(err => {
-            console.error('Error syncing recipe to database:', err);
+        // Persist via API (quiet — no toast or full reload)
+        if (typeof API !== 'undefined') {
+          API.call('/recipes/' + recipe.id, {
+            method: 'PUT',
+            body: JSON.stringify({ tags: recipe.tags })
+          }).catch(err => {
+            console.error('Error saving tags:', err);
           });
         }
 
@@ -399,7 +397,7 @@
         const modal = document.querySelector('.recipe-detail-modal');
         if (modal) {
           modal.remove();
-          openRecipeDetailModal(window.recipes[recipeIndex]);
+          openRecipeDetailModal(recipe);
         }
         renderRecipesGrid();
       }
@@ -415,17 +413,13 @@
     );
 
     if (recipeIndex !== -1 && window.recipes[recipeIndex].tags) {
-      window.recipes[recipeIndex].tags = window.recipes[recipeIndex].tags.filter(t => t !== tag);
+      const recipe = window.recipes[recipeIndex];
+      recipe.tags = recipe.tags.filter(t => t !== tag);
 
-      // Save to storage if function exists
-      if (window.saveRecipes) {
-        window.saveRecipes();
-      }
-
-      // Sync to database if authenticated
-      if (window.db && window.auth && window.auth.isAuthenticated()) {
-        window.db.saveRecipe(window.recipes[recipeIndex]).catch(err => {
-          console.error('Error syncing recipe to database:', err);
+      // Persist via API
+      if (window.updateRecipe) {
+        window.updateRecipe(recipe.id, { tags: recipe.tags }).catch(err => {
+          console.error('Error saving tags:', err);
         });
       }
 
@@ -433,7 +427,7 @@
       const modal = document.querySelector('.recipe-detail-modal');
       if (modal) {
         modal.remove();
-        openRecipeDetailModal(window.recipes[recipeIndex]);
+        openRecipeDetailModal(recipe);
       }
       renderRecipesGrid();
     }
