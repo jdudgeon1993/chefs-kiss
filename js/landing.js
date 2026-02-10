@@ -596,13 +596,13 @@ function initLandingPage() {
   // If already authenticated, redirect to the app immediately
   const isAuth = API.getToken() !== null;
   if (isAuth) {
-    window.location.href = '/pantry/index.html/';
+    window.location.href = '/pantry/';
     return;
   }
 
   // If in demo mode, redirect to the app
   if (isDemoMode()) {
-    window.location.href = '/pantry/index html/';
+    window.location.href = '/pantry/';
     return;
   }
 
