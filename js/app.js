@@ -1,16 +1,3 @@
-// ===== HELPER =====
-function safeSetInnerHTMLById(id, html) {
-  let el = document.getElementById(id);
-  if (!el) {
-    console.warn(`Element with id="${id}" not found. Creating one automatically.`);
-    el = document.createElement('div');
-    el.id = id;
-    document.body.appendChild(el);
-  }
-  el.innerHTML = html;
-  return true;
-}
-
 // ===== DASHBOARD MODULE =====
 const Dashboard = {
   container: null,
@@ -73,50 +60,6 @@ const Dashboard = {
     }
   }
 };
-
-/* ============================================================================
-   UTILITY FUNCTIONS
-============================================================================ */
-
-function showLoading(message = 'Loading...') {}
-function hideLoading() {}
-
-// ── Toast Notification System ──
-function _getToastContainer() {
-  let container = document.getElementById('toast-container');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'toast-container';
-    document.body.appendChild(container);
-  }
-  return container;
-}
-
-function showToast(message, type = 'info', duration = 4000) {
-  const container = _getToastContainer();
-  const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  const icons = { success: '✓', error: '✗', info: 'ℹ', sync: '🔄' };
-  toast.innerHTML = `<span class="toast-icon">${icons[type] || icons.info}</span><span class="toast-msg">${message}</span>`;
-  container.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.add('toast-show'));
-  setTimeout(() => {
-    toast.classList.remove('toast-show');
-    toast.classList.add('toast-hide');
-    toast.addEventListener('transitionend', () => toast.remove());
-    setTimeout(() => toast.remove(), 500);
-  }, duration);
-}
-
-function showError(message) {
-  console.error('Error:', message);
-  showToast(message, 'error', 5000);
-}
-
-function showSuccess(message) {
-  console.log('Success:', message);
-  showToast(message, 'success');
-}
 
 /* ============================================================================
    AUTHENTICATION
@@ -1758,13 +1701,6 @@ async function markMealCooked(dateKey, mealId) {
 /**
  * Close any open modal
  */
-function closeModal() {
-  const modalRoot = document.getElementById('modal-root');
-  if (modalRoot) {
-    modalRoot.innerHTML = '';
-  }
-}
-
 // Expose functions globally for inline scripts
 window.openIngredientModal = openIngredientModal;
 window.deleteIngredientFromModal = deleteIngredientFromModal;
@@ -1773,7 +1709,6 @@ window.openRecipeModal = openRecipeModal;
 window.openDayModal = openDayModal;
 window.openCookNowModal = openCookNowModal;
 window.markMealCooked = markMealCooked;
-window.closeModal = closeModal;
 window.addLocationRowWithDropdown = addLocationRowWithDropdown;
 window.addIngredientRow = addIngredientRow;
 window.removeMealFromDay = removeMealFromDay;
@@ -1811,34 +1746,6 @@ async function loadApp() {
 
   // Show default view
   showView('pantry');
-}
-
-/**
- * Load available units for autocomplete
- */
-window.cachedUnits = [];
-
-async function loadUnits() {
-  try {
-    const response = await API.getUnits();
-    window.cachedUnits = response.units || [];
-    console.log('Units loaded:', window.cachedUnits.length);
-  } catch (error) {
-    console.warn('Failed to load units, using defaults:', error);
-    window.cachedUnits = ['each', 'lb', 'oz', 'cup', 'tbsp', 'tsp', 'gallon', 'g', 'kg', 'ml', 'bunch', 'can', 'bottle', 'bag', 'box'];
-  }
-}
-
-function createUnitDatalist() {
-  // Remove existing if any
-  const existing = document.getElementById('unit-suggestions');
-  if (existing) existing.remove();
-
-  // Create new datalist
-  const datalist = document.createElement('datalist');
-  datalist.id = 'unit-suggestions';
-  datalist.innerHTML = window.cachedUnits.map(u => `<option value="${u}">`).join('');
-  document.body.appendChild(datalist);
 }
 
 /**
@@ -1890,11 +1797,14 @@ function wireUpButtons() {
     btnCheckout.addEventListener('click', openCheckoutModal);
   }
 
-  // Onboarding/bulk entry buttons
+  // Onboarding/bulk entry buttons (toggle via CSS classes on multi-page)
   const btnOnboarding = document.getElementById('btn-onboarding');
   if (btnOnboarding) {
     btnOnboarding.addEventListener('click', () => {
-      document.getElementById('nav-onboarding').checked = true;
+      const pantrySection = document.getElementById('pantry-section');
+      const onboardingSection = document.getElementById('onboarding-section');
+      if (pantrySection) pantrySection.classList.add('section-hidden');
+      if (onboardingSection) onboardingSection.classList.add('section-visible');
       initBulkEntry();
     });
   }
@@ -1902,7 +1812,10 @@ function wireUpButtons() {
   const btnExitOnboarding = document.getElementById('btn-exit-onboarding');
   if (btnExitOnboarding) {
     btnExitOnboarding.addEventListener('click', () => {
-      document.getElementById('nav-pantry').checked = true;
+      const pantrySection = document.getElementById('pantry-section');
+      const onboardingSection = document.getElementById('onboarding-section');
+      if (onboardingSection) onboardingSection.classList.remove('section-visible');
+      if (pantrySection) pantrySection.classList.remove('section-hidden');
     });
   }
 
@@ -1929,914 +1842,16 @@ function wireUpButtons() {
   }
 }
 
-/* ============================================================================
-   SAVED LOCATIONS & CATEGORIES (for settings and checkout)
-============================================================================ */
 
-// Default locations and categories
-const DEFAULT_LOCATIONS = ['Pantry', 'Refrigerator', 'Freezer', 'Cabinet', 'Counter'];
-const DEFAULT_CATEGORIES = ['Meat', 'Dairy', 'Produce', 'Pantry', 'Frozen', 'Spices', 'Beverages', 'Snacks', 'Other'];
 
-// Global settings cache (loaded from API)
-window.householdSettings = {
-  locations: DEFAULT_LOCATIONS,
-  categories: DEFAULT_CATEGORIES,
-  category_emojis: {}
-};
-
-/**
- * Load settings from API
- */
-async function loadSettings() {
-  try {
-    const response = await API.call('/settings/');
-    window.householdSettings = {
-      locations: response.locations || DEFAULT_LOCATIONS,
-      categories: response.categories || DEFAULT_CATEGORIES,
-      category_emojis: response.category_emojis || {}
-    };
-    console.log('Settings loaded from API:', window.householdSettings);
-  } catch (error) {
-    console.warn('Failed to load settings from API, using defaults:', error);
-    // Keep using defaults
-  }
-}
-
-/**
- * Display mode (compact/comfortable)
- */
-function applyDisplayMode() {
-  const isCompact = localStorage.getItem('display_mode') === 'compact';
-  document.body.classList.toggle('compact', isCompact);
-}
-
-function toggleDisplayMode() {
-  const isCurrentlyCompact = document.body.classList.contains('compact');
-  const newMode = isCurrentlyCompact ? 'comfortable' : 'compact';
-  localStorage.setItem('display_mode', newMode);
-  document.body.classList.toggle('compact', newMode === 'compact');
-  return newMode;
-}
-
-function getDisplayMode() {
-  return localStorage.getItem('display_mode') || 'comfortable';
-}
-
-function getSavedLocations() {
-  return window.householdSettings.locations || DEFAULT_LOCATIONS;
-}
-
-function setSavedLocations(locations) {
-  window.householdSettings.locations = locations;
-  // API save happens in saveSettings()
-}
-
-function getSavedCategories() {
-  return window.householdSettings.categories || DEFAULT_CATEGORIES;
-}
-
-function setSavedCategories(categories) {
-  window.householdSettings.categories = categories;
-  // API save happens in saveSettings()
-}
-
-/* ============================================================================
-   BULK PANTRY ENTRY
-   ============================================================================ */
-
-function initBulkEntry() {
-  const tbody = document.getElementById('bulk-entry-tbody-live');
-  if (!tbody) return;
-  if (tbody.children.length === 0) {
-    addBulkRows(5);
-  }
-  updateBulkEntryCount();
-}
-
-function addBulkRows(count) {
-  const tbody = document.getElementById('bulk-entry-tbody-live');
-  if (!tbody) return;
-
-  const locations = (window.householdSettings?.locations || ['Pantry', 'Refrigerator', 'Freezer', 'Cabinet', 'Counter']);
-  const categories = (window.householdSettings?.categories || ['Meat', 'Dairy', 'Produce', 'Pantry', 'Frozen', 'Spices', 'Beverages', 'Snacks', 'Other']);
-
-  const locOptions = locations.map(l => `<option value="${l}">${l}</option>`).join('');
-  const catOptions = categories.map(c => `<option value="${c}">${c}</option>`).join('');
-
-  for (let i = 0; i < count; i++) {
-    const row = document.createElement('tr');
-    row.className = 'bulk-entry-row';
-    row.innerHTML = `
-      <td><input type="text" class="bulk-name form-control" placeholder="Item name" /></td>
-      <td><input type="number" class="bulk-qty form-control" placeholder="Qty" min="0" step="0.5" /></td>
-      <td><input type="text" class="bulk-unit form-control" placeholder="unit" list="unit-suggestions" /></td>
-      <td><select class="bulk-category form-control">${catOptions}</select></td>
-      <td><select class="bulk-location form-control">${locOptions}</select></td>
-      <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove();updateBulkEntryCount();">&times;</button></td>
-    `;
-    tbody.appendChild(row);
-  }
-  updateBulkEntryCount();
-}
-
-function clearBulkEntry() {
-  const tbody = document.getElementById('bulk-entry-tbody-live');
-  if (!tbody) return;
-  tbody.innerHTML = '';
-  addBulkRows(5);
-}
-
-function updateBulkEntryCount() {
-  const countEl = document.getElementById('onboarding-item-count');
-  if (!countEl) return;
-  const rows = document.querySelectorAll('#bulk-entry-tbody-live .bulk-entry-row');
-  let filled = 0;
-  rows.forEach(row => {
-    const name = row.querySelector('.bulk-name');
-    if (name && name.value.trim()) filled++;
-  });
-  countEl.textContent = `${filled} items entered`;
-}
-
-async function saveBulkEntry() {
-  const tbody = document.getElementById('bulk-entry-tbody-live');
-  const btnText = document.getElementById('btn-save-text');
-  if (!tbody) return;
-
-  const rows = tbody.querySelectorAll('.bulk-entry-row');
-  const items = [];
-
-  rows.forEach(row => {
-    const name = row.querySelector('.bulk-name')?.value.trim();
-    if (!name) return;
-    const qty = parseFloat(row.querySelector('.bulk-qty')?.value) || 0;
-    const unit = row.querySelector('.bulk-unit')?.value.trim() || 'unit';
-    const category = row.querySelector('.bulk-category')?.value || 'Other';
-    const location = row.querySelector('.bulk-location')?.value || 'Pantry';
-
-    items.push({ name, quantity: qty, unit, category, location });
-  });
-
-  if (items.length === 0) {
-    showError('No items to save. Enter at least one item name.');
-    return;
-  }
-
-  if (btnText) btnText.textContent = 'Saving...';
-
-  let savedCount = 0;
-  let errorCount = 0;
-
-  for (const item of items) {
-    try {
-      await API.call('/pantry/', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: item.name,
-          category: item.category,
-          unit: item.unit,
-          min_threshold: 0,
-          locations: [{
-            location: item.location,
-            quantity: item.quantity
-          }]
-        })
-      });
-      savedCount++;
-    } catch (e) {
-      console.error(`Failed to save ${item.name}:`, e);
-      errorCount++;
-    }
-  }
-
-  if (btnText) btnText.textContent = 'Save & Add All Items';
-
-  if (errorCount > 0) {
-    showError(`Saved ${savedCount} items. ${errorCount} failed.`);
-  } else {
-    showSuccess(`${savedCount} items added to pantry!`);
-    clearBulkEntry();
-    // Reload pantry data
-    loadPantry();
-  }
-}
-
-/**
- * Open account/household management modal
- */
-async function openAccountModal() {
-  const modalRoot = document.getElementById('modal-root');
-  if (!modalRoot) return;
-
-  modalRoot.innerHTML = `
-    <div class="modal-overlay">
-      <div class="modal-content account-modal">
-        <h2>Loading...</h2>
-      </div>
-    </div>
-  `;
-
-  let userInfo = null;
-  let households = [];
-  try {
-    [userInfo, households] = await Promise.all([
-      API.getCurrentUser().catch(() => null),
-      API.getMyHouseholds().then(r => r.households).catch(() => [])
-    ]);
-  } catch (e) {
-    console.error('Failed to load account info:', e);
-  }
-
-  const email = userInfo?.user?.email || 'Not available';
-  const activeHid = API.getActiveHouseholdId() || userInfo?.household_id;
-  const activeHousehold = households.find(h => h.id === activeHid);
-
-  const householdOptions = households.map(h => {
-    const isActive = h.id === activeHid;
-    const label = `${h.name} (${h.role})`;
-    return `<option value="${h.id}" ${isActive ? 'selected' : ''}>${label}</option>`;
-  }).join('');
-
-  modalRoot.innerHTML = `
-    <div class="modal-overlay" onclick="closeModal()">
-      <div class="modal-content account-modal" onclick="event.stopPropagation()">
-        <button class="modal-close" onclick="closeModal()">&times;</button>
-        <h2>Account & Household</h2>
-
-        <div class="account-section">
-          <h3>Your Account</h3>
-          <div class="account-info">
-            <p><strong>Email:</strong> ${email}</p>
-          </div>
-        </div>
-
-        ${households.length > 1 ? `
-        <div class="account-section">
-          <h3>Switch Household</h3>
-          <select id="household-switcher" class="form-control" onchange="switchHousehold(this.value)">
-            ${householdOptions}
-          </select>
-        </div>
-        ` : `
-        <div class="account-section">
-          <h3>Household</h3>
-          <p>${activeHousehold?.name || 'Your Household'} <span class="status-badge status-connected">${activeHousehold?.role || 'owner'}</span></p>
-        </div>
-        `}
-
-        <div class="account-section">
-          <h3>Members</h3>
-          <div id="members-list"><p>Loading members...</p></div>
-        </div>
-
-        <div class="account-section">
-          <h3>Invite a Member</h3>
-          <p class="help-text">Generate a code to share with someone. They enter it here to join your household.</p>
-          <div id="invite-section">
-            <button class="btn btn-secondary" onclick="generateInviteCode()">Generate Invite Code</button>
-          </div>
-        </div>
-
-        <div class="account-section">
-          <h3>Join a Household</h3>
-          <p class="help-text">Enter an invite code from someone to join their household.</p>
-          <div style="display:flex;gap:8px;">
-            <input type="text" id="accept-invite-input" class="form-control" placeholder="Enter invite code" style="flex:1;text-transform:uppercase;" maxlength="8" />
-            <button class="btn btn-primary" onclick="acceptInviteCode()">Join</button>
-          </div>
-          <div id="accept-invite-status"></div>
-        </div>
-
-        <div class="account-section">
-          <div class="data-actions" style="display:flex;gap:8px;">
-            <button class="btn btn-secondary" onclick="exportData()">Export Data</button>
-            <button class="btn btn-danger" onclick="handleLogout()">Sign Out</button>
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button class="btn btn-primary" onclick="closeModal()">Done</button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  // Load members immediately
-  loadMembersList();
-  loadActiveInvite();
-}
-
-async function loadMembersList() {
-  const container = document.getElementById('members-list');
-  if (!container) return;
-
-  try {
-    const data = await API.getHouseholdMembers();
-    if (!data.members || data.members.length === 0) {
-      container.innerHTML = '<p>No members found.</p>';
-      return;
-    }
-
-    container.innerHTML = data.members.map(m => {
-      const roleClass = m.role === 'owner' ? 'status-connected' : 'status-badge';
-      const youLabel = m.is_you ? ' (You)' : '';
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-color, #333);">
-        <span>Member${youLabel}</span>
-        <span class="status-badge ${roleClass}">${m.role}</span>
-      </div>`;
-    }).join('');
-  } catch (e) {
-    container.innerHTML = '<p>Failed to load members.</p>';
-  }
-}
-
-async function loadActiveInvite() {
-  const container = document.getElementById('invite-section');
-  if (!container) return;
-
-  try {
-    const data = await API.getActiveInvite();
-    if (data.invite) {
-      const expiresAt = new Date(data.invite.expires_at);
-      const hoursLeft = Math.max(0, Math.round((expiresAt - Date.now()) / 3600000));
-      container.innerHTML = `
-        <div style="padding:12px;background:var(--card-bg, #1a1a2e);border-radius:8px;text-align:center;">
-          <p style="margin:0 0 8px;opacity:0.7;">Active invite code:</p>
-          <p style="font-size:1.5rem;font-weight:bold;letter-spacing:4px;margin:0 0 8px;">${data.invite.code}</p>
-          <p style="margin:0;opacity:0.5;font-size:0.85rem;">Expires in ${hoursLeft}h</p>
-          <button class="btn btn-secondary" style="margin-top:8px;" onclick="copyInviteCode('${data.invite.code}')">Copy Code</button>
-        </div>
-        <button class="btn btn-secondary" style="margin-top:8px;" onclick="generateInviteCode()">Generate New Code</button>
-      `;
-    }
-  } catch (e) {
-    // No active invite, keep the generate button
-  }
-}
-
-async function generateInviteCode() {
-  const container = document.getElementById('invite-section');
-  if (!container) return;
-
-  container.innerHTML = '<p>Generating...</p>';
-
-  try {
-    const data = await API.createInvite(48);
-    container.innerHTML = `
-      <div style="padding:12px;background:var(--card-bg, #1a1a2e);border-radius:8px;text-align:center;">
-        <p style="margin:0 0 8px;opacity:0.7;">Share this code:</p>
-        <p style="font-size:1.5rem;font-weight:bold;letter-spacing:4px;margin:0 0 8px;">${data.code}</p>
-        <p style="margin:0;opacity:0.5;font-size:0.85rem;">Expires in ${data.expires_hours}h</p>
-        <button class="btn btn-secondary" style="margin-top:8px;" onclick="copyInviteCode('${data.code}')">Copy Code</button>
-      </div>
-    `;
-  } catch (e) {
-    container.innerHTML = `<p style="color:var(--danger-color,red);">Failed to generate code: ${e.message}</p>
-      <button class="btn btn-secondary" onclick="generateInviteCode()">Try Again</button>`;
-  }
-}
-
-function copyInviteCode(code) {
-  navigator.clipboard.writeText(code).then(() => {
-    showSuccess('Invite code copied!');
-  }).catch(() => {
-    // Fallback
-    prompt('Copy this invite code:', code);
-  });
-}
-
-async function acceptInviteCode() {
-  const input = document.getElementById('accept-invite-input');
-  const statusEl = document.getElementById('accept-invite-status');
-  if (!input || !statusEl) return;
-
-  const code = input.value.trim();
-  if (!code) {
-    statusEl.innerHTML = '<p style="color:var(--danger-color,red);">Please enter a code.</p>';
-    return;
-  }
-
-  statusEl.innerHTML = '<p>Joining...</p>';
-
-  try {
-    const data = await API.acceptInvite(code);
-    statusEl.innerHTML = `<p style="color:var(--success-color,#4ade80);">${data.message}</p>`;
-    input.value = '';
-
-    // Switch to the new household
-    API.setActiveHouseholdId(data.household_id);
-
-    // Refresh the modal after a moment
-    setTimeout(() => openAccountModal(), 1500);
-    // Reload app data for new household
-    setTimeout(() => window.location.reload(), 2000);
-  } catch (e) {
-    statusEl.innerHTML = `<p style="color:var(--danger-color,red);">${e.message}</p>`;
-  }
-}
-
-async function switchHousehold(householdId) {
-  API.setActiveHouseholdId(householdId);
-  showSuccess('Switching household...');
-  // Reload to fetch data for new household
-  setTimeout(() => window.location.reload(), 500);
-}
-
-function exportData() {
-  // Export pantry, recipes, and planner data as JSON
-  const data = {
-    pantry: window.pantry || [],
-    recipes: window.recipes || [],
-    planner: window.planner || {},
-    exportDate: new Date().toISOString()
-  };
-
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `chefs-kiss-export-${new Date().toISOString().split('T')[0]}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-
-  showSuccess('Data exported!');
-}
-
-async function handleLogout() {
-  if (!confirm('Are you sure you want to sign out?')) return;
-
-  try {
-    cleanupRealtime();
-    await API.signOut();
-    showSuccess('Signed out successfully');
-    closeModal();
-    showLandingPage();
-  } catch (error) {
-    console.error('Logout error:', error);
-    showError('Failed to sign out');
-  }
-}
-
-/**
- * Open settings modal - for managing categories and locations
- */
-function openSettingsModal() {
-  const modalRoot = document.getElementById('modal-root');
-  if (!modalRoot) return;
-
-  const locations = getSavedLocations();
-  const categories = getSavedCategories();
-
-  const locationsHTML = locations.map((loc, idx) => `
-    <div class="setting-item" data-idx="${idx}">
-      <input type="text" value="${loc}" class="location-input">
-      <button type="button" class="btn-icon btn-remove" onclick="removeLocation(${idx})">×</button>
-    </div>
-  `).join('');
-
-  const emojis = (window.householdSettings && window.householdSettings.category_emojis) || {};
-  const categoriesHTML = categories.map((cat, idx) => `
-    <div class="setting-item" data-idx="${idx}">
-      <button type="button" class="btn-emoji-pick" data-idx="${idx}" onclick="openEmojiPicker(this)" title="Pick icon">${emojis[cat] || getCategoryDefaultEmoji(cat)}</button>
-      <input type="text" value="${cat}" class="category-input">
-      <button type="button" class="btn-icon btn-remove" onclick="removeCategory(${idx})">×</button>
-    </div>
-  `).join('');
-
-  modalRoot.innerHTML = `
-    <div class="modal-overlay" onclick="closeModal()">
-      <div class="modal-content settings-modal" onclick="event.stopPropagation()">
-        <button class="modal-close" onclick="closeModal()">×</button>
-        <h2>⚙️ Settings</h2>
-
-        <div class="settings-section">
-          <h3>Storage Locations</h3>
-          <p class="help-text">Customize where you store items in your kitchen.</p>
-          <div id="locations-list" class="settings-list">
-            ${locationsHTML}
-          </div>
-          <button type="button" class="btn btn-sm btn-secondary" onclick="addLocation()">+ Add Location</button>
-        </div>
-
-        <div class="settings-section">
-          <h3>Item Categories</h3>
-          <p class="help-text">Organize your pantry and shopping list by category.</p>
-          <div id="categories-list" class="settings-list">
-            ${categoriesHTML}
-          </div>
-          <button type="button" class="btn btn-sm btn-secondary" onclick="addCategory()">+ Add Category</button>
-        </div>
-
-        <div class="settings-section">
-          <h3>Expiration Alerts</h3>
-          <div class="form-group">
-            <label>Alert me about items expiring within:</label>
-            <select id="setting-expiration-days">
-              <option value="1" ${localStorage.getItem('expirationDays') === '1' ? 'selected' : ''}>1 day</option>
-              <option value="3" ${localStorage.getItem('expirationDays') === '3' || !localStorage.getItem('expirationDays') ? 'selected' : ''}>3 days</option>
-              <option value="5" ${localStorage.getItem('expirationDays') === '5' ? 'selected' : ''}>5 days</option>
-              <option value="7" ${localStorage.getItem('expirationDays') === '7' ? 'selected' : ''}>7 days</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <h3>Display</h3>
-          <div class="form-group" style="display:flex;align-items:center;gap:1rem;">
-            <label style="margin:0;">Layout density:</label>
-            <button type="button" class="btn btn-sm ${getDisplayMode() === 'compact' ? 'btn-primary' : 'btn-secondary'}"
-                    onclick="this.textContent = toggleDisplayMode() === 'compact' ? 'Compact' : 'Comfortable'; this.classList.toggle('btn-primary'); this.classList.toggle('btn-secondary');">
-              ${getDisplayMode() === 'compact' ? 'Compact' : 'Comfortable'}
-            </button>
-          </div>
-          <p class="help-text">Compact mode shows more content with less spacing.</p>
-        </div>
-
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="resetSettingsToDefaults()">Reset to Defaults</button>
-          <button type="button" class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function addLocation() {
-  const list = document.getElementById('locations-list');
-  if (!list) return;
-  const idx = list.children.length;
-  const div = document.createElement('div');
-  div.className = 'setting-item';
-  div.dataset.idx = idx;
-  div.innerHTML = `
-    <input type="text" value="" class="location-input" placeholder="New location">
-    <button type="button" class="btn-icon btn-remove" onclick="removeLocation(${idx})">×</button>
-  `;
-  list.appendChild(div);
-  div.querySelector('input').focus();
-}
-
-function removeLocation(idx) {
-  const list = document.getElementById('locations-list');
-  if (!list) return;
-  const item = list.querySelector(`[data-idx="${idx}"]`);
-  if (item) item.remove();
-}
-
-const FOOD_EMOJI_OPTIONS = [
-  '🥩','🧈','🥬','🫙','🧊','🌶️','🥤','🍿','🌾','🧁','🥫','🫗','🐟','🥪',
-  '🍎','🥕','🥚','🍞','🧀','🍗','🥦','🌽','🍋','🫒','🍯','🥜','🍝','🍚',
-  '🫘','🥥','🍫','🧃','🍵','☕','🧂','🫧','🛒','📦'
-];
-
-function getCategoryDefaultEmoji(category) {
-  const defaults = {
-    'Meat': '🥩', 'Dairy': '🧈', 'Produce': '🥬', 'Pantry': '🫙',
-    'Frozen': '🧊', 'Spices': '🌶️', 'Beverages': '🥤', 'Snacks': '🍿',
-    'Grains': '🌾', 'Baking': '🧁', 'Canned Goods': '🥫', 'Condiments': '🫗',
-    'Seafood': '🐟', 'Deli': '🥪', 'Other': '📦'
-  };
-  return defaults[category] || '📦';
-}
-
-function openEmojiPicker(btn) {
-  // Close any existing picker
-  document.querySelectorAll('.emoji-picker-dropdown').forEach(el => el.remove());
-
-  const picker = document.createElement('div');
-  picker.className = 'emoji-picker-dropdown';
-  picker.innerHTML = FOOD_EMOJI_OPTIONS.map(e =>
-    `<button type="button" class="emoji-option" onclick="selectEmoji(this, '${e}')">${e}</button>`
-  ).join('');
-  btn.style.position = 'relative';
-  btn.parentElement.style.position = 'relative';
-  btn.parentElement.appendChild(picker);
-
-  // Close on outside click
-  setTimeout(() => {
-    document.addEventListener('click', function closePicker(e) {
-      if (!picker.contains(e.target) && e.target !== btn) {
-        picker.remove();
-        document.removeEventListener('click', closePicker);
-      }
-    });
-  }, 0);
-}
-
-function selectEmoji(optionBtn, emoji) {
-  const settingItem = optionBtn.closest('.setting-item');
-  const emojiBtn = settingItem.querySelector('.btn-emoji-pick');
-  emojiBtn.textContent = emoji;
-  settingItem.querySelector('.emoji-picker-dropdown').remove();
-}
-
-function addCategory() {
-  const list = document.getElementById('categories-list');
-  if (!list) return;
-  const idx = list.children.length;
-  const div = document.createElement('div');
-  div.className = 'setting-item';
-  div.dataset.idx = idx;
-  div.innerHTML = `
-    <button type="button" class="btn-emoji-pick" data-idx="${idx}" onclick="openEmojiPicker(this)" title="Pick icon">📦</button>
-    <input type="text" value="" class="category-input" placeholder="New category">
-    <button type="button" class="btn-icon btn-remove" onclick="removeCategory(${idx})">×</button>
-  `;
-  list.appendChild(div);
-  div.querySelector('input').focus();
-}
-
-function removeCategory(idx) {
-  const list = document.getElementById('categories-list');
-  if (!list) return;
-  const item = list.querySelector(`[data-idx="${idx}"]`);
-  if (item) item.remove();
-}
-
-async function resetSettingsToDefaults() {
-  if (!confirm('Reset all settings to defaults?')) return;
-
-  try {
-    showLoading();
-
-    // Save defaults to API
-    await API.call('/settings/', {
-      method: 'PUT',
-      body: JSON.stringify({
-        locations: DEFAULT_LOCATIONS,
-        categories: DEFAULT_CATEGORIES
-      })
-    });
-
-    // Update local cache
-    window.householdSettings.locations = DEFAULT_LOCATIONS;
-    window.householdSettings.categories = DEFAULT_CATEGORIES;
-
-    localStorage.setItem('expirationDays', '3');
-    openSettingsModal(); // Refresh modal
-    showSuccess('Settings reset to defaults');
-  } catch (error) {
-    console.error('Failed to reset settings:', error);
-    showError('Failed to reset settings');
-  } finally {
-    hideLoading();
-  }
-}
-
-async function saveSettings() {
-  // Collect locations
-  const locationInputs = document.querySelectorAll('.location-input');
-  const locations = [];
-  locationInputs.forEach(input => {
-    const val = input.value.trim();
-    if (val) locations.push(val);
-  });
-
-  // Collect categories and their emoji mappings
-  const categoryItems = document.querySelectorAll('#categories-list .setting-item');
-  const categories = [];
-  const category_emojis = {};
-  categoryItems.forEach(item => {
-    const input = item.querySelector('.category-input');
-    const emojiBtn = item.querySelector('.btn-emoji-pick');
-    const val = input ? input.value.trim() : '';
-    if (val) {
-      categories.push(val);
-      if (emojiBtn) {
-        category_emojis[val] = emojiBtn.textContent.trim();
-      }
-    }
-  });
-
-  // Save expiration days (still local - per-user preference)
-  const expirationDays = document.getElementById('setting-expiration-days').value;
-
-  // Validate
-  if (locations.length === 0) {
-    alert('You need at least one location.');
-    return;
-  }
-  if (categories.length === 0) {
-    alert('You need at least one category.');
-    return;
-  }
-
-  try {
-    showLoading();
-
-    // Save to API
-    const response = await API.call('/settings/', {
-      method: 'PUT',
-      body: JSON.stringify({ locations, categories, category_emojis })
-    });
-
-    // Update local cache
-    window.householdSettings.locations = response.locations || locations;
-    window.householdSettings.categories = response.categories || categories;
-    window.householdSettings.category_emojis = response.category_emojis || category_emojis;
-
-    // Save expiration days locally (user preference)
-    localStorage.setItem('expirationDays', expirationDays);
-
-    closeModal();
-    showSuccess('Settings saved!');
-
-    // Reload pantry to update category emojis
-    if (window.reloadCategoryEmojis) {
-      window.reloadCategoryEmojis();
-    }
-  } catch (error) {
-    console.error('Failed to save settings:', error);
-    showError('Failed to save settings');
-  } finally {
-    hideLoading();
-  }
-}
-
-// Expose functions globally
-window.addLocation = addLocation;
-window.removeLocation = removeLocation;
-window.addCategory = addCategory;
-window.removeCategory = removeCategory;
-window.openEmojiPicker = openEmojiPicker;
-window.selectEmoji = selectEmoji;
-window.getCategoryDefaultEmoji = getCategoryDefaultEmoji;
-window.resetSettingsToDefaults = resetSettingsToDefaults;
-window.saveSettings = saveSettings;
-window.loadSettings = loadSettings;
-window.toggleDisplayMode = toggleDisplayMode;
-window.getDisplayMode = getDisplayMode;
-window.handleLogout = handleLogout;
-
-// Expose functions globally
-window.openAccountModal = openAccountModal;
-window.openSettingsModal = openSettingsModal;
-window.generateInviteCode = generateInviteCode;
-window.copyInviteCode = copyInviteCode;
-window.acceptInviteCode = acceptInviteCode;
-window.switchHousehold = switchHousehold;
-window.exportData = exportData;
-window.updateBulkEntryCount = updateBulkEntryCount;
+// Expose data-loading functions globally
 window.loadPantry = loadPantry;
 window.loadRecipes = loadRecipes;
 window.loadShoppingList = loadShoppingList;
 window.refreshShoppingList = refreshShoppingList;
 window.loadMealPlans = loadMealPlans;
-window.loadUnits = loadUnits;
-window.markLocalWrite = markLocalWrite;
-window.showToast = showToast;
-
-/* ============================================================================
-   SUPABASE REALTIME SYNC
-============================================================================ */
-
-let _supabaseClient = null;
-let _realtimeChannel = null;
-
-// Track our own recent writes so we don't double-reload on our own changes
-let _lastLocalWrite = 0;
-const LOCAL_WRITE_DEBOUNCE = 2000; // ignore events within 2s of our own write
-
-function markLocalWrite() {
-  _lastLocalWrite = Date.now();
-}
-
-async function initRealtime() {
-  try {
-    const config = await API.call('/realtime/config');
-    if (!config || !config.supabase_url || !config.anon_key) {
-      console.warn('Realtime not configured on backend.');
-      return;
-    }
-
-    const { createClient } = window.supabase;
-    if (!createClient) {
-      console.warn('Supabase JS client not loaded.');
-      return;
-    }
-
-    _supabaseClient = createClient(config.supabase_url, config.anon_key, {
-      auth: { persistSession: false, autoRefreshToken: false }
-    });
-
-    const householdId = API.getActiveHouseholdId();
-    if (!householdId) {
-      console.warn('No active household for Realtime subscriptions.');
-      return;
-    }
-
-    // Subscribe to all core tables for this household
-    _realtimeChannel = _supabaseClient
-      .channel(`household-${householdId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pantry_items', filter: `household_id=eq.${householdId}` }, (payload) => {
-        handleRealtimeEvent('pantry', payload);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pantry_locations' }, (payload) => {
-        handleRealtimeEvent('pantry', payload);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'recipes', filter: `household_id=eq.${householdId}` }, (payload) => {
-        handleRealtimeEvent('recipes', payload);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'meal_plans', filter: `household_id=eq.${householdId}` }, (payload) => {
-        handleRealtimeEvent('meals', payload);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_list_manual', filter: `household_id=eq.${householdId}` }, (payload) => {
-        handleRealtimeEvent('shopping', payload);
-      })
-      .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Realtime connected — live sync active');
-          showToast('Live sync connected', 'success', 2000);
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('Realtime channel error - check Supabase Realtime settings');
-          showToast('Live sync unavailable', 'error', 3000);
-        }
-      });
-
-  } catch (error) {
-    console.warn('Failed to initialize Realtime:', error);
-  }
-}
-
-// Debounce reload calls per section to avoid rapid-fire reloads
-const _realtimeReloadTimers = {};
-
-function handleRealtimeEvent(section, payload) {
-  console.log(`📡 Realtime event: ${section} - ${payload.eventType}`, payload);
-
-  // Skip if this was our own write (within debounce window)
-  if (Date.now() - _lastLocalWrite < LOCAL_WRITE_DEBOUNCE) {
-    console.log('  ↳ Skipped (local write debounce)');
-    return;
-  }
-
-  // Debounce: if multiple events fire for the same section within 500ms, batch them
-  if (_realtimeReloadTimers[section]) {
-    clearTimeout(_realtimeReloadTimers[section]);
-  }
-
-  _realtimeReloadTimers[section] = setTimeout(() => {
-    delete _realtimeReloadTimers[section];
-    reloadSection(section, payload.eventType);
-  }, 500);
-}
-
-async function reloadSection(section, eventType) {
-  const actionLabel = eventType === 'DELETE' ? 'removed' : 'updated';
-  try {
-    switch (section) {
-      case 'pantry':
-        // Pantry changes affect shopping list (threshold items)
-        await Promise.all([loadPantry(), loadShoppingList()]);
-        showToast(`Pantry ${actionLabel} by another user`, 'sync', 3000);
-        break;
-      case 'recipes':
-        await loadRecipes();
-        showToast(`Recipes ${actionLabel} by another user`, 'sync', 3000);
-        break;
-      case 'meals':
-        // Meal changes affect shopping list (ingredient needs)
-        await Promise.all([loadMealPlans(), loadShoppingList()]);
-        showToast(`Meal plan ${actionLabel} by another user`, 'sync', 3000);
-        break;
-      case 'shopping':
-        await loadShoppingList();
-        showToast(`Shopping list ${actionLabel} by another user`, 'sync', 3000);
-        break;
-    }
-  } catch (err) {
-    console.error(`Failed to reload ${section}:`, err);
-  }
-}
-
-function cleanupRealtime() {
-  if (_realtimeChannel && _supabaseClient) {
-    _supabaseClient.removeChannel(_realtimeChannel);
-    _realtimeChannel = null;
-  }
-}
-
-// ── Visibility Change Fallback ──
-// Reload stale data when user switches back to the tab
-let _lastVisibilityReload = 0;
-const VISIBILITY_RELOAD_COOLDOWN = 30000; // 30s minimum between visibility reloads
-
-function setupVisibilityReload() {
-  document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState !== 'visible') return;
-    if (Date.now() - _lastVisibilityReload < VISIBILITY_RELOAD_COOLDOWN) return;
-    if (!API.getToken()) return;
-
-    _lastVisibilityReload = Date.now();
-    console.log('Tab visible — refreshing data');
-    try {
-      await Promise.all([loadPantry(), loadRecipes(), loadMealPlans(), loadShoppingList()]);
-    } catch (err) {
-      console.warn('Visibility reload failed:', err);
-    }
-  });
-}
+window.deleteRecipe = deleteRecipe;
+window.updateRecipe = updateRecipe;
 
 async function initApp() {
   console.log('🍳 Chef\'s Kiss - Python Age 5.0');
@@ -2845,33 +1860,65 @@ async function initApp() {
   // Apply compact mode if enabled
   applyDisplayMode();
 
-  // Check if there was a token before auth check (since checkAuth clears invalid tokens)
-  const hadTokenBeforeCheck = API.getToken() !== null;
+  // Detect if we're on a section page (multi-page architecture)
+  const section = document.body.dataset.section;
+  const isDemoMode = localStorage.getItem('demo-mode') === 'true';
 
   // Check if user is authenticated
   const isAuthenticated = await checkAuth();
 
-  console.log('Authentication status:', isAuthenticated);
+  console.log('Authentication status:', isAuthenticated, section ? `(section: ${section})` : '(landing)');
 
   if (isAuthenticated) {
     await loadApp();
+  } else if (isDemoMode && section) {
+    // Demo mode on a section page — load demo data from localStorage
+    await loadDemoApp();
+  } else if (section) {
+    // Not authenticated on a section page — redirect to landing
+    // (auth-guard.js should have caught this, but just in case)
+    window.location.href = '/index.html';
   } else {
+    // On landing page, not authenticated — landing.js handles display
     showLandingPage();
-
-    // If there was a token but auth failed, show helpful message
-    if (hadTokenBeforeCheck) {
-      console.log('⚠️ Your authentication token was invalid or expired and has been cleared.');
-      console.log('ℹ️ Please sign in again to continue.');
-      console.log('');
-      console.log('If you continue to see authentication errors:');
-      console.log('1. Make sure the backend is deployed and running');
-      console.log('2. Check that SUPABASE_JWT_SECRET is configured correctly in Railway');
-      console.log('3. Try signing up for a new account');
-      console.log('4. Or use the "Try Demo" option to test without authentication');
-    } else {
-      console.log('ℹ️ Welcome! Please sign in or create an account to get started.');
-    }
   }
+}
+
+/**
+ * Load demo data from localStorage (no API calls)
+ */
+async function loadDemoApp() {
+  console.log('🎮 Loading demo mode from localStorage');
+
+  try {
+    window.pantry = JSON.parse(localStorage.getItem('pantry') || '[]');
+    window.recipes = JSON.parse(localStorage.getItem('recipes') || '[]');
+    window.planner = JSON.parse(localStorage.getItem('planner') || '{}');
+    window.shoppingList = [];
+  } catch (e) {
+    console.error('Error parsing demo data:', e);
+    window.pantry = [];
+    window.recipes = [];
+    window.planner = {};
+    window.shoppingList = [];
+  }
+
+  // Load settings defaults (no API call needed for demo)
+  if (typeof loadSettings === 'function') {
+    try { await loadSettings(); } catch (e) { /* ignore API errors in demo */ }
+  }
+  if (typeof createUnitDatalist === 'function') createUnitDatalist();
+
+  // Trigger renders by touching data attributes
+  const pantryDisplay = document.getElementById('pantry-display');
+  if (pantryDisplay) pantryDisplay.setAttribute('data-updated', Date.now());
+
+  const recipesGrid = document.getElementById('recipes-grid');
+  if (recipesGrid) recipesGrid.setAttribute('data-updated', Date.now());
+
+  if (window.reloadCalendar) window.reloadCalendar();
+
+  wireUpButtons();
 }
 
 // Initialize when DOM is ready

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chef's Kiss — Shopping List</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/css/shared.css">
+  <link rel="stylesheet" href="/shopping/shopping.css">
+  <link rel="stylesheet" href="/css/shopping-focus-mode.css">
+  <link rel="icon" type="image/png" href="/assets/favicon.png" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/js/config.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/validation.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/auth-guard.js"></script>
+  <script src="/js/settings.js"></script>
+  <script src="/js/realtime.js"></script>
+  <script defer src="/js/app.js"></script>
+  <script src="/js/shopping-focus-mode.js"></script>
+
+  <style>
+    .main-content > section { display: block !important; }
+    .landing-page { display: none !important; }
+  </style>
+</head>
+<body data-section="shopping">
+
+  <header class="site-header">
+    <div class="header-left">
+      <h1 class="header-brand">
+        Chef's Kiss
+        <span class="header-brand-underline"></span>
+      </h1>
+    </div>
+    <div class="header-right">
+      <div class="header-datetime">
+        <span id="utility-date"></span>
+        <span class="datetime-separator">•</span>
+        <span id="utility-time"></span>
+      </div>
+      <nav class="header-nav">
+        <button class="btn-header-icon" id="btn-account" title="Account & Households">👤</button>
+        <button class="btn-header-icon" id="btn-settings" title="Settings">⚙️</button>
+      </nav>
+    </div>
+  </header>
+
+  <nav class="sidebar-nav" aria-label="Main navigation">
+    <a href="/recipes/" class="nav-btn" title="Recipes" aria-label="Recipes">🍳</a>
+    <a href="/pantry/" class="nav-btn" title="Pantry" aria-label="Pantry">🏺</a>
+    <a href="/shopping/" class="nav-btn active" title="Shopping" aria-label="Shopping">🛒</a>
+    <a href="/meals/" class="nav-btn" title="Meal Planning" aria-label="Meal Planning">📅</a>
+  </nav>
+
+  <nav class="bottom-nav" aria-label="Main navigation">
+    <a href="/recipes/" class="nav-btn" title="Recipes" aria-label="Recipes">🍳</a>
+    <a href="/pantry/" class="nav-btn" title="Pantry" aria-label="Pantry">🏺</a>
+    <a href="/shopping/" class="nav-btn active" title="Shopping" aria-label="Shopping">🛒</a>
+    <a href="/meals/" class="nav-btn" title="Meal Planning" aria-label="Meal Planning">📅</a>
+  </nav>
+
+  <div class="main-content">
+    <div class="floating-action-menu fab-shopping" id="fab-shopping">
+      <button class="floating-action-btn" id="fab-btn-shopping" title="Add Shopping Item" onclick="document.getElementById('btn-add-custom-item').click()">+</button>
+    </div>
+
+    <section class="shopping-section" id="shopping-section">
+      <div class="shopping-header">
+        <h2>SHOPPING LIST</h2>
+        <button class="btn-refresh" onclick="refreshShoppingList()" title="Refresh shopping list">🔄</button>
+      </div>
+
+      <div class="shopping-add-inline">
+        <input type="text" id="user-item-name" placeholder="Add item...">
+        <button class="btn-add-icon" id="btn-add-custom-item" title="Add custom item">+</button>
+      </div>
+
+      <div id="shopping-list" class="shopping-list"></div>
+
+      <div class="shopping-actions">
+        <button class="btn btn-focus-mode-large" onclick="enterShoppingFocusMode()">
+          🛒 SHOPPING MODE
+        </button>
+        <button class="btn btn-primary btn-block" id="btn-checkout">Checkout</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="modal-root"></div>
+</body>
+</html>

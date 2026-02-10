@@ -292,54 +292,16 @@ function updateLandingPageVisibility(isAuthenticated) {
  */
 function loadDemoAccount() {
   try {
-    // Set demo mode flag
+    // Set demo mode flag and store demo data in localStorage
     localStorage.setItem('demo-mode', 'true');
-
-    // Load demo data into localStorage
     localStorage.setItem('pantry', JSON.stringify(DEMO_DATA.pantry));
     localStorage.setItem('recipes', JSON.stringify(DEMO_DATA.recipes));
     localStorage.setItem('planner', JSON.stringify(DEMO_DATA.planner));
 
-    // Update global variables if they exist
-    if (window.pantry !== undefined) {
-      window.pantry = DEMO_DATA.pantry;
-    }
-    if (window.recipes !== undefined) {
-      window.recipes = DEMO_DATA.recipes;
-    }
-    if (window.planner !== undefined) {
-      window.planner = DEMO_DATA.planner;
-    }
+    console.log('✅ Demo mode activated — redirecting to app');
 
-    // Hide landing page and show app
-    const landingPage = document.getElementById('landing-page');
-    const body = document.body;
-
-    if (landingPage) {
-      landingPage.classList.remove('show');
-      body.classList.remove('landing-active');
-    }
-
-    // Show demo mode banner
-    const demoBanner = document.getElementById('demo-banner');
-    if (demoBanner) {
-      demoBanner.style.display = 'block';
-      document.body.classList.add('demo-mode-active');
-    }
-
-    // Show toast notification
-    if (window.showSuccess) {
-      window.showSuccess('Welcome to the demo! Explore all features with sample data.');
-    }
-
-    // Refresh all views
-    if (window.loadPantry) window.loadPantry();
-    if (window.loadRecipes) window.loadRecipes();
-    if (window.loadShoppingList) window.loadShoppingList();
-    if (window.loadMealPlans) window.loadMealPlans();
-
-    console.log('✅ Demo mode activated');
-
+    // Navigate to the app (auth-guard allows demo mode through)
+    window.location.href = '/pantry/';
   } catch (err) {
     console.error('Error loading demo account:', err);
     if (window.showError) {
@@ -353,30 +315,16 @@ function loadDemoAccount() {
  */
 function exitDemoMode() {
   if (confirm('Exit demo mode? All demo data will be cleared.')) {
-    // Clear demo flag
+    // Clear demo flag and data
     localStorage.removeItem('demo-mode');
-
-    // Clear demo data
     localStorage.removeItem('pantry');
     localStorage.removeItem('recipes');
     localStorage.removeItem('planner');
 
-    // Reset global arrays
-    if (window.pantry !== undefined) window.pantry = [];
-    if (window.recipes !== undefined) window.recipes = [];
-    if (window.planner !== undefined) window.planner = {};
+    console.log('✅ Demo mode exited — redirecting to landing');
 
-    // Hide demo banner
-    const demoBanner = document.getElementById('demo-banner');
-    if (demoBanner) {
-      demoBanner.style.display = 'none';
-      document.body.classList.remove('demo-mode-active');
-    }
-
-    // Show landing page
-    updateLandingPageVisibility(false);
-
-    console.log('✅ Demo mode exited');
+    // Navigate back to landing page
+    window.location.href = '/index.html';
   }
 }
 
@@ -452,9 +400,9 @@ async function handleLandingSignIn() {
     });
 
     if (response.session && response.session.access_token) {
-      // Save token and reload
+      // Save token and navigate to the app
       API.setToken(response.session.access_token);
-      window.location.reload();
+      window.location.href = '/pantry/';
     } else {
       errorDiv.textContent = 'Sign in failed';
       signInBtn.disabled = false;
@@ -519,9 +467,9 @@ async function handleLandingSignUp() {
     });
 
     if (response.session && response.session.access_token) {
-      // Save token and reload
+      // Save token and navigate to the app
       API.setToken(response.session.access_token);
-      window.location.reload();
+      window.location.href = '/pantry/';
     } else {
       errorDiv.textContent = 'Sign up failed';
       signUpBtn.disabled = false;
@@ -645,18 +593,21 @@ function initLandingPage() {
     });
   }
 
-  // Check initial state - show landing if not authenticated and not in demo
+  // If already authenticated, redirect to the app immediately
   const isAuth = API.getToken() !== null;
-  updateLandingPageVisibility(isAuth);
-
-  // Show demo banner if in demo mode
-  if (isDemoMode()) {
-    const demoBanner = document.getElementById('demo-banner');
-    if (demoBanner) {
-      demoBanner.style.display = 'block';
-      document.body.classList.add('demo-mode-active');
-    }
+  if (isAuth) {
+    window.location.href = '/pantry/';
+    return;
   }
+
+  // If in demo mode, redirect to the app
+  if (isDemoMode()) {
+    window.location.href = '/pantry/';
+    return;
+  }
+
+  // Show landing page for unauthenticated visitors
+  updateLandingPageVisibility(false);
 
   console.log('✅ Landing page initialized');
 }
