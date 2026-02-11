@@ -1749,6 +1749,12 @@ async function loadApp() {
     console.error('Error loading initial data:', error);
   }
 
+  // After all data is loaded, force a calendar re-render on the meals page
+  // This ensures both window.recipes and window.planner are ready
+  if (section === 'meals' && window.reloadCalendar) {
+    window.reloadCalendar();
+  }
+
   // Create global unit datalist for autocomplete
   createUnitDatalist();
 
@@ -1761,6 +1767,13 @@ async function loadApp() {
 
   // Track current section (data already loaded above, no need to re-fetch)
   AppState.currentView = section === 'meals' ? 'meal-planning' : section;
+
+  // Fade out page transition overlay now that content is ready
+  const overlay = document.getElementById('page-transition-overlay');
+  if (overlay && overlay.classList.contains('entering')) {
+    requestAnimationFrame(() => overlay.classList.add('fade-out'));
+    setTimeout(() => overlay.classList.remove('entering', 'fade-out', 'active'), 400);
+  }
 }
 
 /**
@@ -1856,13 +1869,19 @@ function wireUpButtons() {
     btnSettings.addEventListener('click', openSettingsModal);
   }
 
-  // Smooth page transitions — intercept nav link clicks for fade-out
+  // Smooth page transitions — overlay covers white flash between navigations
   document.querySelectorAll('.sidebar-nav .nav-btn[href], .bottom-nav .nav-btn[href]').forEach(link => {
     link.addEventListener('click', (e) => {
       if (link.classList.contains('active')) { e.preventDefault(); return; }
       e.preventDefault();
-      document.body.classList.add('page-exit');
-      setTimeout(() => { window.location.href = link.href; }, 150);
+      const overlay = document.getElementById('page-transition-overlay');
+      if (overlay) {
+        overlay.classList.add('active');
+        sessionStorage.setItem('ck-navigating', '1');
+        setTimeout(() => { window.location.href = link.href; }, 180);
+      } else {
+        window.location.href = link.href;
+      }
     });
   });
 
@@ -1894,6 +1913,13 @@ window.updateRecipe = updateRecipe;
 async function initApp() {
   console.log('🍳 Chef\'s Kiss - Python Age 5.0');
   console.log('Backend:', window.CONFIG?.API_BASE || 'http://localhost:8000/api');
+
+  // If arriving via nav click, show overlay immediately so page reveals smoothly
+  const overlay = document.getElementById('page-transition-overlay');
+  if (overlay && sessionStorage.getItem('ck-navigating')) {
+    overlay.classList.add('entering');
+    sessionStorage.removeItem('ck-navigating');
+  }
 
   // Apply compact mode if enabled
   applyDisplayMode();
