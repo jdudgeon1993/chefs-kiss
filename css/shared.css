@@ -23,7 +23,7 @@ body {
   /* Green and white gingham background */
   background-color: var(--parchment);
             /* Refined Gingham Weave */
-            background-image: 
+            background-image:
                 linear-gradient(90deg, rgba(139, 168, 142, 0.15) 50%, transparent 50%),
                 linear-gradient(rgba(139, 168, 142, 0.15) 50%, transparent 50%);
             background-size: 70px 70px;
@@ -34,6 +34,14 @@ body {
   display: flex;
   min-height: 100vh;
   padding-top: 70px;
+
+  /* Smooth page transitions between sections */
+  opacity: 1;
+  transition: opacity 0.15s ease;
+}
+
+body.page-exit {
+  opacity: 0;
 }
 
 /* Global Focus Styles for Accessibility */

@@ -15,7 +15,17 @@ function markLocalWrite() {
 
 async function initRealtime() {
   try {
-    const config = await API.call('/realtime/config');
+    // Use cached realtime config to avoid extra API call on page switches
+    let config;
+    const cachedConfig = sessionStorage.getItem('ck-realtime-config');
+    if (cachedConfig) {
+      config = JSON.parse(cachedConfig);
+    } else {
+      config = await API.call('/realtime/config');
+      if (config && config.supabase_url) {
+        sessionStorage.setItem('ck-realtime-config', JSON.stringify(config));
+      }
+    }
     if (!config || !config.supabase_url || !config.anon_key) {
       console.warn('Realtime not configured on backend.');
       return;
@@ -59,7 +69,11 @@ async function initRealtime() {
         console.log('Realtime subscription status:', status);
         if (status === 'SUBSCRIBED') {
           console.log('✅ Realtime connected — live sync active');
-          showToast('Live sync connected', 'success', 2000);
+          // Only show toast on first connection per session (not on every page switch)
+          if (!sessionStorage.getItem('ck-realtime-connected')) {
+            sessionStorage.setItem('ck-realtime-connected', '1');
+            showToast('Live sync connected', 'success', 2000);
+          }
         } else if (status === 'CHANNEL_ERROR') {
           console.error('Realtime channel error - check Supabase Realtime settings');
           showToast('Live sync unavailable', 'error', 3000);
