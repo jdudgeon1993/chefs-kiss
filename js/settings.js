@@ -15,6 +15,16 @@ window.householdSettings = {
 };
 
 async function loadSettings() {
+  // Use cached settings immediately if available (avoids API call on page switch)
+  const cached = sessionStorage.getItem('ck-settings');
+  if (cached) {
+    try {
+      window.householdSettings = JSON.parse(cached);
+      console.log('Settings loaded from cache');
+      return;
+    } catch (e) { /* fall through to API */ }
+  }
+
   try {
     const response = await API.call('/settings/');
     window.householdSettings = {
@@ -22,6 +32,7 @@ async function loadSettings() {
       categories: response.categories || DEFAULT_CATEGORIES,
       category_emojis: response.category_emojis || {}
     };
+    sessionStorage.setItem('ck-settings', JSON.stringify(window.householdSettings));
     console.log('Settings loaded from API:', window.householdSettings);
   } catch (error) {
     console.warn('Failed to load settings from API, using defaults:', error);
@@ -66,9 +77,19 @@ function setSavedCategories(categories) {
 window.cachedUnits = [];
 
 async function loadUnits() {
+  const cached = sessionStorage.getItem('ck-units');
+  if (cached) {
+    try {
+      window.cachedUnits = JSON.parse(cached);
+      console.log('Units loaded from cache:', window.cachedUnits.length);
+      return;
+    } catch (e) { /* fall through to API */ }
+  }
+
   try {
     const response = await API.getUnits();
     window.cachedUnits = response.units || [];
+    sessionStorage.setItem('ck-units', JSON.stringify(window.cachedUnits));
     console.log('Units loaded:', window.cachedUnits.length);
   } catch (error) {
     console.warn('Failed to load units, using defaults:', error);
@@ -442,6 +463,8 @@ async function handleLogout() {
 
   try {
     cleanupRealtime();
+    // Clear session cache so next login gets fresh data
+    sessionStorage.clear();
     await API.signOut();
     // Navigate to landing page (multi-page architecture)
     window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/index.html';
@@ -698,6 +721,8 @@ async function saveSettings() {
     window.householdSettings.categories = response.categories || categories;
     window.householdSettings.category_emojis = response.category_emojis || category_emojis;
 
+    // Update cache so other pages pick up changes immediately
+    sessionStorage.setItem('ck-settings', JSON.stringify(window.householdSettings));
     localStorage.setItem('expirationDays', expirationDays);
 
     closeModal();

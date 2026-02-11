@@ -1853,6 +1853,29 @@ function wireUpButtons() {
   if (btnSettings) {
     btnSettings.addEventListener('click', openSettingsModal);
   }
+
+  // Smooth page transitions — intercept nav link clicks for fade-out
+  document.querySelectorAll('.sidebar-nav .nav-btn[href], .bottom-nav .nav-btn[href]').forEach(link => {
+    link.addEventListener('click', (e) => {
+      if (link.classList.contains('active')) { e.preventDefault(); return; }
+      e.preventDefault();
+      document.body.classList.add('page-exit');
+      setTimeout(() => { window.location.href = link.href; }, 150);
+    });
+  });
+
+  // Prefetch other section pages so navigation feels instant
+  const sections = ['recipes', 'pantry', 'shopping', 'meals'];
+  const currentSection = document.body.dataset.section;
+  const basePath = window.CONFIG?.BASE_PATH || '';
+  sections.forEach(s => {
+    if (s !== currentSection) {
+      const link = document.createElement('link');
+      link.rel = 'prefetch';
+      link.href = `${basePath}/${s}/`;
+      document.head.appendChild(link);
+    }
+  });
 }
 
 
