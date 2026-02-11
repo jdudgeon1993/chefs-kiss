@@ -35,12 +35,37 @@ body {
   min-height: 100vh;
   padding-top: 70px;
 
-  /* Smooth page transitions between sections */
-  opacity: 1;
-  transition: opacity 0.15s ease;
 }
 
-body.page-exit {
+/* Page transition overlay — covers white flash between navigations */
+.page-transition-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--parchment);
+  background-image:
+    linear-gradient(90deg, rgba(139, 168, 142, 0.15) 50%, transparent 50%),
+    linear-gradient(rgba(139, 168, 142, 0.15) 50%, transparent 50%);
+  background-size: 70px 70px;
+  z-index: 99999;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.page-transition-overlay.active {
+  opacity: 1;
+}
+
+/* On page load, start with overlay visible then fade it out */
+.page-transition-overlay.entering {
+  opacity: 1;
+  transition: opacity 0.25s ease 0.05s;
+}
+
+.page-transition-overlay.entering.fade-out {
   opacity: 0;
 }
 
@@ -334,31 +359,19 @@ body.compact {
   padding: 0;
 }
 
-/* Section visibility - Hide all by default */
+/* Section visibility — multi-page architecture */
+/* Each section page has data-section on body; sections are shown there */
 .main-content > section {
   display: none;
 }
 
-/* Show section when corresponding radio is checked */
-#nav-recipes:checked ~ .main-content .recipes-section {
+body[data-section] .main-content > section {
   display: flex;
 }
 
-#nav-pantry:checked ~ .main-content .pantry-section {
-  display: flex;
-}
-
-#nav-shopping:checked ~ .main-content .shopping-section {
-  display: flex;
-}
-
-#nav-meal-planning:checked ~ .main-content .meal-planning-section {
-  display: flex;
-}
-
-#nav-onboarding:checked ~ .main-content .onboarding-section {
-  display: flex;
-}
+/* Landing page: hide sections, show landing */
+.landing-page { display: none; }
+body:not([data-section]) .landing-page { display: block; }
 
 
 /* -------------------------------------------------------------------
@@ -2210,20 +2223,8 @@ body.compact {
   gap: 1rem;
 }
 
-/* Show appropriate FAB based on active section */
-#nav-recipes:checked ~ .main-content .fab-recipes {
-  display: flex;
-}
-
-#nav-pantry:checked ~ .main-content .fab-pantry {
-  display: flex;
-}
-
-#nav-shopping:checked ~ .main-content .fab-shopping {
-  display: flex;
-}
-
-#nav-meal-planning:checked ~ .main-content .fab-meal-planning {
+/* Show FAB on section pages (each page only includes its own FAB) */
+body[data-section] .floating-action-menu {
   display: flex;
 }
 

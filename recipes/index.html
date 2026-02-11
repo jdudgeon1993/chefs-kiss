@@ -19,13 +19,9 @@
   <script defer src="../js/app.js"></script>
   <script defer src="recipes.js"></script>
 
-  <style>
-    /* Override CSS radio-button navigation — always show this section */
-    .main-content > section { display: block !important; }
-    .landing-page { display: none !important; }
-  </style>
 </head>
 <body data-section="recipes">
+  <div class="page-transition-overlay" id="page-transition-overlay"></div>
 
   <!-- UNIFIED PURPLE HEADER BAR -->
   <header class="site-header">
@@ -69,10 +65,6 @@
     <!-- FLOATING ACTION BUTTON -->
     <div class="floating-action-menu fab-recipes" id="fab-recipes">
       <button class="floating-action-btn" id="fab-btn-recipe" title="Add Recipe" onclick="if(window.openRecipeModal) window.openRecipeModal(null)">+</button>
-    </div>
-
-    <div style="position: absolute; opacity: 0; pointer-events: none;">
-      <button id="fab-add-recipe" style="display: none;"></button>
     </div>
 
     <!-- RECIPES SECTION -->

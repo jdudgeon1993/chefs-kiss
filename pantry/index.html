@@ -20,14 +20,13 @@
   <script defer src="pantry.js"></script>
 
   <style>
-    .main-content > section { display: block !important; }
-    .main-content > section.section-hidden { display: none !important; }
-    .main-content > .onboarding-section { display: none !important; }
-    .main-content > .onboarding-section.section-visible { display: block !important; }
-    .landing-page { display: none !important; }
+    /* Onboarding section hidden by default, shown via JS */
+    .main-content > .onboarding-section { display: none; }
+    .main-content > .onboarding-section.section-visible { display: block; }
   </style>
 </head>
 <body data-section="pantry">
+  <div class="page-transition-overlay" id="page-transition-overlay"></div>
 
   <header class="site-header">
     <div class="header-left">
