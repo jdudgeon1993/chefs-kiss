@@ -391,12 +391,20 @@
     }
   }
 
-  // Initialize when DOM is ready
+  // Initialize when data is ready (loadMealPlans calls window.reloadCalendar,
+  // but we also need an initial render for the calendar shell)
+  function waitForDataAndInit() {
+    if (window.recipes && window.planner) {
+      initCalendar();
+    } else {
+      setTimeout(waitForDataAndInit, 200);
+    }
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initCalendar);
+    document.addEventListener('DOMContentLoaded', waitForDataAndInit);
   } else {
-    // DOM already loaded, but wait a bit for window.recipes to load
-    setTimeout(initCalendar, 1000);
+    waitForDataAndInit();
   }
 
   // Expose reload function for external use

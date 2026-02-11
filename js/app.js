@@ -106,12 +106,12 @@ async function loadPantry() {
 }
 
 function renderPantryList(items) {
-  const container = document.getElementById('pantry-display');
-  if (!container) return;
-
   if (!items || items.length === 0) {
-    container.innerHTML = '<p class="empty-state">No pantry items yet. Add your first item!</p>';
     window.pantry = [];
+    const container = document.getElementById('pantry-display');
+    if (container) {
+      container.innerHTML = '<p class="empty-state">No pantry items yet. Add your first item!</p>';
+    }
     return;
   }
 
@@ -144,9 +144,11 @@ function renderPantryList(items) {
   // Store transformed items globally for other scripts to access
   window.pantry = transformedItems;
 
-  // The actual rendering is done by the pantry ledger script in index.html
-  // Just trigger a re-render event
-  container.setAttribute('data-updated', Date.now());
+  // The actual rendering is done by the pantry ledger script in pantry.js
+  const container = document.getElementById('pantry-display');
+  if (container) {
+    container.setAttribute('data-updated', Date.now());
+  }
 }
 
 /* ============================================================================
@@ -223,13 +225,12 @@ async function deleteRecipe(recipeId) {
 }
 
 function renderRecipeList(recipes) {
-  const container = document.getElementById('recipes-grid');
-  if (!container) return;
-
   if (!recipes || recipes.length === 0) {
-    container.innerHTML = '<p class="empty-state">No recipes yet. Add your first recipe!</p>';
-    // Store empty array globally for recipe grid script
     window.recipes = [];
+    const container = document.getElementById('recipes-grid');
+    if (container) {
+      container.innerHTML = '<p class="empty-state">No recipes yet. Add your first recipe!</p>';
+    }
     return;
   }
 
@@ -258,11 +259,12 @@ function renderRecipeList(recipes) {
     };
   });
 
-  // Store transformed recipes globally for recipe grid script in index.html
+  // Store transformed recipes globally (needed by meals page for recipe names)
   window.recipes = transformedRecipes;
 
   // Signal the recipe grid observer to re-render by touching a data attribute.
-  // The actual rendering is handled by renderRecipesGrid() in index.html.
+  // The actual rendering is handled by renderRecipesGrid() in recipes.js.
+  const container = document.getElementById('recipes-grid');
   if (container) {
     container.setAttribute('data-updated', Date.now());
   }
@@ -611,11 +613,11 @@ function clearLocalCheckedItems() {
 }
 
 function renderShoppingList(items) {
+  // Store items globally for checkout (must happen before container check)
+  window.shoppingList = items || [];
+
   const container = document.getElementById('shopping-list');
   if (!container) return;
-
-  // Store items globally for checkout
-  window.shoppingList = items || [];
 
   if (!items || items.length === 0) {
     container.innerHTML = '<p class="empty-state">Shopping list is empty!</p>';
