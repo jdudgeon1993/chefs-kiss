@@ -89,6 +89,7 @@ body {
   --clay-warm: #a6634b;
   --linen-texture: rgba(0, 0, 0, 0.03);
   --color-recipe-border: #e8e2d0;
+  --color-recipe-accent: #8B9376;
 
   /* Button Colors */
   --btn-primary: #8B9376;
@@ -303,15 +304,8 @@ body.compact {
   outline-offset: 3px;
 }
 
-/* Active state - when radio is checked */
-#nav-recipes:checked ~ .sidebar-nav label[for="nav-recipes"],
-#nav-pantry:checked ~ .sidebar-nav label[for="nav-pantry"],
-#nav-shopping:checked ~ .sidebar-nav label[for="nav-shopping"],
-#nav-meal-planning:checked ~ .sidebar-nav label[for="nav-meal-planning"],
-#nav-recipes:checked ~ .bottom-nav label[for="nav-recipes"],
-#nav-pantry:checked ~ .bottom-nav label[for="nav-pantry"],
-#nav-shopping:checked ~ .bottom-nav label[for="nav-shopping"],
-#nav-meal-planning:checked ~ .bottom-nav label[for="nav-meal-planning"] {
+/* Active state - multi-page nav uses .active class on <a> links */
+.nav-btn.active {
   opacity: 1;
   background: rgba(255, 255, 255, 0.25);
   transform: scale(1.15);

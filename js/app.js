@@ -1162,7 +1162,7 @@ function showLandingPage() {
   document.body.classList.add('landing-active');
 }
 
-function showApp() {
+function showApp(section) {
   const landing = document.getElementById('landing-page');
   const mainContent = document.querySelector('.main-content');
   const siteHeader = document.querySelector('.site-header');
@@ -1179,8 +1179,6 @@ function showApp() {
   if (bottomNav) bottomNav.style.display = '';
 
   document.body.classList.remove('landing-active');
-
-  showView('pantry'); // Default view
 }
 
 /* ============================================================================
@@ -1718,18 +1716,33 @@ window.removeMealFromDay = removeMealFromDay;
 ============================================================================ */
 
 async function loadApp() {
-  showApp();
+  const section = document.body.dataset.section || 'pantry';
+  showApp(section);
 
-  // Load all data in parallel for faster startup
+  // Always load settings and units; only load data for the current section
+  const dataLoaders = [
+    loadSettings(),
+    loadUnits()
+  ];
+
+  switch (section) {
+    case 'pantry':
+      dataLoaders.push(loadPantry());
+      break;
+    case 'recipes':
+      dataLoaders.push(loadRecipes());
+      break;
+    case 'meals':
+      dataLoaders.push(loadRecipes()); // needed for recipe names in calendar
+      dataLoaders.push(loadMealPlans());
+      break;
+    case 'shopping':
+      dataLoaders.push(loadShoppingList());
+      break;
+  }
+
   try {
-    await Promise.all([
-      loadSettings(),  // Load settings first for categories/locations
-      loadUnits(),     // Load unit suggestions for autocomplete
-      loadPantry(),
-      loadRecipes(),
-      loadMealPlans(),
-      loadShoppingList()
-    ]);
+    await Promise.all(dataLoaders);
   } catch (error) {
     console.error('Error loading initial data:', error);
   }
@@ -1744,8 +1757,8 @@ async function loadApp() {
   initRealtime();
   setupVisibilityReload();
 
-  // Show default view
-  showView('pantry');
+  // Track current section (data already loaded above, no need to re-fetch)
+  AppState.currentView = section === 'meals' ? 'meal-planning' : section;
 }
 
 /**
@@ -1888,7 +1901,9 @@ async function initApp() {
  * Load demo data from localStorage (no API calls)
  */
 async function loadDemoApp() {
+  const section = document.body.dataset.section || 'pantry';
   console.log('🎮 Loading demo mode from localStorage');
+  showApp(section);
 
   try {
     window.pantry = JSON.parse(localStorage.getItem('pantry') || '[]');

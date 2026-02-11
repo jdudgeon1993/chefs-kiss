@@ -141,9 +141,15 @@ function setupVisibilityReload() {
     if (!API.getToken()) return;
 
     _lastVisibilityReload = Date.now();
-    console.log('Tab visible — refreshing data');
+    const section = document.body.dataset.section || 'pantry';
+    console.log(`Tab visible — refreshing ${section} data`);
     try {
-      await Promise.all([loadPantry(), loadRecipes(), loadMealPlans(), loadShoppingList()]);
+      switch (section) {
+        case 'pantry':   await loadPantry(); break;
+        case 'recipes':  await loadRecipes(); break;
+        case 'meals':    await Promise.all([loadRecipes(), loadMealPlans()]); break;
+        case 'shopping': await loadShoppingList(); break;
+      }
     } catch (err) {
       console.warn('Visibility reload failed:', err);
     }
