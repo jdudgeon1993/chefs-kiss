@@ -1038,9 +1038,18 @@ async function confirmCheckout() {
           method: 'PUT',
           body: JSON.stringify({ locations: newLocations })
         });
+
+        // Update in-memory pantry so subsequent items in this batch
+        // see the updated state (prevents double-update or missed match)
+        pantryItem.locations = newLocations.map(l => ({
+          location: l.location,
+          qty: l.quantity,
+          expiry: l.expiration_date
+        }));
+        pantryItem.totalQty = newLocations.reduce((sum, l) => sum + (l.quantity || 0), 0);
       } else {
         // Create new pantry item
-        await API.call('/pantry/', {
+        const response = await API.call('/pantry/', {
           method: 'POST',
           body: JSON.stringify({
             name: item.name,
@@ -1054,6 +1063,19 @@ async function confirmCheckout() {
             }]
           })
         });
+
+        // Add to in-memory pantry so subsequent items can find it
+        if (window.pantry) {
+          window.pantry.push({
+            id: response?.id || null,
+            name: item.name,
+            category: item.category,
+            unit: item.unit,
+            min: 0,
+            totalQty: item.quantity,
+            locations: [{ location: item.location, qty: item.quantity, expiry: item.expiration_date }]
+          });
+        }
       }
     }
 
@@ -1798,7 +1820,7 @@ const PAGE_LOADER_CAPTIONS = {
   ]
 };
 
-const PAGE_LOADER_MIN_DISPLAY_MS = 800;
+const PAGE_LOADER_MIN_DISPLAY_MS = 3500;
 
 function updateLoaderProgress(percent) {
   const bar = document.getElementById('loader-bar');

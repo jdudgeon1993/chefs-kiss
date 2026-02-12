@@ -135,7 +135,7 @@ class HouseholdState:
                 continue
 
             for ingredient in recipe.ingredients:
-                key = f"{ingredient.name.lower()}|{ingredient.unit}"
+                key = f"{ingredient.name.lower()}|{ingredient.unit.lower()}"
                 reserved[key] += ingredient.quantity * meal.serving_multiplier
 
         return dict(reserved)
@@ -185,7 +185,7 @@ class HouseholdState:
             if item.min_threshold <= 0:
                 continue  # No threshold set
 
-            key = f"{item.name.lower()}|{item.unit}"
+            key = f"{item.name.lower()}|{item.unit.lower()}"
             reserved = self.reserved_ingredients.get(key, 0)
 
             # What will on-hand be after meals consume reserved ingredients?
@@ -201,7 +201,7 @@ class HouseholdState:
                 # Already have a meal shortfall item — add threshold gap on top
                 for shop_item in shopping:
                     if (shop_item.name.lower() == item.name.lower() and
-                        shop_item.unit == item.unit):
+                        shop_item.unit.lower() == item.unit.lower()):
                         meal_qty = shop_item.quantity
                         shop_item.quantity = round(meal_qty + threshold_gap, 2)
                         shop_item.source = "Meals + Threshold"
@@ -249,7 +249,7 @@ class HouseholdState:
                 available = pantry_item.total_quantity if pantry_item else 0
 
                 # Subtract reserved ingredients
-                key = f"{ingredient.name.lower()}|{ingredient.unit}"
+                key = f"{ingredient.name.lower()}|{ingredient.unit.lower()}"
                 reserved = self.reserved_ingredients.get(key, 0)
 
                 actual_available = available - reserved
@@ -411,10 +411,11 @@ class HouseholdState:
     # ===== HELPER METHODS =====
 
     def _find_pantry_item(self, name: str, unit: str) -> Optional[PantryItem]:
-        """Find pantry item by name and unit"""
+        """Find pantry item by name and unit (case-insensitive)"""
         name_lower = name.lower()
+        unit_lower = unit.lower()
         for item in self.pantry_items:
-            if item.name.lower() == name_lower and item.unit == unit:
+            if item.name.lower() == name_lower and item.unit.lower() == unit_lower:
                 return item
         return None
 
