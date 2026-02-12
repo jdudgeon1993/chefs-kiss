@@ -8,7 +8,8 @@
  * - Check off items as you shop
  * - Quick add items on the fly
  * - Edit items for more details
- * - Live sync via main app's realtime events
+ * - Live sync via main app's realtime events (preserves local checked state)
+ * - Checkout opens main app's checkout modal
  * - Clean, distraction-free interface
  */
 
@@ -28,7 +29,7 @@ class ShoppingFocusMode {
 
     this.isActive = true;
 
-    // Load shopping list
+    // Load shopping list and merge local checked state
     await this.loadShoppingList();
 
     // Create overlay
@@ -71,23 +72,43 @@ class ShoppingFocusMode {
     // Restore body scrolling
     document.body.style.overflow = '';
 
-    // Trigger app refresh
+    // Trigger app refresh so main list reflects any changes
     if (window.loadShoppingList) {
       window.loadShoppingList();
     }
   }
 
   /**
-   * Load shopping list from API
+   * Load shopping list from API and merge local checked state
    */
   async loadShoppingList() {
     try {
       const data = await API.call('/shopping-list/');
       this.shoppingList = data.shopping_list || [];
+      this._mergeLocalCheckedState();
     } catch (error) {
       console.error('Failed to load shopping list:', error);
       this.shoppingList = [];
     }
+  }
+
+  /**
+   * Merge localStorage checked state into the shopping list.
+   * Auto-generated items (no backend ID) track checked state in localStorage
+   * via the same mechanism as the main app.
+   */
+  _mergeLocalCheckedState() {
+    if (typeof getLocalCheckedItems !== 'function') return;
+
+    const localChecked = getLocalCheckedItems();
+    this.shoppingList.forEach(item => {
+      if (!item.id) {
+        const itemKey = `${item.name}|${item.unit}`;
+        if (localChecked[itemKey]) {
+          item.checked = true;
+        }
+      }
+    });
   }
 
   /**
@@ -251,11 +272,23 @@ class ShoppingFocusMode {
   }
 
   /**
+   * Build breakdown subtitle for an item (e.g. "3 for meals, 2 to restock")
+   */
+  _getBreakdownText(item) {
+    if (!item.breakdown) return '';
+    const parts = [];
+    if (item.breakdown.meals) parts.push(`${item.breakdown.meals} for meals`);
+    if (item.breakdown.threshold) parts.push(`${item.breakdown.threshold} to restock`);
+    return parts.length > 1 ? parts.join(', ') : '';
+  }
+
+  /**
    * Render single shopping item
    */
   renderItem(item, isChecked) {
     const itemKey = item.id || `${item.name}|${item.unit}`;
     const safeKey = itemKey.replace(/'/g, "\\'");
+    const breakdownText = this._getBreakdownText(item);
 
     return `
       <div class="focus-item ${isChecked ? 'checked' : ''}" data-item-key="${itemKey}">
@@ -273,6 +306,7 @@ class ShoppingFocusMode {
             <span class="focus-item-qty">${item.quantity} ${item.unit}</span>
             ${item.source ? `<span class="focus-item-source">${item.source}</span>` : ''}
           </div>
+          ${breakdownText ? `<div class="focus-item-breakdown">${breakdownText}</div>` : ''}
         </div>
       </div>
     `;
@@ -280,6 +314,8 @@ class ShoppingFocusMode {
 
   /**
    * Toggle item checked status
+   * - Manual items (with ID): update backend via PATCH
+   * - Auto-generated items (no ID): track in localStorage
    */
   async toggleItem(itemKey, checked) {
     try {
@@ -291,12 +327,17 @@ class ShoppingFocusMode {
 
       if (!item) return;
 
-      // Update backend if it's a manual item with ID
       if (item.id) {
+        // Manual item with ID — update backend
         await API.call(`/shopping-list/items/${item.id}`, {
-          method: 'PUT',
+          method: 'PATCH',
           body: JSON.stringify({ checked })
         });
+      } else {
+        // Auto-generated item — persist in localStorage (shared with main app)
+        if (typeof setLocalCheckedItem === 'function') {
+          setLocalCheckedItem(itemKey, checked);
+        }
       }
 
       // Update local state
@@ -336,12 +377,24 @@ class ShoppingFocusMode {
       await this.loadShoppingList();
       this.render();
 
+      // Notify main app so it stays in sync
+      this._notifyMainApp();
+
       if (window.showToast) window.showToast('Item added!', 'success', 2000);
 
     } catch (error) {
       console.error('Failed to add item:', error);
       if (window.showToast) window.showToast('Failed to add item', 'error');
     }
+  }
+
+  /**
+   * Dispatch event to keep main app in sync with focus mode changes
+   */
+  _notifyMainApp() {
+    window.dispatchEvent(new CustomEvent('shopping-list-updated', {
+      detail: this.shoppingList
+    }));
   }
 
   /**
@@ -357,6 +410,7 @@ class ShoppingFocusMode {
 
     // Get categories from household settings or use defaults
     const categories = (window.householdSettings && window.householdSettings.categories) ||
+      (typeof getSavedCategories === 'function' ? getSavedCategories() : null) ||
       ['Meat', 'Dairy', 'Produce', 'Pantry', 'Frozen', 'Spices', 'Beverages', 'Snacks', 'Other'];
 
     const modal = document.createElement('div');
@@ -390,7 +444,7 @@ class ShoppingFocusMode {
         <div class="focus-modal-actions">
           ${item.id ? `<button class="focus-btn danger" onclick="window.shoppingFocus.deleteItem('${item.id}')">Delete</button>` : ''}
           <button class="focus-btn secondary" onclick="window.shoppingFocus.closeEditModal()">Cancel</button>
-          <button class="focus-btn primary" onclick="window.shoppingFocus.saveEdit('${itemKey}')">Save</button>
+          <button class="focus-btn primary" onclick="window.shoppingFocus.saveEdit('${itemKey.replace(/'/g, "\\'")}')">Save</button>
         </div>
       </div>
     `;
@@ -433,9 +487,10 @@ class ShoppingFocusMode {
 
     try {
       if (item.id) {
+        // Manual item — save to backend
         await API.call(`/shopping-list/items/${item.id}`, {
-          method: 'PUT',
-          body: JSON.stringify({ name, quantity, unit, category })
+          method: 'PATCH',
+          body: JSON.stringify({ name, quantity, category })
         });
       }
 
@@ -447,6 +502,7 @@ class ShoppingFocusMode {
 
       this.closeEditModal();
       this.render();
+      this._notifyMainApp();
 
       if (window.showToast) window.showToast('Item updated!', 'success', 2000);
 
@@ -468,6 +524,7 @@ class ShoppingFocusMode {
       this.closeEditModal();
       await this.loadShoppingList();
       this.render();
+      this._notifyMainApp();
 
       if (window.showToast) window.showToast('Item deleted', 'success', 2000);
 
@@ -484,9 +541,16 @@ class ShoppingFocusMode {
     if (!confirm('Remove all checked items from the list?')) return;
 
     try {
+      // Clear backend manual checked items
       await API.call('/shopping-list/clear-checked', { method: 'POST' });
+      // Clear localStorage checked items
+      if (typeof clearLocalCheckedItems === 'function') {
+        clearLocalCheckedItems();
+      }
+
       await this.loadShoppingList();
       this.render();
+      this._notifyMainApp();
 
       if (window.showToast) window.showToast('Checked items cleared!', 'success');
 
@@ -502,29 +566,34 @@ class ShoppingFocusMode {
   }
 
   /**
-   * Checkout - add checked items to pantry
+   * Checkout - opens the main app's checkout modal (with location/category/expiry fields)
+   * then exits focus mode
    */
-  async checkout() {
+  checkout() {
     const checked = this.shoppingList.filter(item => item.checked);
-    if (checked.length === 0) return;
+    if (checked.length === 0) {
+      if (window.showToast) window.showToast('Check off items first', 'info');
+      return;
+    }
 
-    if (!confirm(`Add ${checked.length} item(s) to your pantry?`)) return;
+    // Update window.shoppingList so the checkout modal picks up our checked state
+    window.shoppingList = this.shoppingList;
 
-    try {
-      await API.call('/shopping-list/checkout', { method: 'POST' });
-      await this.loadShoppingList();
-      this.render();
+    // Exit focus mode overlay (keep body scrolling locked briefly)
+    this.isActive = false;
+    if (this.overlay) {
+      this.overlay.remove();
+      this.overlay = null;
+    }
+    this.removeKeyboardShortcuts();
+    this.unsubscribeFromUpdates();
+    document.body.style.overflow = '';
 
-      if (window.showToast) window.showToast(`${checked.length} items added to pantry!`, 'success');
-
-      // If list is now empty, prompt to exit
-      if (this.shoppingList.length === 0) {
-        this.promptExitIfEmpty();
-      }
-
-    } catch (error) {
-      console.error('Failed to checkout:', error);
-      if (window.showToast) window.showToast('Failed to checkout', 'error');
+    // Open the main app's checkout modal
+    if (typeof openCheckoutModal === 'function') {
+      openCheckoutModal();
+    } else {
+      if (window.showToast) window.showToast('Checkout not available', 'error');
     }
   }
 
@@ -542,15 +611,34 @@ class ShoppingFocusMode {
   }
 
   /**
-   * Subscribe to shopping list updates from main app
-   * The main app handles all realtime complexity - we just listen for its updates
+   * Subscribe to shopping list updates from main app.
+   * Preserves local checked state when merging incoming data.
    */
   subscribeToUpdates() {
     this._updateHandler = (event) => {
       if (!this.isActive) return;
 
-      // Update our local list from the event data
+      // Preserve our local checked state before overwriting
+      const localCheckedState = {};
+      this.shoppingList.forEach(item => {
+        if (item.checked) {
+          const key = item.id || `${item.name}|${item.unit}`;
+          localCheckedState[key] = true;
+        }
+      });
+
+      // Update list from event
       this.shoppingList = event.detail || [];
+
+      // Re-apply local checked state + localStorage state
+      this._mergeLocalCheckedState();
+      this.shoppingList.forEach(item => {
+        const key = item.id || `${item.name}|${item.unit}`;
+        if (localCheckedState[key]) {
+          item.checked = true;
+        }
+      });
+
       this.render();
 
       if (window.showToast) {

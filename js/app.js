@@ -664,6 +664,7 @@ function renderShoppingList(items) {
                 <span class="item-qty">${item.quantity} ${item.unit}</span>
               </label>
               ${item.source ? `<span class="item-source">${item.source}</span>` : ''}
+              ${item.breakdown && item.breakdown.meals && item.breakdown.threshold ? `<span class="item-breakdown">${item.breakdown.meals} for meals, ${item.breakdown.threshold} to restock</span>` : ''}
               <div class="item-actions">
                 <button onclick="editShoppingItem('${safeItemKey}', '${item.name}', ${item.quantity}, '${item.unit}', '${item.category || 'Other'}')" class="btn-icon" title="Edit">✏️</button>
                 ${item.id ? `<button onclick="deleteShoppingItem('${item.id}')" class="btn-icon" title="Delete">🗑️</button>` : ''}
@@ -757,10 +758,36 @@ function editShoppingItem(itemKey, name, quantity, unit, category) {
   const form = document.getElementById('edit-shopping-form');
   form.onsubmit = async (e) => {
     e.preventDefault();
-    // For now, just update local state and re-render
-    // TODO: If item has ID, update via API
-    closeModal();
-    showSuccess('Item updated (local only - will sync on next load)');
+
+    const newName = document.getElementById('edit-item-name').value.trim();
+    const newQty = parseFloat(document.getElementById('edit-item-qty').value) || 1;
+    const newUnit = document.getElementById('edit-item-unit').value.trim() || 'unit';
+    const newCategory = document.getElementById('edit-item-category').value;
+
+    if (!newName) { alert('Name is required'); return; }
+
+    // Find the item to determine if it has a backend ID
+    const items = window.shoppingList || [];
+    const item = items.find(i => {
+      const key = i.id || `${i.name}|${i.unit}`;
+      return key === itemKey;
+    });
+
+    try {
+      if (item && item.id) {
+        // Manual item — update via API
+        await API.call(`/shopping-list/items/${item.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ name: newName, quantity: newQty, category: newCategory })
+        });
+      }
+      closeModal();
+      await loadShoppingList();
+      showSuccess('Item updated!');
+    } catch (error) {
+      console.error('Error updating item:', error);
+      showError('Failed to update item');
+    }
   };
 }
 

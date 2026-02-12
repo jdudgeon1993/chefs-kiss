@@ -146,8 +146,12 @@ class HouseholdState:
 
         Combines:
         1. What meals need (that we don't have)
-        2. Items below minimum threshold
+        2. Items below minimum threshold (accounting for reserved ingredients)
         3. Manual items (toilet paper, soap, etc.)
+
+        Threshold calculation accounts for reserved meal ingredients:
+        after buying meal shortfall and cooking, on-hand will drop.
+        We need enough extra to restore the threshold AFTER cooking.
 
         Returns:
             Complete shopping list
@@ -162,43 +166,60 @@ class HouseholdState:
             pantry_item = self._find_pantry_item(name, unit)
             available = pantry_item.total_quantity if pantry_item else 0
 
-            if available < needed_qty:
+            meal_shortfall = round(max(0, needed_qty - available), 2)
+
+            if meal_shortfall > 0:
                 shopping.append(ShoppingItem(
                     name=name.title(),
-                    quantity=round(needed_qty - available, 2),
+                    quantity=meal_shortfall,
                     unit=unit,
                     category=pantry_item.category if pantry_item else "Other",
                     source="Meals",
-                    checked=False
+                    checked=False,
+                    breakdown={"meals": meal_shortfall}
                 ))
                 added_keys.add(key)
 
-        # Part 2: Items below threshold
+        # Part 2: Items below threshold (accounts for reserved ingredients)
         for item in self.pantry_items:
-            key = f"{item.name.lower()}|{item.unit}"
+            if item.min_threshold <= 0:
+                continue  # No threshold set
 
-            # Skip if already added from meals
+            key = f"{item.name.lower()}|{item.unit}"
+            reserved = self.reserved_ingredients.get(key, 0)
+
+            # What will on-hand be after meals consume reserved ingredients?
+            # (meal_shortfall covers the gap so we can cook, but stock still drops)
+            after_cooking = max(0, item.total_quantity - reserved)
+
+            threshold_gap = round(max(0, item.min_threshold - after_cooking), 2)
+
+            if threshold_gap <= 0:
+                continue  # Threshold satisfied even after cooking
+
             if key in added_keys:
-                # But increase quantity if threshold requires more
+                # Already have a meal shortfall item — add threshold gap on top
                 for shop_item in shopping:
                     if (shop_item.name.lower() == item.name.lower() and
                         shop_item.unit == item.unit):
-                        threshold_shortfall = item.min_threshold - item.total_quantity
-                        if threshold_shortfall > 0:
-                            shop_item.quantity = max(
-                                shop_item.quantity,
-                                round(threshold_shortfall, 2)
-                            )
-                continue
-
-            if item.total_quantity < item.min_threshold:
+                        meal_qty = shop_item.quantity
+                        shop_item.quantity = round(meal_qty + threshold_gap, 2)
+                        shop_item.source = "Meals + Threshold"
+                        shop_item.breakdown = {
+                            "meals": meal_qty,
+                            "threshold": threshold_gap
+                        }
+                        break
+            else:
+                # Threshold-only item (no meal shortfall, but stock drops after cooking)
                 shopping.append(ShoppingItem(
                     name=item.name.title(),
-                    quantity=round(item.min_threshold - item.total_quantity, 2),
+                    quantity=threshold_gap,
                     unit=item.unit,
                     category=item.category,
                     source="Threshold",
-                    checked=False
+                    checked=False,
+                    breakdown={"threshold": threshold_gap}
                 ))
 
         # Part 3: Manual items (the essentials!)

@@ -16,11 +16,12 @@ class ShoppingItem(BaseModel):
     quantity: float
     unit: str
     category: str
-    source: str  # "Meals", "Threshold", or "Manual"
+    source: str  # "Meals", "Threshold", "Meals + Threshold", or "Manual"
     checked: bool = False
     checked_at: Optional[datetime] = None
     checked_by: Optional[str] = None
     household_id: Optional[str] = None
+    breakdown: Optional[dict] = None  # e.g. {"meals": 3, "threshold": 2}
 
     class Config:
         json_schema_extra = {
