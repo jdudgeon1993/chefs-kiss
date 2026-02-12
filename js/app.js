@@ -967,11 +967,38 @@ async function confirmCheckout() {
   try {
     showLoading();
 
+    // Fetch fresh pantry data to ensure we have the latest state
+    // (window.pantry might be stale or empty if we're on the shopping page)
+    try {
+      const pantryResponse = await API.call('/pantry/');
+      const freshPantry = (pantryResponse.pantry_items || pantryResponse || []).map(item => {
+        const locations = (item.locations || []).map(loc => ({
+          id: loc.id,
+          location: loc.location || loc.location_name || 'Unknown',
+          qty: loc.quantity || loc.qty || 0,
+          expiry: loc.expiration_date || loc.expiry || null
+        }));
+        return {
+          id: item.id,
+          name: item.name,
+          category: item.category || 'Other',
+          unit: item.unit || 'unit',
+          min: item.min_threshold || item.min || 0,
+          totalQty: locations.reduce((sum, loc) => sum + (loc.qty || 0), 0),
+          locations: locations
+        };
+      });
+      window.pantry = freshPantry;
+    } catch (err) {
+      console.warn('Could not refresh pantry before checkout, using cached data:', err);
+    }
+
     // Add each item to pantry
     for (const item of itemsToAdd) {
-      // Check if item exists in pantry
+      // Check if item exists in pantry (case-insensitive name + unit match)
       const pantryItem = (window.pantry || []).find(p =>
-        p.name.toLowerCase() === item.name.toLowerCase() && p.unit === item.unit
+        p.name.toLowerCase() === item.name.toLowerCase() &&
+        p.unit.toLowerCase() === item.unit.toLowerCase()
       );
 
       if (pantryItem) {
@@ -1815,14 +1842,14 @@ async function loadApp() {
   const section = document.body.dataset.section || 'pantry';
   showApp(section);
 
-  // Start loader captions and record start time
-  const loaderStart = Date.now();
-  const stopCaptions = startCaptionRotation(section);
+  // Use the loader timer started in initApp() (includes auth check time)
+  const loaderStart = window._loaderStart || Date.now();
+  const stopCaptions = window._stopCaptions || startCaptionRotation(section);
 
   // Phase 1: Settings + Units (~40%)
-  updateLoaderProgress(10);
+  updateLoaderProgress(15);
 
-  const settingsPromise = loadSettings().then(() => updateLoaderProgress(25));
+  const settingsPromise = loadSettings().then(() => updateLoaderProgress(30));
   const unitsPromise = loadUnits().then(() => updateLoaderProgress(40));
 
   try {
@@ -1852,7 +1879,11 @@ async function loadApp() {
         updateLoaderProgress(90);
         break;
       case 'shopping':
-        await loadShoppingList();
+        // Load pantry data too — needed for checkout to match existing items
+        await Promise.all([
+          loadShoppingList().then(() => updateLoaderProgress(70)),
+          loadPantry().then(() => updateLoaderProgress(85))
+        ]);
         updateLoaderProgress(90);
         break;
     }
@@ -2021,6 +2052,13 @@ async function initApp() {
   const section = document.body.dataset.section;
   const isDemoMode = localStorage.getItem('demo-mode') === 'true';
 
+  // Start loader captions immediately so the user sees activity during auth check
+  if (section) {
+    window._loaderStart = Date.now();
+    window._stopCaptions = startCaptionRotation(section);
+    updateLoaderProgress(5);
+  }
+
   // Check if user is authenticated
   const isAuthenticated = await checkAuth();
 
@@ -2029,6 +2067,7 @@ async function initApp() {
   if (isAuthenticated) {
     await loadApp();
   } else if (isDemoMode && section) {
+    if (window._stopCaptions) window._stopCaptions();
     dismissLoader();
     await loadDemoApp();
   } else if (section) {
