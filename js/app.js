@@ -1798,7 +1798,7 @@ const PAGE_LOADER_CAPTIONS = {
   ]
 };
 
-const PAGE_LOADER_MIN_DISPLAY_MS = 800;
+const PAGE_LOADER_MIN_DISPLAY_MS = 1600;
 
 function updateLoaderProgress(percent) {
   const bar = document.getElementById('loader-bar');
