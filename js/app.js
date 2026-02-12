@@ -1741,6 +1741,73 @@ window.addIngredientRow = addIngredientRow;
 window.removeMealFromDay = removeMealFromDay;
 
 /* ============================================================================
+   PAGE LOADER — progress bar + rotating captions
+============================================================================ */
+
+const PAGE_LOADER_CAPTIONS = {
+  recipes: [
+    'Flipping through the cookbook...',
+    'Stirring up some ideas...',
+    'Consulting the Chef...',
+    'Whisking up something new...'
+  ],
+  pantry: [
+    'Checking the back of the shelf...',
+    'Counting the cans...',
+    'Organizing the spice rack...',
+    'Peeking in the crisper drawer...'
+  ],
+  meals: [
+    'Consulting the calendar...',
+    'Mapping out the deliciousness...',
+    'Drafting the menu...',
+    'Prepping for the week...'
+  ],
+  shopping: [
+    'Checking the coupons...',
+    'Grabbing the reusable bags...',
+    'Writing it all down...',
+    'Mapping the aisles...'
+  ]
+};
+
+const PAGE_LOADER_MIN_DISPLAY_MS = 800;
+
+function updateLoaderProgress(percent) {
+  const bar = document.getElementById('loader-bar');
+  if (bar) bar.style.width = percent + '%';
+}
+
+function startCaptionRotation(section) {
+  const captions = PAGE_LOADER_CAPTIONS[section] || PAGE_LOADER_CAPTIONS.pantry;
+  const el = document.getElementById('loader-caption');
+  if (!el || captions.length === 0) return () => {};
+
+  let idx = Math.floor(Math.random() * captions.length);
+  el.textContent = captions[idx];
+  el.style.transition = 'opacity 0.15s ease';
+
+  const interval = setInterval(() => {
+    idx = (idx + 1) % captions.length;
+    el.style.opacity = '0';
+    setTimeout(() => {
+      el.textContent = captions[idx];
+      el.style.opacity = '1';
+    }, 150);
+  }, 1800);
+
+  return () => clearInterval(interval);
+}
+
+function dismissLoader() {
+  const loader = document.getElementById('page-loader');
+  if (!loader) return;
+  loader.style.opacity = '0';
+  loader.style.pointerEvents = 'none';
+  setTimeout(() => loader.remove(), 200);
+}
+
+/* ============================================================================
    APP INITIALIZATION
 ============================================================================ */
 
@@ -1748,59 +1815,72 @@ async function loadApp() {
   const section = document.body.dataset.section || 'pantry';
   showApp(section);
 
-  // Always load settings and units; only load data for the current section
-  const dataLoaders = [
-    loadSettings(),
-    loadUnits()
-  ];
+  // Start loader captions and record start time
+  const loaderStart = Date.now();
+  const stopCaptions = startCaptionRotation(section);
 
-  switch (section) {
-    case 'pantry':
-      dataLoaders.push(loadPantry());
-      break;
-    case 'recipes':
-      dataLoaders.push(loadRecipes());
-      break;
-    case 'meals':
-      dataLoaders.push(loadRecipes()); // needed for recipe names in calendar
-      dataLoaders.push(loadMealPlans());
-      break;
-    case 'shopping':
-      dataLoaders.push(loadShoppingList());
-      break;
-  }
+  // Phase 1: Settings + Units (~40%)
+  updateLoaderProgress(10);
+
+  const settingsPromise = loadSettings().then(() => updateLoaderProgress(25));
+  const unitsPromise = loadUnits().then(() => updateLoaderProgress(40));
 
   try {
-    await Promise.all(dataLoaders);
+    await Promise.all([settingsPromise, unitsPromise]);
   } catch (error) {
-    console.error('Error loading initial data:', error);
+    console.error('Error loading settings/units:', error);
   }
 
-  // After all data is loaded, force a calendar re-render on the meals page
-  // This ensures both window.recipes and window.planner are ready
+  // Phase 2: Section data (~40-90%)
+  updateLoaderProgress(50);
+
+  try {
+    switch (section) {
+      case 'pantry':
+        await loadPantry();
+        updateLoaderProgress(90);
+        break;
+      case 'recipes':
+        await loadRecipes();
+        updateLoaderProgress(90);
+        break;
+      case 'meals':
+        await Promise.all([
+          loadRecipes().then(() => updateLoaderProgress(70)),
+          loadMealPlans().then(() => updateLoaderProgress(85))
+        ]);
+        updateLoaderProgress(90);
+        break;
+      case 'shopping':
+        await loadShoppingList();
+        updateLoaderProgress(90);
+        break;
+    }
+  } catch (error) {
+    console.error('Error loading section data:', error);
+  }
+
+  // Phase 3: Finalize (90-100%)
   if (section === 'meals' && window.reloadCalendar) {
     window.reloadCalendar();
   }
 
-  // Create global unit datalist for autocomplete
   createUnitDatalist();
-
-  // Wire up UI buttons
   wireUpButtons();
-
-  // Start Realtime sync + visibility fallback
   initRealtime();
   setupVisibilityReload();
-
-  // Track current section (data already loaded above, no need to re-fetch)
   AppState.currentView = section === 'meals' ? 'meal-planning' : section;
 
-  // Fade out page transition overlay now that content is ready
-  const overlay = document.getElementById('page-transition-overlay');
-  if (overlay && overlay.classList.contains('entering')) {
-    requestAnimationFrame(() => overlay.classList.add('fade-out'));
-    setTimeout(() => overlay.classList.remove('entering', 'fade-out', 'active'), 400);
-  }
+  updateLoaderProgress(100);
+
+  // Enforce minimum display so the loader always feels intentional
+  const elapsed = Date.now() - loaderStart;
+  const remaining = Math.max(0, PAGE_LOADER_MIN_DISPLAY_MS - elapsed);
+
+  setTimeout(() => {
+    stopCaptions();
+    dismissLoader();
+  }, remaining);
 }
 
 /**
@@ -1896,19 +1976,12 @@ function wireUpButtons() {
     btnSettings.addEventListener('click', openSettingsModal);
   }
 
-  // Smooth page transitions — overlay covers white flash between navigations
+  // Nav click — navigate directly; the target page's inline loader handles the transition
   document.querySelectorAll('.sidebar-nav .nav-btn[href], .bottom-nav .nav-btn[href]').forEach(link => {
     link.addEventListener('click', (e) => {
       if (link.classList.contains('active')) { e.preventDefault(); return; }
-      e.preventDefault();
-      const overlay = document.getElementById('page-transition-overlay');
-      if (overlay) {
-        overlay.classList.add('active');
-        sessionStorage.setItem('ck-navigating', '1');
-        setTimeout(() => { window.location.href = link.href; }, 180);
-      } else {
-        window.location.href = link.href;
-      }
+      // Let the browser navigate normally — the target page's inline
+      // loader is visible immediately (before CSS/JS loads)
     });
   });
 
@@ -1941,13 +2014,6 @@ async function initApp() {
   console.log('🍳 Chef\'s Kiss - Python Age 5.0');
   console.log('Backend:', window.CONFIG?.API_BASE || 'http://localhost:8000/api');
 
-  // If arriving via nav click, show overlay immediately so page reveals smoothly
-  const overlay = document.getElementById('page-transition-overlay');
-  if (overlay && sessionStorage.getItem('ck-navigating')) {
-    overlay.classList.add('entering');
-    sessionStorage.removeItem('ck-navigating');
-  }
-
   // Apply compact mode if enabled
   applyDisplayMode();
 
@@ -1963,14 +2029,14 @@ async function initApp() {
   if (isAuthenticated) {
     await loadApp();
   } else if (isDemoMode && section) {
-    // Demo mode on a section page — load demo data from localStorage
+    dismissLoader();
     await loadDemoApp();
   } else if (section) {
     // Not authenticated on a section page — redirect to landing
-    // (auth-guard.js should have caught this, but just in case)
     window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/index.html';
   } else {
-    // On landing page, not authenticated — landing.js handles display
+    // On landing page — no loader needed
+    dismissLoader();
     showLandingPage();
   }
 }
