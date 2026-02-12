@@ -286,3 +286,81 @@
 .edit-shopping-modal {
   max-width: 450px;
 }
+
+/* Shopping item source + breakdown labels */
+.shopping-item .item-source {
+  font-size: 0.72rem;
+  font-style: italic;
+  color: #999;
+  margin-left: 0.25rem;
+}
+
+.shopping-item .item-breakdown {
+  display: block;
+  font-size: 0.72rem;
+  color: #aaa;
+  font-style: italic;
+  margin-top: 2px;
+  padding-left: 1.75rem;
+}
+
+/* Checked shopping items */
+.shopping-item.checked {
+  opacity: 0.55;
+}
+
+.shopping-item.checked .item-name {
+  text-decoration: line-through;
+}
+
+.category-title {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6a4f35;
+  margin: 1rem 0 0.5rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+/* Checkout modal */
+.checkout-modal {
+  max-width: 550px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.checkout-item {
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.checkout-item-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.checkout-item-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.checkout-field label {
+  display: block;
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 2px;
+}
+
+.checkout-field select,
+.checkout-field input {
+  width: 100%;
+  padding: 0.4rem;
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}

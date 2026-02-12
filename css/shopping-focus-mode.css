@@ -281,6 +281,13 @@
   color: #888;
 }
 
+.focus-item-breakdown {
+  font-size: 0.78em;
+  color: #999;
+  margin-top: 2px;
+  font-style: italic;
+}
+
 /* Footer Buttons (updated) */
 .focus-btn.primary {
   background: #2d8a4e;

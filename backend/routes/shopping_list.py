@@ -221,11 +221,11 @@ async def add_checked_to_pantry(household_id: str = Depends(get_current_househol
             if not item.checked:
                 continue
 
-            # Check if item already exists in pantry
+            # Check if item already exists in pantry (case-insensitive)
             existing = supabase.table('pantry_items')\
                 .select('id')\
                 .eq('household_id', household_id)\
-                .eq('name', item.name)\
+                .ilike('name', item.name)\
                 .eq('unit', item.unit)\
                 .execute()
 
