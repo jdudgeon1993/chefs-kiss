@@ -8,7 +8,7 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
 
-from .supabase_client import get_supabase
+from db import get_db
 
 security = HTTPBearer()
 
@@ -26,24 +26,23 @@ async def get_current_user(
         dict: User info from Supabase
     """
     token = credentials.credentials
-    supabase = get_supabase()
+    db = get_db()
 
     try:
-        # Use Supabase API to validate token (works with any algorithm)
-        user_response = supabase.auth.get_user(token)
+        user_response = db.auth.get_user(token)
 
-        if not user_response or not user_response.user:
+        if not user_response or not user_response.get('user'):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authentication token"
             )
 
-        user = user_response.user
+        user = user_response['user']
 
         return {
-            "id": user.id,
-            "email": user.email,
-            "role": user.role if hasattr(user, 'role') else None
+            "id": user['id'],
+            "email": user['email'],
+            "role": user.get('role')
         }
 
     except Exception as e:
@@ -75,24 +74,21 @@ async def get_current_household(
     Returns:
         str: Household ID (UUID)
     """
-    supabase = get_supabase()
+    db = get_db()
 
     # Check for explicit household selection via header
     requested_hid = request.headers.get('X-Household-Id')
 
     # Get all household memberships
-    response = supabase.table('household_members')\
-        .select('household_id')\
-        .eq('user_id', user['id'])\
-        .execute()
+    memberships = db.households.get_memberships(user['id'])
 
-    if not response.data:
+    if not memberships:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User is not part of any household"
         )
 
-    member_hids = [m['household_id'] for m in response.data]
+    member_hids = [m['household_id'] for m in memberships]
 
     # If a specific household was requested, verify membership
     if requested_hid and requested_hid in member_hids:

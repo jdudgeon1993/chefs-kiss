@@ -9,7 +9,7 @@ from typing import List
 
 from models.pantry import PantryItemCreate, PantryItemUpdate
 from utils.auth import get_current_household
-from utils.supabase_client import get_supabase
+from db import get_db
 from state_manager import StateManager
 
 router = APIRouter(prefix="/api/pantry", tags=["pantry"])
@@ -41,29 +41,23 @@ async def get_units(household_id: str = Depends(get_current_household)):
 
     Useful for autocomplete/suggestions when adding new items.
     """
-    supabase = get_supabase()
+    db = get_db()
 
     # Get units from pantry
-    pantry_units = supabase.table('pantry_items')\
-        .select('unit')\
-        .eq('household_id', household_id)\
-        .execute()
+    pantry_units = db.pantry.get_item_units(household_id)
 
     # Get units from recipe ingredients
-    recipes = supabase.table('recipes')\
-        .select('ingredients')\
-        .eq('household_id', household_id)\
-        .execute()
+    recipes = db.recipes.get_ingredients_only(household_id)
 
     units = set()
 
     # Add pantry units
-    for item in pantry_units.data:
+    for item in pantry_units:
         if item.get('unit'):
             units.add(item['unit'].lower().strip())
 
     # Add recipe ingredient units
-    for recipe in recipes.data:
+    for recipe in recipes:
         ingredients = recipe.get('ingredients', []) or []
         for ing in ingredients:
             if ing.get('unit'):
@@ -89,28 +83,28 @@ async def add_pantry_item(
 
     Shopping list automatically updates!
     """
-    supabase = get_supabase()
+    db = get_db()
 
     def update():
         # Insert pantry item
-        item_response = supabase.table('pantry_items').insert({
+        item_data = db.pantry.create_item({
             'household_id': household_id,
             'name': item.name,
             'category': item.category,
             'unit': item.unit,
             'min_threshold': item.min_threshold
-        }).execute()
+        })
 
-        item_id = item_response.data[0]['id']
+        item_id = item_data[0]['id']
 
         # Insert locations (if any provided)
         for location in item.locations:
-            supabase.table('pantry_locations').insert({
+            db.pantry.create_location({
                 'pantry_item_id': item_id,
                 'location_name': location.get('location', 'Unspecified'),
                 'quantity': location.get('quantity', 0),
                 'expiration_date': location.get('expiration_date')
-            }).execute()
+            })
 
         return item_id
 
@@ -138,7 +132,7 @@ async def update_pantry_item(
 
     Everything syncs automatically!
     """
-    supabase = get_supabase()
+    db = get_db()
 
     def update():
         # Build update dict (only include provided fields)
@@ -153,27 +147,21 @@ async def update_pantry_item(
             update_data['min_threshold'] = item.min_threshold
 
         if update_data:
-            supabase.table('pantry_items').update(update_data)\
-                .eq('id', item_id)\
-                .eq('household_id', household_id)\
-                .execute()
+            db.pantry.update_item(item_id, household_id, update_data)
 
         # Update locations if provided
         if item.locations is not None:
             # Delete old locations
-            supabase.table('pantry_locations')\
-                .delete()\
-                .eq('pantry_item_id', item_id)\
-                .execute()
+            db.pantry.delete_locations_for_item(item_id)
 
             # Insert new locations
             for location in item.locations:
-                supabase.table('pantry_locations').insert({
+                db.pantry.create_location({
                     'pantry_item_id': item_id,
                     'location_name': location.get('location', 'Unspecified'),
                     'quantity': location.get('quantity', 0),
                     'expiration_date': location.get('expiration_date')
-                }).execute()
+                })
 
     StateManager.update_and_invalidate(household_id, update)
 
@@ -197,21 +185,14 @@ async def delete_pantry_item(
 
     Shopping list updates automatically!
     """
-    supabase = get_supabase()
+    db = get_db()
 
     def update():
         # Delete locations first (foreign key constraint)
-        supabase.table('pantry_locations')\
-            .delete()\
-            .eq('pantry_item_id', item_id)\
-            .execute()
+        db.pantry.delete_locations_for_item(item_id)
 
         # Delete item
-        supabase.table('pantry_items')\
-            .delete()\
-            .eq('id', item_id)\
-            .eq('household_id', household_id)\
-            .execute()
+        db.pantry.delete_item(item_id, household_id)
 
     StateManager.update_and_invalidate(household_id, update)
 

@@ -25,7 +25,7 @@ from models.pantry import PantryItem
 from models.recipe import Recipe
 from models.meal_plan import MealPlan
 from models.shopping import ShoppingItem
-from utils.supabase_client import get_supabase
+from db import get_db
 
 logger = logging.getLogger(__name__)
 
@@ -479,36 +479,26 @@ class StateManager:
 
     @classmethod
     def _load_from_database(cls, household_id: str) -> HouseholdState:
-        """Load all data from Supabase in parallel for faster cache misses."""
-        supabase = get_supabase()
+        """Load all data from database in parallel for faster cache misses."""
+        db = get_db()
 
         def load_pantry():
-            resp = supabase.table('pantry_items')\
-                .select('*, pantry_locations(*)')\
-                .eq('household_id', household_id)\
-                .execute()
+            rows = db.pantry.get_items_with_locations(household_id)
             items = []
-            for item_data in resp.data:
+            for item_data in rows:
                 locations = item_data.pop('pantry_locations', [])
                 items.append(PantryItem.from_supabase(item_data, locations))
             return items
 
         def load_recipes():
-            resp = supabase.table('recipes')\
-                .select('*')\
-                .eq('household_id', household_id)\
-                .execute()
-            return [Recipe.from_supabase(r) for r in resp.data]
+            rows = db.recipes.get_all(household_id)
+            return [Recipe.from_supabase(r) for r in rows]
 
         def load_meals():
             try:
-                resp = supabase.table('meal_plans')\
-                    .select('*')\
-                    .eq('household_id', household_id)\
-                    .gte('planned_date', date.today().isoformat())\
-                    .execute()
+                rows = db.meal_plans.get_upcoming(household_id, date.today().isoformat())
                 plans = []
-                for meal_data in resp.data:
+                for meal_data in rows:
                     try:
                         plans.append(MealPlan.from_supabase(meal_data))
                     except Exception as e:
@@ -520,10 +510,7 @@ class StateManager:
 
         def load_shopping():
             try:
-                resp = supabase.table('shopping_list_manual')\
-                    .select('*')\
-                    .eq('household_id', household_id)\
-                    .execute()
+                rows = db.shopping.get_manual_items(household_id)
                 return [
                     ShoppingItem(
                         id=str(item['id']),
@@ -537,7 +524,7 @@ class StateManager:
                         checked_by=item.get('checked_by'),
                         household_id=household_id
                     )
-                    for item in resp.data
+                    for item in rows
                 ]
             except Exception as e:
                 logger.warning(f"Manual shopping items not loaded: {e}")
