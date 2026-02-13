@@ -4,11 +4,15 @@ Authentication Routes - Python Age 5.0
 Proxy to Supabase auth (keeping what works!)
 """
 
-from fastapi import APIRouter, HTTPException, status, Header
+from fastapi import APIRouter, HTTPException, status, Header, Request
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 import logging
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from utils.supabase_client import get_supabase
+
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 logger = logging.getLogger(__name__)
@@ -25,7 +29,8 @@ class SignInRequest(BaseModel):
 
 
 @router.post("/signup")
-async def signup(request: SignUpRequest):
+@limiter.limit("3/hour")
+async def signup(request: SignUpRequest, req: Request):
     """
     Create new user account and household.
     """
@@ -81,7 +86,8 @@ async def signup(request: SignUpRequest):
 
 
 @router.post("/signin")
-async def signin(request: SignInRequest):
+@limiter.limit("10/minute")
+async def signin(request: SignInRequest, req: Request):
     """
     Sign in existing user.
     """
@@ -122,6 +128,44 @@ async def signin(request: SignInRequest):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
+        )
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
+@router.post("/refresh")
+@limiter.limit("10/minute")
+async def refresh_token(request: RefreshRequest, req: Request):
+    """
+    Refresh an expired access token using a refresh token.
+    Returns new access_token and refresh_token.
+    """
+    supabase = get_supabase()
+
+    try:
+        response = supabase.auth.refresh_session(request.refresh_token)
+
+        if not response.session:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Refresh token invalid or expired"
+            )
+
+        return {
+            "access_token": response.session.access_token,
+            "refresh_token": response.session.refresh_token,
+            "expires_in": response.session.expires_in
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Token refresh failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Failed to refresh token"
         )
 
 

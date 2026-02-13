@@ -15,6 +15,7 @@ One source of truth. Everything flows from here.
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, date, timedelta
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 import redis
 import pickle
 import logging
@@ -81,6 +82,16 @@ class HouseholdState:
         self.recipes = recipes
         self.meal_plans = meal_plans
         self.manual_shopping_items = manual_shopping_items or []
+
+        # O(1) lookup dictionaries (built once, used many times)
+        self._pantry_lookup: Dict[tuple, PantryItem] = {}
+        for item in self.pantry_items:
+            key = (item.name.lower(), item.unit.lower())
+            self._pantry_lookup[key] = item
+
+        self._recipe_lookup: Dict[str, Recipe] = {}
+        for recipe in self.recipes:
+            self._recipe_lookup[recipe.id] = recipe
 
         # Calculated properties (set by calculate_all)
         self.reserved_ingredients: Dict[str, float] = {}
@@ -411,20 +422,12 @@ class HouseholdState:
     # ===== HELPER METHODS =====
 
     def _find_pantry_item(self, name: str, unit: str) -> Optional[PantryItem]:
-        """Find pantry item by name and unit (case-insensitive)"""
-        name_lower = name.lower()
-        unit_lower = unit.lower()
-        for item in self.pantry_items:
-            if item.name.lower() == name_lower and item.unit.lower() == unit_lower:
-                return item
-        return None
+        """Find pantry item by name and unit — O(1) dictionary lookup"""
+        return self._pantry_lookup.get((name.lower(), unit.lower()))
 
     def _get_recipe(self, recipe_id: str) -> Optional[Recipe]:
-        """Get recipe by ID"""
-        for recipe in self.recipes:
-            if recipe.id == recipe_id:
-                return recipe
-        return None
+        """Get recipe by ID — O(1) dictionary lookup"""
+        return self._recipe_lookup.get(recipe_id)
 
 
 class StateManager:
@@ -476,84 +479,82 @@ class StateManager:
 
     @classmethod
     def _load_from_database(cls, household_id: str) -> HouseholdState:
-        """Load all data from Supabase"""
+        """Load all data from Supabase in parallel for faster cache misses."""
         supabase = get_supabase()
 
-        # Load pantry items with locations
-        logger.debug("Loading pantry items...")
-        pantry_response = supabase.table('pantry_items')\
-            .select('*, pantry_locations(*)')\
-            .eq('household_id', household_id)\
-            .execute()
-
-        pantry_items = []
-        for item_data in pantry_response.data:
-            locations = item_data.pop('pantry_locations', [])
-            pantry_items.append(
-                PantryItem.from_supabase(item_data, locations)
-            )
-
-        # Load recipes (ingredients stored as JSONB in recipes table)
-        logger.debug("Loading recipes...")
-        recipes_response = supabase.table('recipes')\
-            .select('*')\
-            .eq('household_id', household_id)\
-            .execute()
-
-        recipes = [
-            Recipe.from_supabase(recipe_data)
-            for recipe_data in recipes_response.data
-        ]
-
-        # Load meal plans
-        logger.debug("Loading meal plans...")
-        try:
-            # Use planned_date column (actual DB column name)
-            meals_response = supabase.table('meal_plans')\
-                .select('*')\
+        def load_pantry():
+            resp = supabase.table('pantry_items')\
+                .select('*, pantry_locations(*)')\
                 .eq('household_id', household_id)\
-                .gte('planned_date', date.today().isoformat())\
                 .execute()
+            items = []
+            for item_data in resp.data:
+                locations = item_data.pop('pantry_locations', [])
+                items.append(PantryItem.from_supabase(item_data, locations))
+            return items
 
-            meal_plans = []
-            for meal_data in meals_response.data:
-                try:
-                    meal_plans.append(MealPlan.from_supabase(meal_data))
-                except Exception as e:
-                    logger.warning(f"Could not parse meal plan: {e}")
-                    continue
-        except Exception as e:
-            logger.warning(f"Could not load meal plans: {e}")
-            meal_plans = []
-
-        # Load manual shopping items
-        logger.debug("Loading manual shopping items...")
-        try:
-            shopping_response = supabase.table('shopping_list_manual')\
+        def load_recipes():
+            resp = supabase.table('recipes')\
                 .select('*')\
                 .eq('household_id', household_id)\
                 .execute()
+            return [Recipe.from_supabase(r) for r in resp.data]
 
-            manual_shopping_items = [
-                ShoppingItem(
-                    id=str(item['id']),
-                    name=item['name'],
-                    quantity=item['quantity'],
-                    unit=item['unit'],
-                    category=item.get('category', 'Other'),
-                    source="Manual",
-                    checked=item.get('checked', False),
-                    checked_at=item.get('checked_at'),
-                    checked_by=item.get('checked_by'),
-                    household_id=household_id
-                )
-                for item in shopping_response.data
-            ]
-        except Exception as e:
-            logger.warning(f"Manual shopping items not loaded: {e}")
-            manual_shopping_items = []
+        def load_meals():
+            try:
+                resp = supabase.table('meal_plans')\
+                    .select('*')\
+                    .eq('household_id', household_id)\
+                    .gte('planned_date', date.today().isoformat())\
+                    .execute()
+                plans = []
+                for meal_data in resp.data:
+                    try:
+                        plans.append(MealPlan.from_supabase(meal_data))
+                    except Exception as e:
+                        logger.warning(f"Could not parse meal plan: {e}")
+                return plans
+            except Exception as e:
+                logger.warning(f"Could not load meal plans: {e}")
+                return []
 
-        # Create state (automatically calculates everything!)
+        def load_shopping():
+            try:
+                resp = supabase.table('shopping_list_manual')\
+                    .select('*')\
+                    .eq('household_id', household_id)\
+                    .execute()
+                return [
+                    ShoppingItem(
+                        id=str(item['id']),
+                        name=item['name'],
+                        quantity=item['quantity'],
+                        unit=item['unit'],
+                        category=item.get('category', 'Other'),
+                        source="Manual",
+                        checked=item.get('checked', False),
+                        checked_at=item.get('checked_at'),
+                        checked_by=item.get('checked_by'),
+                        household_id=household_id
+                    )
+                    for item in resp.data
+                ]
+            except Exception as e:
+                logger.warning(f"Manual shopping items not loaded: {e}")
+                return []
+
+        # Run all 4 queries in parallel (limited by slowest query, not sum)
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            pantry_future = executor.submit(load_pantry)
+            recipes_future = executor.submit(load_recipes)
+            meals_future = executor.submit(load_meals)
+            shopping_future = executor.submit(load_shopping)
+
+            pantry_items = pantry_future.result()
+            recipes = recipes_future.result()
+            meal_plans = meals_future.result()
+            manual_shopping_items = shopping_future.result()
+
         logger.info(f"✨ Creating state for household {household_id}")
         return HouseholdState(
             household_id=household_id,
