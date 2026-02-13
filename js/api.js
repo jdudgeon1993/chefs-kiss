@@ -18,10 +18,75 @@ class API {
 
   static setToken(token) {
     localStorage.setItem('auth_token', token);
+    localStorage.removeItem('auth_token_needs_refresh');
   }
 
   static clearToken() {
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_refresh_token');
+    localStorage.removeItem('auth_token_needs_refresh');
+  }
+
+  static getRefreshToken() {
+    return localStorage.getItem('auth_refresh_token');
+  }
+
+  static setRefreshToken(token) {
+    if (token) {
+      localStorage.setItem('auth_refresh_token', token);
+    }
+  }
+
+  /**
+   * Check if the current access token is expired or about to expire.
+   * Returns true if token needs refreshing (expired or < 5 min remaining).
+   */
+  static isTokenExpiring() {
+    const token = this.getToken();
+    if (!token) return false;
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (!payload.exp) return false;
+      // Refresh if less than 5 minutes remaining
+      return payload.exp - (Date.now() / 1000) < 300;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Refresh the access token using the stored refresh token.
+   * Returns true if successful, false if refresh failed.
+   */
+  static async refreshAccessToken() {
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) return false;
+
+    try {
+      const response = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken })
+      });
+
+      if (!response.ok) {
+        this.clearToken();
+        return false;
+      }
+
+      const data = await response.json();
+      if (data.access_token) {
+        this.setToken(data.access_token);
+      }
+      if (data.refresh_token) {
+        this.setRefreshToken(data.refresh_token);
+      }
+      return true;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      return false;
+    }
   }
 
   static getActiveHouseholdId() {
@@ -36,6 +101,16 @@ class API {
    * Make API call
    */
   static async call(endpoint, options = {}) {
+    // Auto-refresh token if expired or about to expire (skip auth endpoints to avoid loops)
+    if (!endpoint.includes('/auth/') && (this.isTokenExpiring() || localStorage.getItem('auth_token_needs_refresh'))) {
+      const refreshed = await this.refreshAccessToken();
+      if (!refreshed && !localStorage.getItem('demo-mode')) {
+        const base = (window.CONFIG && window.CONFIG.BASE_PATH) || '';
+        window.location.href = base + '/index.html';
+        throw new Error('Session expired');
+      }
+    }
+
     const token = this.getToken();
     const householdId = this.getActiveHouseholdId();
 
@@ -62,14 +137,23 @@ class API {
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: response.statusText }));
 
-      // If we get 401 and it's an auth token error, clear the token and reload
-      if (response.status === 401 && error.detail && error.detail.includes('authentication token')) {
-        console.error('Invalid authentication token detected, clearing and reloading...');
-        this.clearToken();
-        // Don't reload immediately if this is an auth endpoint to avoid loops
-        if (!endpoint.includes('/auth/')) {
-          setTimeout(() => window.location.reload(), 1000);
+      // 401 — attempt one refresh before giving up
+      if (response.status === 401 && !endpoint.includes('/auth/')) {
+        const refreshed = await this.refreshAccessToken();
+        if (refreshed) {
+          // Retry the original request with the new token
+          const retryHeaders = {
+            ...headers,
+            'Authorization': `Bearer ${this.getToken()}`
+          };
+          const retryResponse = await fetch(`${API_BASE}${endpoint}`, { ...options, headers: retryHeaders });
+          if (retryResponse.ok) return retryResponse.json();
         }
+        // Refresh failed or retry failed — redirect to login
+        this.clearToken();
+        const base = (window.CONFIG && window.CONFIG.BASE_PATH) || '';
+        window.location.href = base + '/index.html';
+        throw new Error('Session expired');
       }
 
       throw new Error(error.detail || response.statusText);
@@ -89,6 +173,9 @@ class API {
     if (data.session?.access_token) {
       this.setToken(data.session.access_token);
     }
+    if (data.session?.refresh_token) {
+      this.setRefreshToken(data.session.refresh_token);
+    }
     if (data.household_id) {
       this.setActiveHouseholdId(data.household_id);
     }
@@ -104,6 +191,9 @@ class API {
 
     if (data.session?.access_token) {
       this.setToken(data.session.access_token);
+    }
+    if (data.session?.refresh_token) {
+      this.setRefreshToken(data.session.refresh_token);
     }
     if (data.household_id) {
       this.setActiveHouseholdId(data.household_id);
