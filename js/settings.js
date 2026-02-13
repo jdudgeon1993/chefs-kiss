@@ -75,13 +75,16 @@ function setSavedCategories(categories) {
 /* ── Units ── */
 
 window.cachedUnits = [];
+window.cachedIngredientNames = [];
 
 async function loadUnits() {
-  const cached = sessionStorage.getItem('ck-units');
-  if (cached) {
+  const cachedUnits = sessionStorage.getItem('ck-units');
+  const cachedNames = sessionStorage.getItem('ck-ingredient-names');
+  if (cachedUnits && cachedNames) {
     try {
-      window.cachedUnits = JSON.parse(cached);
-      console.log('Units loaded from cache:', window.cachedUnits.length);
+      window.cachedUnits = JSON.parse(cachedUnits);
+      window.cachedIngredientNames = JSON.parse(cachedNames);
+      console.log('Units loaded from cache:', window.cachedUnits.length, '| Ingredients:', window.cachedIngredientNames.length);
       return;
     } catch (e) { /* fall through to API */ }
   }
@@ -89,11 +92,14 @@ async function loadUnits() {
   try {
     const response = await API.getUnits();
     window.cachedUnits = response.units || [];
+    window.cachedIngredientNames = response.ingredient_names || [];
     sessionStorage.setItem('ck-units', JSON.stringify(window.cachedUnits));
-    console.log('Units loaded:', window.cachedUnits.length);
+    sessionStorage.setItem('ck-ingredient-names', JSON.stringify(window.cachedIngredientNames));
+    console.log('Units loaded:', window.cachedUnits.length, '| Ingredients:', window.cachedIngredientNames.length);
   } catch (error) {
     console.warn('Failed to load units, using defaults:', error);
     window.cachedUnits = ['each', 'lb', 'oz', 'cup', 'tbsp', 'tsp', 'gallon', 'g', 'kg', 'ml', 'bunch', 'can', 'bottle', 'bag', 'box'];
+    window.cachedIngredientNames = [];
   }
 }
 
@@ -104,6 +110,16 @@ function createUnitDatalist() {
   const datalist = document.createElement('datalist');
   datalist.id = 'unit-suggestions';
   datalist.innerHTML = window.cachedUnits.map(u => `<option value="${u}">`).join('');
+  document.body.appendChild(datalist);
+}
+
+function createIngredientDatalist() {
+  const existing = document.getElementById('ingredient-suggestions');
+  if (existing) existing.remove();
+
+  const datalist = document.createElement('datalist');
+  datalist.id = 'ingredient-suggestions';
+  datalist.innerHTML = window.cachedIngredientNames.map(n => `<option value="${n}">`).join('');
   document.body.appendChild(datalist);
 }
 
@@ -132,7 +148,10 @@ function addBulkRows(count) {
     const row = document.createElement('tr');
     row.className = 'bulk-entry-row';
     row.innerHTML = `
-      <td><input type="text" class="bulk-name form-control" placeholder="Item name" /></td>
+      <td>
+        <input type="text" class="bulk-name form-control" placeholder="Item name" list="ingredient-suggestions" />
+        <div class="bulk-name-warning" style="display:none;"></div>
+      </td>
       <td><input type="number" class="bulk-qty form-control" placeholder="Qty" min="0" step="0.5" /></td>
       <td><input type="text" class="bulk-unit form-control" placeholder="unit" list="unit-suggestions" /></td>
       <td><select class="bulk-category form-control">${catOptions}</select></td>
@@ -140,8 +159,43 @@ function addBulkRows(count) {
       <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove();updateBulkEntryCount();">&times;</button></td>
     `;
     tbody.appendChild(row);
+
+    // Wire up duplicate detection on the name input
+    const nameInput = row.querySelector('.bulk-name');
+    nameInput.addEventListener('input', checkBulkDuplicate);
   }
   updateBulkEntryCount();
+}
+
+/**
+ * Check if a bulk entry name already exists in the pantry.
+ * Shows a warning on the row if duplicate found.
+ */
+function checkBulkDuplicate(e) {
+  const input = e.target;
+  const name = input.value.trim().toLowerCase();
+  const warningEl = input.parentElement.querySelector('.bulk-name-warning');
+  if (!warningEl) return;
+
+  if (!name) {
+    warningEl.style.display = 'none';
+    input.classList.remove('bulk-name-duplicate');
+    return;
+  }
+
+  // Check against current pantry
+  const pantry = window.pantry || [];
+  const match = pantry.find(p => p.name.toLowerCase() === name);
+
+  if (match) {
+    const locSummary = match.locations.map(l => `${l.qty} ${match.unit} in ${l.location}`).join(', ');
+    warningEl.textContent = `Already in pantry: ${locSummary || match.totalQty + ' ' + match.unit}`;
+    warningEl.style.display = 'block';
+    input.classList.add('bulk-name-duplicate');
+  } else {
+    warningEl.style.display = 'none';
+    input.classList.remove('bulk-name-duplicate');
+  }
 }
 
 function clearBulkEntry() {
@@ -187,6 +241,20 @@ async function saveBulkEntry() {
     return;
   }
 
+  // Check for duplicates against current pantry
+  const pantry = window.pantry || [];
+  const duplicates = items.filter(item =>
+    pantry.some(p => p.name.toLowerCase() === item.name.toLowerCase())
+  );
+
+  if (duplicates.length > 0) {
+    const names = duplicates.map(d => d.name).join(', ');
+    const proceed = confirm(
+      `These items already exist in your pantry:\n${names}\n\nThis will create duplicate entries. Continue?`
+    );
+    if (!proceed) return;
+  }
+
   if (btnText) btnText.textContent = 'Saving...';
 
   let savedCount = 0;
@@ -216,12 +284,22 @@ async function saveBulkEntry() {
 
   if (btnText) btnText.textContent = 'Save & Add All Items';
 
+  // Clear ingredient names cache so it refreshes with the new items
+  sessionStorage.removeItem('ck-ingredient-names');
+
   if (errorCount > 0) {
     showError(`Saved ${savedCount} items. ${errorCount} failed.`);
   } else {
     showSuccess(`${savedCount} items added to pantry!`);
     clearBulkEntry();
     loadPantry();
+    // Refresh the ingredient suggestions with the new items
+    try {
+      const response = await API.getUnits();
+      window.cachedIngredientNames = response.ingredient_names || [];
+      sessionStorage.setItem('ck-ingredient-names', JSON.stringify(window.cachedIngredientNames));
+      createIngredientDatalist();
+    } catch (e) { /* non-critical */ }
   }
 }
 
@@ -762,3 +840,4 @@ window.switchHousehold = switchHousehold;
 window.exportData = exportData;
 window.updateBulkEntryCount = updateBulkEntryCount;
 window.loadUnits = loadUnits;
+window.createIngredientDatalist = createIngredientDatalist;

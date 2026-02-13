@@ -37,31 +37,37 @@ async def get_pantry(household_id: str = Depends(get_current_household)):
 @router.get("/units")
 async def get_units(household_id: str = Depends(get_current_household)):
     """
-    Get all distinct units used in this household's pantry and recipes.
+    Get all distinct units and ingredient names used in this household's
+    pantry and recipes.
 
     Useful for autocomplete/suggestions when adding new items.
     """
     db = get_db()
 
-    # Get units from pantry
-    pantry_units = db.pantry.get_item_units(household_id)
+    # Get names + units from pantry
+    pantry_items = db.pantry.get_item_units(household_id)
 
-    # Get units from recipe ingredients
+    # Get ingredients from recipes
     recipes = db.recipes.get_ingredients_only(household_id)
 
     units = set()
+    ingredient_names = set()
 
-    # Add pantry units
-    for item in pantry_units:
+    # Add pantry units and names
+    for item in pantry_items:
         if item.get('unit'):
             units.add(item['unit'].lower().strip())
+        if item.get('name'):
+            ingredient_names.add(item['name'].strip())
 
-    # Add recipe ingredient units
+    # Add recipe ingredient units and names
     for recipe in recipes:
         ingredients = recipe.get('ingredients', []) or []
         for ing in ingredients:
             if ing.get('unit'):
                 units.add(ing['unit'].lower().strip())
+            if ing.get('name'):
+                ingredient_names.add(ing['name'].strip())
 
     # Add some common defaults if we don't have many
     common_units = ['each', 'lb', 'oz', 'cup', 'tbsp', 'tsp', 'gallon', 'quart', 'pint', 'g', 'kg', 'ml', 'l', 'bunch', 'can', 'bottle', 'bag', 'box', 'package']
@@ -70,7 +76,10 @@ async def get_units(household_id: str = Depends(get_current_household)):
             units.add(u)
 
     # Sort and return
-    return {"units": sorted(list(units))}
+    return {
+        "units": sorted(list(units)),
+        "ingredient_names": sorted(list(ingredient_names))
+    }
 
 
 @router.post("/")

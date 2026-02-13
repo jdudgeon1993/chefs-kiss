@@ -75,7 +75,7 @@ class SupabasePantryProvider(PantryProvider):
 
     def get_item_units(self, household_id: str) -> List[dict]:
         resp = self._client.table('pantry_items')\
-            .select('unit')\
+            .select('name, unit')\
             .eq('household_id', household_id)\
             .execute()
         return resp.data

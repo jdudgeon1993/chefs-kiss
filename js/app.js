@@ -1303,7 +1303,7 @@ function openIngredientModal(item) {
         <form id="ingredient-form">
           <div class="form-group">
             <label>Name</label>
-            <input type="text" id="ing-name" value="${item.name || ''}" required>
+            <input type="text" id="ing-name" value="${item.name || ''}" required list="ingredient-suggestions">
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -1513,11 +1513,11 @@ function openRecipeModal(recipeId) {
 
   const ingredientsHTML = (recipe.ingredients || []).map((ing, idx) => `
     <div class="ingredient-row" data-idx="${idx}">
-      <input type="text" class="ing-name" value="${ing.name || ''}" placeholder="Ingredient">
+      <input type="text" class="ing-name" value="${ing.name || ''}" placeholder="Ingredient" list="ingredient-suggestions">
       <input type="number" class="ing-qty" value="${ing.qty || 0}" step="0.1" min="0">
       <input type="text" class="ing-unit" value="${ing.unit || ''}" placeholder="unit" list="unit-suggestions">
     </div>
-  `).join('') || '<div class="ingredient-row"><input type="text" class="ing-name" placeholder="Ingredient"><input type="number" class="ing-qty" value="1" step="0.1" min="0"><input type="text" class="ing-unit" placeholder="unit" list="unit-suggestions"></div>';
+  `).join('') || '<div class="ingredient-row"><input type="text" class="ing-name" placeholder="Ingredient" list="ingredient-suggestions"><input type="number" class="ing-qty" value="1" step="0.1" min="0"><input type="text" class="ing-unit" placeholder="unit" list="unit-suggestions"></div>';
 
   modalRoot.innerHTML = `
     <div class="modal-overlay" onclick="closeModal()">
@@ -1582,7 +1582,7 @@ function addIngredientRow() {
   if (!list) return;
   const row = document.createElement('div');
   row.className = 'ingredient-row';
-  row.innerHTML = '<input type="text" class="ing-name" placeholder="Ingredient"><input type="number" class="ing-qty" value="1" step="0.1" min="0"><input type="text" class="ing-unit" placeholder="unit" list="unit-suggestions">';
+  row.innerHTML = '<input type="text" class="ing-name" placeholder="Ingredient" list="ingredient-suggestions"><input type="number" class="ing-qty" value="1" step="0.1" min="0"><input type="text" class="ing-unit" placeholder="unit" list="unit-suggestions">';
   list.appendChild(row);
 }
 
@@ -1919,6 +1919,7 @@ async function loadApp() {
   }
 
   createUnitDatalist();
+  createIngredientDatalist();
   wireUpButtons();
   initRealtime();
   setupVisibilityReload();
@@ -1940,10 +1941,16 @@ async function loadApp() {
  * Wire up all button click handlers
  */
 function wireUpButtons() {
-  // New pantry entry button
+  // New pantry entry button — toggles the bulk entry section
   const btnNewPantry = document.getElementById('btn-new-pantry-entry');
   if (btnNewPantry) {
-    btnNewPantry.addEventListener('click', () => openIngredientModal({}));
+    btnNewPantry.addEventListener('click', () => {
+      const pantrySection = document.getElementById('pantry-section');
+      const onboardingSection = document.getElementById('onboarding-section');
+      if (pantrySection) pantrySection.classList.add('section-hidden');
+      if (onboardingSection) onboardingSection.classList.add('section-visible');
+      initBulkEntry();
+    });
   }
 
   // FAB buttons (using onclick in HTML, but also wire here as backup)
@@ -1985,18 +1992,7 @@ function wireUpButtons() {
     btnCheckout.addEventListener('click', openCheckoutModal);
   }
 
-  // Onboarding/bulk entry buttons (toggle via CSS classes on multi-page)
-  const btnOnboarding = document.getElementById('btn-onboarding');
-  if (btnOnboarding) {
-    btnOnboarding.addEventListener('click', () => {
-      const pantrySection = document.getElementById('pantry-section');
-      const onboardingSection = document.getElementById('onboarding-section');
-      if (pantrySection) pantrySection.classList.add('section-hidden');
-      if (onboardingSection) onboardingSection.classList.add('section-visible');
-      initBulkEntry();
-    });
-  }
-
+  // Exit bulk entry — return to pantry view
   const btnExitOnboarding = document.getElementById('btn-exit-onboarding');
   if (btnExitOnboarding) {
     btnExitOnboarding.addEventListener('click', () => {
@@ -2128,6 +2124,7 @@ async function loadDemoApp() {
     try { await loadSettings(); } catch (e) { /* ignore API errors in demo */ }
   }
   if (typeof createUnitDatalist === 'function') createUnitDatalist();
+  if (typeof createIngredientDatalist === 'function') createIngredientDatalist();
 
   // Trigger renders by touching data attributes
   const pantryDisplay = document.getElementById('pantry-display');
