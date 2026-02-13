@@ -23,9 +23,10 @@
   <script defer src="pantry.js"></script>
 
   <style>
-    /* Onboarding section hidden by default, shown via JS */
+    /* Bulk entry section hidden by default, shown via JS */
     .main-content > .onboarding-section { display: none; }
     .main-content > .onboarding-section.section-visible { display: block; }
+    .section-hidden { display: none !important; }
   </style>
 </head>
 <body data-section="pantry">
@@ -57,7 +58,6 @@
       </div>
       <nav class="header-nav">
         <button class="btn-header-icon" id="btn-account" title="Account & Households">👤</button>
-        <button class="btn-header-icon" id="btn-onboarding" title="Quick Setup">📋</button>
         <button class="btn-header-icon" id="btn-settings" title="Settings">⚙️</button>
       </nav>
     </div>
@@ -78,10 +78,6 @@
   </nav>
 
   <div class="main-content">
-    <div class="floating-action-menu fab-pantry" id="fab-pantry">
-      <button class="floating-action-btn" id="fab-btn-pantry" title="Add Pantry Item" onclick="if(window.openIngredientModal) window.openIngredientModal({})">+</button>
-    </div>
-
     <section class="pantry-section" id="pantry-section">
       <div class="pantry-header">
         <h2>PANTRY LEDGER</h2>
@@ -110,7 +106,7 @@
       <div id="pantry-ledger-display" class="pantry-ledger-display"></div>
       <div id="pantry-display" class="pantry-display" style="display: none;"></div>
 
-      <button class="btn btn-new-entry" id="btn-new-pantry-entry">+ NEW ENTRY</button>
+      <button class="btn btn-new-entry" id="btn-new-pantry-entry">+ ADD ITEMS</button>
     </section>
 
     <!-- ONBOARDING SECTION (Bulk Entry) -->
