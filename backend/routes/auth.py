@@ -30,7 +30,7 @@ class SignInRequest(BaseModel):
 
 @router.post("/signup")
 @limiter.limit("3/hour")
-async def signup(request: SignUpRequest, req: Request):
+async def signup(credentials: SignUpRequest, request: Request):
     """
     Create new user account and household.
     """
@@ -38,7 +38,7 @@ async def signup(request: SignUpRequest, req: Request):
 
     try:
         # Create user
-        auth_result = db.auth.sign_up(request.email, request.password)
+        auth_result = db.auth.sign_up(credentials.email, credentials.password)
 
         if not auth_result.get('user'):
             raise HTTPException(
@@ -50,7 +50,7 @@ async def signup(request: SignUpRequest, req: Request):
 
         # Create household for user
         household_data = db.households.create({
-            'name': f"{request.email.split('@')[0]}'s Household",
+            'name': f"{credentials.email.split('@')[0]}'s Household",
             'owner_id': user['id']
         })
 
@@ -84,14 +84,14 @@ async def signup(request: SignUpRequest, req: Request):
 
 @router.post("/signin")
 @limiter.limit("10/minute")
-async def signin(request: SignInRequest, req: Request):
+async def signin(credentials: SignInRequest, request: Request):
     """
     Sign in existing user.
     """
     db = get_db()
 
     try:
-        auth_result = db.auth.sign_in_with_password(request.email, request.password)
+        auth_result = db.auth.sign_in_with_password(credentials.email, credentials.password)
 
         if not auth_result.get('user'):
             raise HTTPException(
@@ -127,7 +127,7 @@ class RefreshRequest(BaseModel):
 
 @router.post("/refresh")
 @limiter.limit("10/minute")
-async def refresh_token(request: RefreshRequest, req: Request):
+async def refresh_token(body: RefreshRequest, request: Request):
     """
     Refresh an expired access token using a refresh token.
     Returns new access_token and refresh_token.
@@ -135,7 +135,7 @@ async def refresh_token(request: RefreshRequest, req: Request):
     db = get_db()
 
     try:
-        result = db.auth.refresh_session(request.refresh_token)
+        result = db.auth.refresh_session(body.refresh_token)
 
         if not result.get('session'):
             raise HTTPException(
