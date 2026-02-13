@@ -10,7 +10,7 @@ import logging
 
 from models.settings import HouseholdSettings, SettingsUpdate
 from utils.auth import get_current_household
-from utils.supabase_client import get_supabase
+from db import get_db
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 logger = logging.getLogger(__name__)
@@ -28,28 +28,25 @@ async def get_settings(household_id: str = Depends(get_current_household)):
     Creates default settings if none exist.
     Falls back to defaults if table doesn't exist yet.
     """
-    supabase = get_supabase()
+    db = get_db()
 
     try:
         # Try to get existing settings
-        response = supabase.table('household_settings')\
-            .select('*')\
-            .eq('household_id', household_id)\
-            .execute()
+        rows = db.settings.get(household_id)
 
-        if response.data:
-            settings = HouseholdSettings.from_supabase(response.data[0])
+        if rows:
+            settings = HouseholdSettings.from_supabase(rows[0])
         else:
             # Create default settings
             logger.info(f"Creating default settings for household {household_id}")
-            insert_response = supabase.table('household_settings').insert({
+            insert_result = db.settings.create({
                 'household_id': household_id,
                 'locations': DEFAULT_LOCATIONS,
                 'categories': DEFAULT_CATEGORIES,
                 'category_emojis': {}
-            }).execute()
+            })
 
-            settings = HouseholdSettings.from_supabase(insert_response.data[0])
+            settings = HouseholdSettings.from_supabase(insert_result[0])
 
         return {
             "settings": settings.model_dump(),
@@ -78,7 +75,7 @@ async def update_settings(
 
     Only updates fields that are provided.
     """
-    supabase = get_supabase()
+    db = get_db()
 
     # Build update dict (only include provided fields)
     update_data = {}
@@ -95,25 +92,17 @@ async def update_settings(
 
     try:
         # Check if settings exist
-        existing = supabase.table('household_settings')\
-            .select('id')\
-            .eq('household_id', household_id)\
-            .execute()
+        existing = db.settings.get(household_id, 'id')
 
-        if existing.data:
+        if existing:
             # Update existing
-            response = supabase.table('household_settings')\
-                .update(update_data)\
-                .eq('household_id', household_id)\
-                .execute()
+            result = db.settings.update(household_id, update_data)
         else:
             # Create new with updates
             update_data['household_id'] = household_id
-            response = supabase.table('household_settings')\
-                .insert(update_data)\
-                .execute()
+            result = db.settings.create(update_data)
 
-        settings = HouseholdSettings.from_supabase(response.data[0])
+        settings = HouseholdSettings.from_supabase(result[0])
 
         return {
             "settings": settings.model_dump(),
@@ -144,16 +133,13 @@ async def add_location(
     if not name:
         raise HTTPException(status_code=400, detail="Location name required")
 
-    supabase = get_supabase()
+    db = get_db()
 
     # Get current settings
-    response = supabase.table('household_settings')\
-        .select('locations')\
-        .eq('household_id', household_id)\
-        .execute()
+    rows = db.settings.get(household_id, 'locations')
 
-    if response.data:
-        locations = response.data[0].get('locations', DEFAULT_LOCATIONS)
+    if rows:
+        locations = rows[0].get('locations', DEFAULT_LOCATIONS)
     else:
         locations = DEFAULT_LOCATIONS.copy()
 
@@ -161,16 +147,13 @@ async def add_location(
     if name not in locations:
         locations.append(name)
 
-        if response.data:
-            supabase.table('household_settings')\
-                .update({'locations': locations})\
-                .eq('household_id', household_id)\
-                .execute()
+        if rows:
+            db.settings.update(household_id, {'locations': locations})
         else:
-            supabase.table('household_settings').insert({
+            db.settings.create({
                 'household_id': household_id,
                 'locations': locations
-            }).execute()
+            })
 
     return {"locations": locations, "message": f"Location '{name}' added"}
 
@@ -181,21 +164,15 @@ async def remove_location(
     household_id: str = Depends(get_current_household)
 ):
     """Remove a location."""
-    supabase = get_supabase()
+    db = get_db()
 
-    response = supabase.table('household_settings')\
-        .select('locations')\
-        .eq('household_id', household_id)\
-        .execute()
+    rows = db.settings.get(household_id, 'locations')
 
-    if response.data:
-        locations = response.data[0].get('locations', DEFAULT_LOCATIONS)
+    if rows:
+        locations = rows[0].get('locations', DEFAULT_LOCATIONS)
         if location_name in locations:
             locations.remove(location_name)
-            supabase.table('household_settings')\
-                .update({'locations': locations})\
-                .eq('household_id', household_id)\
-                .execute()
+            db.settings.update(household_id, {'locations': locations})
 
     return {"locations": locations, "message": f"Location '{location_name}' removed"}
 
@@ -212,17 +189,14 @@ async def add_category(
     if not name:
         raise HTTPException(status_code=400, detail="Category name required")
 
-    supabase = get_supabase()
+    db = get_db()
 
     # Get current settings
-    response = supabase.table('household_settings')\
-        .select('categories, category_emojis')\
-        .eq('household_id', household_id)\
-        .execute()
+    rows = db.settings.get(household_id, 'categories, category_emojis')
 
-    if response.data:
-        categories = response.data[0].get('categories', DEFAULT_CATEGORIES)
-        emojis = response.data[0].get('category_emojis', {})
+    if rows:
+        categories = rows[0].get('categories', DEFAULT_CATEGORIES)
+        emojis = rows[0].get('category_emojis', {})
     else:
         categories = DEFAULT_CATEGORIES.copy()
         emojis = {}
@@ -235,17 +209,14 @@ async def add_category(
     if emoji:
         emojis[name] = emoji
 
-    if response.data:
-        supabase.table('household_settings')\
-            .update({'categories': categories, 'category_emojis': emojis})\
-            .eq('household_id', household_id)\
-            .execute()
+    if rows:
+        db.settings.update(household_id, {'categories': categories, 'category_emojis': emojis})
     else:
-        supabase.table('household_settings').insert({
+        db.settings.create({
             'household_id': household_id,
             'categories': categories,
             'category_emojis': emojis
-        }).execute()
+        })
 
     return {
         "categories": categories,
@@ -260,26 +231,20 @@ async def remove_category(
     household_id: str = Depends(get_current_household)
 ):
     """Remove a category."""
-    supabase = get_supabase()
+    db = get_db()
 
-    response = supabase.table('household_settings')\
-        .select('categories, category_emojis')\
-        .eq('household_id', household_id)\
-        .execute()
+    rows = db.settings.get(household_id, 'categories, category_emojis')
 
-    if response.data:
-        categories = response.data[0].get('categories', DEFAULT_CATEGORIES)
-        emojis = response.data[0].get('category_emojis', {})
+    if rows:
+        categories = rows[0].get('categories', DEFAULT_CATEGORIES)
+        emojis = rows[0].get('category_emojis', {})
 
         if category_name in categories:
             categories.remove(category_name)
         if category_name in emojis:
             del emojis[category_name]
 
-        supabase.table('household_settings')\
-            .update({'categories': categories, 'category_emojis': emojis})\
-            .eq('household_id', household_id)\
-            .execute()
+        db.settings.update(household_id, {'categories': categories, 'category_emojis': emojis})
     else:
         categories = DEFAULT_CATEGORIES
         emojis = {}

@@ -10,7 +10,7 @@ from typing import Optional
 import logging
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from utils.supabase_client import get_supabase
+from db import get_db
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -34,45 +34,42 @@ async def signup(request: SignUpRequest, req: Request):
     """
     Create new user account and household.
     """
-    supabase = get_supabase()
+    db = get_db()
 
     try:
-        # Create user with Supabase Auth
-        auth_response = supabase.auth.sign_up({
-            "email": request.email,
-            "password": request.password
-        })
+        # Create user
+        auth_result = db.auth.sign_up(request.email, request.password)
 
-        if not auth_response.user:
+        if not auth_result.get('user'):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Failed to create user"
             )
 
-        user = auth_response.user
+        user = auth_result['user']
 
         # Create household for user
-        household_response = supabase.table('households').insert({
+        household_data = db.households.create({
             'name': f"{request.email.split('@')[0]}'s Household",
-            'owner_id': user.id
-        }).execute()
+            'owner_id': user['id']
+        })
 
-        household_id = household_response.data[0]['id']
+        household_id = household_data[0]['id']
 
         # Add user to household
-        supabase.table('household_members').insert({
+        db.households.add_member({
             'household_id': household_id,
-            'user_id': user.id,
+            'user_id': user['id'],
             'role': 'owner'
-        }).execute()
+        })
 
         return {
             "user": {
-                "id": user.id,
-                "email": user.email
+                "id": user['id'],
+                "email": user['email']
             },
             "household_id": household_id,
-            "session": auth_response.session.model_dump() if auth_response.session else None
+            "session": auth_result.get('session')
         }
 
     except HTTPException:
@@ -91,37 +88,30 @@ async def signin(request: SignInRequest, req: Request):
     """
     Sign in existing user.
     """
-    supabase = get_supabase()
+    db = get_db()
 
     try:
-        auth_response = supabase.auth.sign_in_with_password({
-            "email": request.email,
-            "password": request.password
-        })
+        auth_result = db.auth.sign_in_with_password(request.email, request.password)
 
-        if not auth_response.user:
+        if not auth_result.get('user'):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials"
             )
 
-        user = auth_response.user
+        user = auth_result['user']
 
         # Get user's household
-        household_response = supabase.table('household_members')\
-            .select('household_id')\
-            .eq('user_id', user.id)\
-            .execute()
-
-        household_id = household_response.data[0]['household_id'] if household_response.data else None
+        memberships = db.households.get_memberships(user['id'])
+        household_id = memberships[0]['household_id'] if memberships else None
 
         return {
             "user": {
-                "id": user.id,
-                "email": user.email
+                "id": user['id'],
+                "email": user['email']
             },
             "household_id": household_id,
-            "session": auth_response.session.model_dump() if auth_response.session else None
+            "session": auth_result.get('session')
         }
 
     except Exception as e:
@@ -142,21 +132,22 @@ async def refresh_token(request: RefreshRequest, req: Request):
     Refresh an expired access token using a refresh token.
     Returns new access_token and refresh_token.
     """
-    supabase = get_supabase()
+    db = get_db()
 
     try:
-        response = supabase.auth.refresh_session(request.refresh_token)
+        result = db.auth.refresh_session(request.refresh_token)
 
-        if not response.session:
+        if not result.get('session'):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Refresh token invalid or expired"
             )
 
+        session = result['session']
         return {
-            "access_token": response.session.access_token,
-            "refresh_token": response.session.refresh_token,
-            "expires_in": response.session.expires_in
+            "access_token": session['access_token'],
+            "refresh_token": session['refresh_token'],
+            "expires_in": session['expires_in']
         }
 
     except HTTPException:
@@ -174,10 +165,10 @@ async def signout():
     """
     Sign out current user.
     """
-    supabase = get_supabase()
+    db = get_db()
 
     try:
-        supabase.auth.sign_out()
+        db.auth.sign_out()
         return {"message": "Signed out successfully"}
     except Exception as e:
         logger.error(f"Signout failed: {e}")
@@ -199,32 +190,28 @@ async def get_current_user_info(authorization: Optional[str] = Header(None)):
         )
 
     token = authorization.replace('Bearer ', '')
-    supabase = get_supabase()
+    db = get_db()
 
     try:
         # Verify token and get user
-        user_response = supabase.auth.get_user(token)
+        user_result = db.auth.get_user(token)
 
-        if not user_response or not user_response.user:
+        if not user_result or not user_result.get('user'):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token"
             )
 
-        user = user_response.user
+        user = user_result['user']
 
         # Get household
-        household_response = supabase.table('household_members')\
-            .select('household_id')\
-            .eq('user_id', user.id)\
-            .execute()
-
-        household_id = household_response.data[0]['household_id'] if household_response.data else None
+        memberships = db.households.get_memberships(user['id'])
+        household_id = memberships[0]['household_id'] if memberships else None
 
         return {
             "user": {
-                "id": user.id,
-                "email": user.email
+                "id": user['id'],
+                "email": user['email']
             },
             "household_id": household_id
         }

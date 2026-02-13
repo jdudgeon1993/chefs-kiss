@@ -15,7 +15,7 @@ from datetime import datetime
 
 from models.shopping import ManualShoppingItemCreate, ShoppingItemUpdate
 from utils.auth import get_current_household, get_current_user
-from utils.supabase_client import get_supabase
+from db import get_db
 from state_manager import StateManager
 
 router = APIRouter(prefix="/api/shopping-list", tags=["shopping"])
@@ -69,19 +69,19 @@ async def add_manual_item(
 
     These persist separately from auto-generated items.
     """
-    supabase = get_supabase()
+    db = get_db()
 
     def update():
-        response = supabase.table('shopping_list_manual').insert({
+        result = db.shopping.create_manual_item({
             'household_id': household_id,
             'name': item.name,
             'quantity': item.quantity,
             'unit': item.unit,
             'category': item.category,
             'checked': False
-        }).execute()
+        })
 
-        return response.data[0]['id']
+        return result[0]['id']
 
     item_id = StateManager.update_and_invalidate(household_id, update)
 
@@ -106,7 +106,7 @@ async def update_shopping_item(
 
     Only works for manual items (auto-generated items can't be edited).
     """
-    supabase = get_supabase()
+    db = get_db()
 
     def update_item():
         update_data = {}
@@ -130,11 +130,7 @@ async def update_shopping_item(
             update_data['category'] = update.category
 
         if update_data:
-            supabase.table('shopping_list_manual')\
-                .update(update_data)\
-                .eq('id', item_id)\
-                .eq('household_id', household_id)\
-                .execute()
+            db.shopping.update_manual_item(item_id, household_id, update_data)
 
     StateManager.update_and_invalidate(household_id, update_item)
 
@@ -156,14 +152,10 @@ async def delete_manual_item(
 
     Only works for manual items (can't delete auto-generated items).
     """
-    supabase = get_supabase()
+    db = get_db()
 
     def update():
-        supabase.table('shopping_list_manual')\
-            .delete()\
-            .eq('id', item_id)\
-            .eq('household_id', household_id)\
-            .execute()
+        db.shopping.delete_manual_item(item_id, household_id)
 
     StateManager.update_and_invalidate(household_id, update)
 
@@ -182,14 +174,10 @@ async def clear_checked_items(household_id: str = Depends(get_current_household)
 
     Useful after shopping is complete.
     """
-    supabase = get_supabase()
+    db = get_db()
 
     def update():
-        supabase.table('shopping_list_manual')\
-            .delete()\
-            .eq('household_id', household_id)\
-            .eq('checked', True)\
-            .execute()
+        db.shopping.delete_checked_items(household_id)
 
     StateManager.update_and_invalidate(household_id, update)
 
@@ -210,7 +198,7 @@ async def add_checked_to_pantry(household_id: str = Depends(get_current_househol
     Smart feature: After shopping, add purchased items to pantry automatically!
     """
     state = StateManager.get_state(household_id)
-    supabase = get_supabase()
+    db = get_db()
 
     added_count = 0
 
@@ -222,59 +210,47 @@ async def add_checked_to_pantry(household_id: str = Depends(get_current_househol
                 continue
 
             # Check if item already exists in pantry (case-insensitive)
-            existing = supabase.table('pantry_items')\
-                .select('id')\
-                .eq('household_id', household_id)\
-                .ilike('name', item.name)\
-                .eq('unit', item.unit)\
-                .execute()
+            existing = db.pantry.find_by_name_and_unit(household_id, item.name, item.unit)
 
-            if existing.data:
+            if existing:
                 # Update existing item quantity
-                pantry_id = existing.data[0]['id']
+                pantry_id = existing[0]['id']
 
                 # Get current location or create default
-                location_response = supabase.table('pantry_locations')\
-                    .select('*')\
-                    .eq('pantry_item_id', pantry_id)\
-                    .limit(1)\
-                    .execute()
+                locations = db.pantry.get_locations(pantry_id, limit=1)
 
-                if location_response.data:
+                if locations:
                     # Add to existing location
-                    location = location_response.data[0]
+                    location = locations[0]
                     new_qty = location['quantity'] + item.quantity
-                    supabase.table('pantry_locations')\
-                        .update({'quantity': new_qty})\
-                        .eq('id', location['id'])\
-                        .execute()
+                    db.pantry.update_location(location['id'], {'quantity': new_qty})
                 else:
                     # Create new location
-                    supabase.table('pantry_locations').insert({
+                    db.pantry.create_location({
                         'pantry_item_id': pantry_id,
                         'location_name': 'Pantry',
                         'quantity': item.quantity
-                    }).execute()
+                    })
 
                 added_count += 1
             else:
                 # Create new pantry item
-                pantry_response = supabase.table('pantry_items').insert({
+                pantry_data = db.pantry.create_item({
                     'household_id': household_id,
                     'name': item.name,
                     'unit': item.unit,
                     'category': item.category,
                     'min_threshold': 0
-                }).execute()
+                })
 
-                pantry_id = pantry_response.data[0]['id']
+                pantry_id = pantry_data[0]['id']
 
                 # Create location
-                supabase.table('pantry_locations').insert({
+                db.pantry.create_location({
                     'pantry_item_id': pantry_id,
                     'location_name': 'Pantry',
                     'quantity': item.quantity
-                }).execute()
+                })
 
                 added_count += 1
 

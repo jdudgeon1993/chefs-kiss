@@ -9,7 +9,7 @@ from typing import List, Optional
 
 from models.recipe import RecipeCreate, RecipeUpdate
 from utils.auth import get_current_household
-from utils.supabase_client import get_supabase
+from db import get_db
 from state_manager import StateManager
 
 router = APIRouter(prefix="/api/recipes", tags=["recipes"])
@@ -104,11 +104,11 @@ async def add_recipe(
     """
     Add new recipe.
     """
-    supabase = get_supabase()
+    db = get_db()
 
     def update():
         # Insert recipe with ingredients as JSONB
-        recipe_response = supabase.table('recipes').insert({
+        recipe_data = db.recipes.create({
             'household_id': household_id,
             'name': recipe.name,
             'servings': recipe.servings,
@@ -116,9 +116,9 @@ async def add_recipe(
             'tags': recipe.tags,
             'instructions': recipe.instructions,
             'ingredients': recipe.ingredients  # Store as JSONB
-        }).execute()
+        })
 
-        recipe_id = recipe_response.data[0]['id']
+        recipe_id = recipe_data[0]['id']
         return recipe_id
 
     recipe_id = StateManager.update_and_invalidate(household_id, update)
@@ -142,7 +142,7 @@ async def update_recipe(
     """
     Update existing recipe.
     """
-    supabase = get_supabase()
+    db = get_db()
 
     def update():
         # Build update dict with all provided fields
@@ -162,10 +162,7 @@ async def update_recipe(
 
         # Single atomic update with all fields
         if update_data:
-            supabase.table('recipes').update(update_data)\
-                .eq('id', recipe_id)\
-                .eq('household_id', household_id)\
-                .execute()
+            db.recipes.update(recipe_id, household_id, update_data)
 
     StateManager.update_and_invalidate(household_id, update)
 
@@ -186,15 +183,11 @@ async def delete_recipe(
     """
     Delete recipe.
     """
-    supabase = get_supabase()
+    db = get_db()
 
     def update():
         # Delete recipe (ingredients stored as JSONB, no separate table)
-        supabase.table('recipes')\
-            .delete()\
-            .eq('id', recipe_id)\
-            .eq('household_id', household_id)\
-            .execute()
+        db.recipes.delete(recipe_id, household_id)
 
     StateManager.update_and_invalidate(household_id, update)
 

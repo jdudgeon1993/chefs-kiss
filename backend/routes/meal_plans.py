@@ -10,7 +10,7 @@ import logging
 
 from models.meal_plan import MealPlanCreate, MealPlanUpdate
 from utils.auth import get_current_household
-from utils.supabase_client import get_supabase
+from db import get_db
 from state_manager import StateManager
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ async def add_meal_plan(
 
     Reserved ingredients and shopping list update automatically!
     """
-    supabase = get_supabase()
+    db = get_db()
 
     def update():
         insert_data = {
@@ -55,13 +55,13 @@ async def add_meal_plan(
         }
         logger.info(f"Inserting meal plan: {insert_data}")
 
-        response = supabase.table('meal_plans').insert(insert_data).execute()
+        result = db.meal_plans.create(insert_data)
 
-        if not response.data:
+        if not result:
             logger.error(f"Meal plan insert returned no data")
             raise HTTPException(500, "Failed to create meal plan")
 
-        return response.data[0]['id']
+        return result[0]['id']
 
     try:
         meal_id = StateManager.update_and_invalidate(household_id, update)
@@ -91,7 +91,7 @@ async def update_meal_plan(
     """
     Update meal plan.
     """
-    supabase = get_supabase()
+    db = get_db()
 
     def update():
         update_data = {}
@@ -103,10 +103,7 @@ async def update_meal_plan(
             update_data['is_cooked'] = meal.cooked
 
         if update_data:
-            supabase.table('meal_plans').update(update_data)\
-                .eq('id', meal_id)\
-                .eq('household_id', household_id)\
-                .execute()
+            db.meal_plans.update(meal_id, household_id, update_data)
 
     StateManager.update_and_invalidate(household_id, update)
 
@@ -130,14 +127,10 @@ async def delete_meal_plan(
 
     Shopping list updates automatically!
     """
-    supabase = get_supabase()
+    db = get_db()
 
     def update():
-        supabase.table('meal_plans')\
-            .delete()\
-            .eq('id', meal_id)\
-            .eq('household_id', household_id)\
-            .execute()
+        db.meal_plans.delete(meal_id, household_id)
 
     StateManager.update_and_invalidate(household_id, update)
 
@@ -196,32 +189,25 @@ async def mark_meal_cooked(
                 }
             )
 
-    supabase = get_supabase()
+    db = get_db()
 
     def update():
         # Get the meal
-        meal_response = supabase.table('meal_plans')\
-            .select('*')\
-            .eq('id', meal_id)\
-            .eq('household_id', household_id)\
-            .execute()
+        meal_data = db.meal_plans.get_by_id(meal_id, household_id)
 
-        if not meal_response.data:
+        if not meal_data:
             raise HTTPException(404, "Meal not found")
 
-        meal = meal_response.data[0]
+        meal = meal_data[0]
         serving_multiplier = meal.get('serving_multiplier', 1.0) or 1.0
 
         # Get the recipe (ingredients stored as JSONB in recipes table)
-        recipe_response = supabase.table('recipes')\
-            .select('*')\
-            .eq('id', meal['recipe_id'])\
-            .execute()
+        recipe_data = db.recipes.get_by_id(meal['recipe_id'])
 
-        if not recipe_response.data:
+        if not recipe_data:
             raise HTTPException(404, "Recipe not found")
 
-        recipe = recipe_response.data[0]
+        recipe = recipe_data[0]
         ingredients = recipe.get('ingredients', []) or []
 
         # Deplete pantry for each ingredient
@@ -235,15 +221,11 @@ async def mark_meal_cooked(
                 continue
 
             # Find pantry item by name (case-insensitive) and unit
-            pantry_response = supabase.table('pantry_items')\
-                .select('*, pantry_locations(*)')\
-                .eq('household_id', household_id)\
-                .ilike('name', ing_name)\
-                .execute()
+            pantry_items = db.pantry.find_by_name_ilike(household_id, ing_name)
 
             # Filter by unit match
             matching_items = [
-                item for item in pantry_response.data
+                item for item in pantry_items
                 if item.get('unit', '').lower() == ing_unit.lower()
             ]
 
@@ -264,23 +246,14 @@ async def mark_meal_cooked(
                     loc_qty = location.get('quantity', 0) or 0
                     if loc_qty >= remaining:
                         new_qty = loc_qty - remaining
-                        supabase.table('pantry_locations')\
-                            .update({'quantity': new_qty})\
-                            .eq('id', location['id'])\
-                            .execute()
+                        db.pantry.update_location(location['id'], {'quantity': new_qty})
                         remaining = 0
                     else:
                         remaining -= loc_qty
-                        supabase.table('pantry_locations')\
-                            .update({'quantity': 0})\
-                            .eq('id', location['id'])\
-                            .execute()
+                        db.pantry.update_location(location['id'], {'quantity': 0})
 
         # Mark meal as cooked
-        supabase.table('meal_plans')\
-            .update({'is_cooked': True})\
-            .eq('id', meal_id)\
-            .execute()
+        db.meal_plans.update_by_id(meal_id, {'is_cooked': True})
 
     StateManager.update_and_invalidate(household_id, update)
 

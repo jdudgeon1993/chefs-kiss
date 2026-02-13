@@ -13,7 +13,7 @@ from typing import Optional
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from utils.supabase_client import get_supabase
+from db import get_db
 from utils.auth import get_current_user
 
 router = APIRouter(prefix="/api/households", tags=["households"])
@@ -36,27 +36,21 @@ class SwitchHouseholdRequest(BaseModel):
 @router.get("/")
 async def list_my_households(user: dict = Depends(get_current_user)):
     """List all households the current user belongs to."""
-    supabase = get_supabase()
+    db = get_db()
 
-    memberships = supabase.table('household_members')\
-        .select('household_id, role')\
-        .eq('user_id', user['id'])\
-        .execute()
+    memberships = db.households.get_memberships(user['id'], 'household_id, role')
 
-    if not memberships.data:
+    if not memberships:
         return {"households": []}
 
-    household_ids = [m['household_id'] for m in memberships.data]
+    household_ids = [m['household_id'] for m in memberships]
 
-    households = supabase.table('households')\
-        .select('id, name, created_at')\
-        .in_('id', household_ids)\
-        .execute()
+    households = db.households.get_by_ids(household_ids)
 
     # Merge role info
-    role_map = {m['household_id']: m['role'] for m in memberships.data}
+    role_map = {m['household_id']: m['role'] for m in memberships}
     result = []
-    for h in households.data:
+    for h in households:
         result.append({
             "id": h['id'],
             "name": h['name'],
@@ -75,26 +69,20 @@ async def list_members(
     household_id: Optional[str] = None
 ):
     """List all members of a household."""
-    supabase = get_supabase()
+    db = get_db()
 
     # Resolve household
-    hid = household_id or _get_user_household(supabase, user['id'])
+    hid = household_id or _get_user_household(db, user['id'])
     if not hid:
         raise HTTPException(status_code=404, detail="No household found")
 
     # Verify caller is a member
-    _verify_membership(supabase, user['id'], hid)
+    _verify_membership(db, user['id'], hid)
 
-    members = supabase.table('household_members')\
-        .select('user_id, role, created_at')\
-        .eq('household_id', hid)\
-        .execute()
+    members = db.households.get_members(hid)
 
-    # Get emails from auth - we query supabase auth admin API if available,
-    # otherwise return user_ids. For now, return what we have.
-    # Supabase client-side can't query auth.users directly, so we return IDs and roles.
     result = []
-    for m in members.data:
+    for m in members:
         member_info = {
             "user_id": m['user_id'],
             "role": m['role'],
@@ -119,26 +107,26 @@ async def create_invite(
     household_id: Optional[str] = None
 ):
     """Generate an invite code for the current household."""
-    supabase = get_supabase()
+    db = get_db()
 
-    hid = household_id or _get_user_household(supabase, user['id'])
+    hid = household_id or _get_user_household(db, user['id'])
     if not hid:
         raise HTTPException(status_code=404, detail="No household found")
 
-    _verify_membership(supabase, user['id'], hid)
+    _verify_membership(db, user['id'], hid)
 
     # Generate a short, readable code (8 chars uppercase alphanumeric)
     code = secrets.token_hex(4).upper()
 
     expires_at = datetime.now(timezone.utc) + timedelta(hours=request.expires_hours)
 
-    invite = supabase.table('household_invites').insert({
+    db.households.create_invite({
         'household_id': hid,
         'code': code,
         'expires_at': expires_at.isoformat(),
         'created_by': user['id'],
         'role': 'member'
-    }).execute()
+    })
 
     return {
         "code": code,
@@ -150,27 +138,20 @@ async def create_invite(
 @router.get("/invite")
 async def get_active_invite(user: dict = Depends(get_current_user)):
     """Get the active (unused, unexpired) invite for the user's household."""
-    supabase = get_supabase()
+    db = get_db()
 
-    hid = _get_user_household(supabase, user['id'])
+    hid = _get_user_household(db, user['id'])
     if not hid:
         raise HTTPException(status_code=404, detail="No household found")
 
     now = datetime.now(timezone.utc).isoformat()
 
-    invites = supabase.table('household_invites')\
-        .select('code, expires_at, created_at')\
-        .eq('household_id', hid)\
-        .is_('used_by', 'null')\
-        .gte('expires_at', now)\
-        .order('created_at', desc=True)\
-        .limit(1)\
-        .execute()
+    invites = db.households.get_active_invite(hid, now)
 
-    if not invites.data:
+    if not invites:
         return {"invite": None}
 
-    return {"invite": invites.data[0]}
+    return {"invite": invites[0]}
 
 
 @router.post("/invite/accept")
@@ -179,69 +160,53 @@ async def accept_invite(
     user: dict = Depends(get_current_user)
 ):
     """Accept an invite code and join the household."""
-    supabase = get_supabase()
+    db = get_db()
     code = request.code.strip().upper()
 
     now = datetime.now(timezone.utc).isoformat()
 
     # Find valid invite
-    invite = supabase.table('household_invites')\
-        .select('id, household_id, role')\
-        .eq('code', code)\
-        .is_('used_by', 'null')\
-        .gte('expires_at', now)\
-        .execute()
+    invite_results = db.households.find_valid_invite(code, now)
 
-    if not invite.data:
+    if not invite_results:
         raise HTTPException(
             status_code=400,
             detail="Invalid or expired invite code"
         )
 
-    invite_data = invite.data[0]
+    invite_data = invite_results[0]
     target_household = invite_data['household_id']
     role = invite_data['role'] or 'member'
 
     # Check if already a member
-    existing = supabase.table('household_members')\
-        .select('id')\
-        .eq('household_id', target_household)\
-        .eq('user_id', user['id'])\
-        .execute()
+    existing = db.households.check_membership(user['id'], target_household)
 
-    if existing.data:
+    if existing:
         raise HTTPException(
             status_code=400,
             detail="You are already a member of this household"
         )
 
     # Add user to household
-    supabase.table('household_members').insert({
+    db.households.add_member({
         'household_id': target_household,
         'user_id': user['id'],
         'role': role
-    }).execute()
+    })
 
     # Mark invite as used
-    supabase.table('household_invites')\
-        .update({
-            'used_by': user['id'],
-            'used_at': datetime.now(timezone.utc).isoformat()
-        })\
-        .eq('id', invite_data['id'])\
-        .execute()
+    db.households.mark_invite_used(invite_data['id'], {
+        'used_by': user['id'],
+        'used_at': datetime.now(timezone.utc).isoformat()
+    })
 
     # Get household name
-    household = supabase.table('households')\
-        .select('name')\
-        .eq('id', target_household)\
-        .single()\
-        .execute()
+    household = db.households.get_by_id_single(target_household)
 
     return {
-        "message": f"Joined '{household.data['name']}' successfully",
+        "message": f"Joined '{household['name']}' successfully",
         "household_id": target_household,
-        "household_name": household.data['name'],
+        "household_name": household['name'],
         "role": role
     }
 
@@ -254,52 +219,36 @@ async def leave_household(
     user: dict = Depends(get_current_user)
 ):
     """Leave a household. Owners cannot leave their own household."""
-    supabase = get_supabase()
+    db = get_db()
 
     # Check membership and role
-    membership = supabase.table('household_members')\
-        .select('id, role')\
-        .eq('household_id', request.household_id)\
-        .eq('user_id', user['id'])\
-        .execute()
+    membership = db.households.check_membership_with_role(request.household_id, user['id'])
 
-    if not membership.data:
+    if not membership:
         raise HTTPException(status_code=404, detail="Not a member of this household")
 
-    if membership.data[0]['role'] == 'owner':
+    if membership[0]['role'] == 'owner':
         raise HTTPException(
             status_code=400,
             detail="Owners cannot leave their own household. Transfer ownership first."
         )
 
     # Remove membership
-    supabase.table('household_members')\
-        .delete()\
-        .eq('household_id', request.household_id)\
-        .eq('user_id', user['id'])\
-        .execute()
+    db.households.remove_member(request.household_id, user['id'])
 
     return {"message": "Left household successfully"}
 
 
 # ===== HELPERS =====
 
-def _get_user_household(supabase, user_id: str) -> Optional[str]:
+def _get_user_household(db, user_id: str) -> Optional[str]:
     """Get the first household for a user."""
-    response = supabase.table('household_members')\
-        .select('household_id')\
-        .eq('user_id', user_id)\
-        .limit(1)\
-        .execute()
-    return response.data[0]['household_id'] if response.data else None
+    memberships = db.households.get_first_membership(user_id)
+    return memberships[0]['household_id'] if memberships else None
 
 
-def _verify_membership(supabase, user_id: str, household_id: str):
+def _verify_membership(db, user_id: str, household_id: str):
     """Verify a user is a member of a household."""
-    check = supabase.table('household_members')\
-        .select('id')\
-        .eq('user_id', user_id)\
-        .eq('household_id', household_id)\
-        .execute()
-    if not check.data:
+    check = db.households.check_membership(user_id, household_id)
+    if not check:
         raise HTTPException(status_code=403, detail="Not a member of this household")
