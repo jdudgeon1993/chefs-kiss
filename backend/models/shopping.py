@@ -21,6 +21,7 @@ class ShoppingItem(BaseModel):
     checked_at: Optional[datetime] = None
     checked_by: Optional[str] = None
     household_id: Optional[str] = None
+    preferred_store: Optional[str] = None
     breakdown: Optional[dict] = None  # e.g. {"meals": 3, "threshold": 2}
 
     class Config:

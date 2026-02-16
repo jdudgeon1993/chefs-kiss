@@ -115,10 +115,13 @@ class API {
     const householdId = this.getActiveHouseholdId();
 
     const headers = {
-      'Content-Type': 'application/json',
       'Authorization': token ? `Bearer ${token}` : '',
       ...options.headers
     };
+    // Don't set Content-Type for FormData (browser sets it with boundary)
+    if (!options.rawBody) {
+      headers['Content-Type'] = 'application/json';
+    }
     if (householdId) {
       headers['X-Household-Id'] = householdId;
     }
@@ -129,10 +132,10 @@ class API {
       window.markLocalWrite();
     }
 
-    const response = await fetch(`${API_BASE}${endpoint}`, {
-      ...options,
-      headers
-    });
+    const fetchOptions = { ...options, headers };
+    delete fetchOptions.rawBody;
+
+    const response = await fetch(`${API_BASE}${endpoint}`, fetchOptions);
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: response.statusText }));

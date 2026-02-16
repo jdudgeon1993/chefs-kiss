@@ -123,6 +123,25 @@ function createIngredientDatalist() {
   document.body.appendChild(datalist);
 }
 
+function createStoreDatalist() {
+  const existing = document.getElementById('store-suggestions');
+  if (existing) existing.remove();
+
+  // Build store list from pantry items
+  const stores = new Set();
+  if (window.pantry) {
+    window.pantry.forEach(item => {
+      if (item.preferredStore) stores.add(item.preferredStore);
+    });
+  }
+  if (stores.size === 0) return;
+
+  const datalist = document.createElement('datalist');
+  datalist.id = 'store-suggestions';
+  datalist.innerHTML = [...stores].sort().map(s => `<option value="${s}">`).join('');
+  document.body.appendChild(datalist);
+}
+
 /* ── Bulk Pantry Entry ── */
 
 function initBulkEntry() {
