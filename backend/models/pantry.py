@@ -23,6 +23,7 @@ class PantryItem(BaseModel):
     category: str
     unit: str
     min_threshold: float = 0
+    preferred_store: Optional[str] = None
     locations: List[PantryLocation] = []
 
     @property
@@ -64,6 +65,7 @@ class PantryItem(BaseModel):
             category=item_data['category'],
             unit=item_data['unit'],
             min_threshold=item_data.get('min_threshold', 0),
+            preferred_store=item_data.get('preferred_store'),
             locations=locations
         )
 
@@ -74,6 +76,7 @@ class PantryItemCreate(BaseModel):
     category: str = Field(default="Other", max_length=50)
     unit: str = Field(default="unit", max_length=20)
     min_threshold: float = Field(default=0, ge=0)
+    preferred_store: Optional[str] = Field(None, max_length=100)
     locations: List[dict] = Field(default_factory=list)  # Optional, can be empty
 
     class Config:
@@ -96,4 +99,5 @@ class PantryItemUpdate(BaseModel):
     category: Optional[str] = Field(None, min_length=1, max_length=50)
     unit: Optional[str] = Field(None, min_length=1, max_length=20)
     min_threshold: Optional[float] = Field(None, ge=0)
+    preferred_store: Optional[str] = Field(None, max_length=100)
     locations: Optional[List[dict]] = None

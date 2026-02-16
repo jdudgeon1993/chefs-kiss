@@ -19,6 +19,7 @@ class ShoppingFocusMode {
     this.shoppingList = [];
     this.overlay = null;
     this._updateHandler = null;
+    this.groupMode = 'category'; // 'category' or 'store'
   }
 
   /**
@@ -124,26 +125,42 @@ class ShoppingFocusMode {
   }
 
   /**
-   * Group items by category, sorted A-Z within each category
+   * Group items by category or store, sorted A-Z within each group
    */
   groupByCategory(items) {
+    return this._groupItems(items, 'category');
+  }
+
+  groupByStore(items) {
+    return this._groupItems(items, 'store');
+  }
+
+  _groupItems(items, mode) {
     const groups = {};
 
     items.forEach(item => {
-      const cat = item.category || 'Other';
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(item);
+      const key = mode === 'store'
+        ? (item.preferred_store || 'No Store Set')
+        : (item.category || 'Other');
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(item);
     });
 
-    // Sort items A-Z within each category
-    Object.keys(groups).forEach(cat => {
-      groups[cat].sort((a, b) => a.name.localeCompare(b.name));
+    // Sort items A-Z within each group
+    Object.keys(groups).forEach(key => {
+      groups[key].sort((a, b) => a.name.localeCompare(b.name));
     });
 
-    // Sort categories A-Z
+    // Sort groups A-Z (put "No Store Set" last)
     const sortedGroups = {};
-    Object.keys(groups).sort().forEach(cat => {
-      sortedGroups[cat] = groups[cat];
+    Object.keys(groups).sort((a, b) => {
+      if (mode === 'store') {
+        if (a === 'No Store Set') return 1;
+        if (b === 'No Store Set') return -1;
+      }
+      return a.localeCompare(b);
+    }).forEach(key => {
+      sortedGroups[key] = groups[key];
     });
 
     return sortedGroups;
@@ -158,8 +175,9 @@ class ShoppingFocusMode {
     const unchecked = this.shoppingList.filter(item => !item.checked);
     const checked = this.shoppingList.filter(item => item.checked);
 
-    const uncheckedByCategory = this.groupByCategory(unchecked);
-    const checkedByCategory = this.groupByCategory(checked);
+    const groupFn = this.groupMode === 'store' ? 'groupByStore' : 'groupByCategory';
+    const uncheckedByCategory = this[groupFn](unchecked);
+    const checkedByCategory = this[groupFn](checked);
 
     const progress = this.shoppingList.length > 0
       ? Math.round((checked.length / this.shoppingList.length) * 100)
@@ -177,6 +195,12 @@ class ShoppingFocusMode {
             <div class="progress-text">
               ${checked.length} of ${this.shoppingList.length} items checked
             </div>
+          </div>
+
+          <!-- Group Toggle -->
+          <div class="focus-group-toggle" style="display:flex;gap:0.5rem;justify-content:center;margin:0.5rem 0;">
+            <button class="focus-btn ${this.groupMode === 'category' ? 'primary' : 'secondary'}" style="padding:0.25rem 0.75rem;font-size:0.8rem;" onclick="window.shoppingFocus.setGroupMode('category')">By Category</button>
+            <button class="focus-btn ${this.groupMode === 'store' ? 'primary' : 'secondary'}" style="padding:0.25rem 0.75rem;font-size:0.8rem;" onclick="window.shoppingFocus.setGroupMode('store')">By Store</button>
           </div>
 
           <!-- Quick Add -->
@@ -204,9 +228,9 @@ class ShoppingFocusMode {
           ${unchecked.length > 0 ? `
             <div class="focus-section">
               <h2>To Buy (${unchecked.length})</h2>
-              ${Object.entries(uncheckedByCategory).map(([category, items]) => `
+              ${Object.entries(uncheckedByCategory).map(([groupKey, items]) => `
                 <div class="focus-category">
-                  <div class="focus-category-header">${this.getCategoryEmoji(category)} ${category}</div>
+                  <div class="focus-category-header">${this.groupMode === 'store' ? '🏪' : this.getCategoryEmoji(groupKey)} ${groupKey}</div>
                   <div class="focus-items">
                     ${items.map(item => this.renderItem(item, false)).join('')}
                   </div>
@@ -218,9 +242,9 @@ class ShoppingFocusMode {
           ${checked.length > 0 ? `
             <div class="focus-section checked-section">
               <h2>In Cart (${checked.length})</h2>
-              ${Object.entries(checkedByCategory).map(([category, items]) => `
+              ${Object.entries(checkedByCategory).map(([groupKey, items]) => `
                 <div class="focus-category">
-                  <div class="focus-category-header">${this.getCategoryEmoji(category)} ${category}</div>
+                  <div class="focus-category-header">${this.groupMode === 'store' ? '🏪' : this.getCategoryEmoji(groupKey)} ${groupKey}</div>
                   <div class="focus-items">
                     ${items.map(item => this.renderItem(item, true)).join('')}
                   </div>
@@ -256,6 +280,14 @@ class ShoppingFocusMode {
       // Auto-focus the input
       setTimeout(() => quickAddInput.focus(), 100);
     }
+  }
+
+  /**
+   * Switch group mode and re-render
+   */
+  setGroupMode(mode) {
+    this.groupMode = mode;
+    this.render();
   }
 
   /**

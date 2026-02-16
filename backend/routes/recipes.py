@@ -4,13 +4,18 @@ Recipe Routes - Python Age 5.0
 Recipes with smart search and filtering.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from typing import List, Optional
+import uuid
+import logging
 
 from models.recipe import RecipeCreate, RecipeUpdate
 from utils.auth import get_current_household
+from utils.supabase_client import get_supabase
 from db import get_db
 from state_manager import StateManager
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/recipes", tags=["recipes"])
 
@@ -75,6 +80,44 @@ async def search_recipes(
     }
 
 
+ALLOWED_PHOTO_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+MAX_PHOTO_SIZE = 5 * 1024 * 1024  # 5 MB
+
+
+@router.post("/upload-photo")
+async def upload_recipe_photo(
+    file: UploadFile = File(...),
+    household_id: str = Depends(get_current_household)
+):
+    """
+    Upload a recipe photo to Supabase Storage.
+    Returns the public URL for use in recipe create/update.
+    """
+    if file.content_type not in ALLOWED_PHOTO_TYPES:
+        raise HTTPException(status_code=400, detail="File must be JPEG, PNG, WebP, or GIF")
+
+    contents = await file.read()
+    if len(contents) > MAX_PHOTO_SIZE:
+        raise HTTPException(status_code=400, detail="File must be under 5 MB")
+
+    # Generate unique filename
+    ext = file.filename.rsplit('.', 1)[-1] if '.' in file.filename else 'jpg'
+    storage_path = f"{household_id}/{uuid.uuid4().hex}.{ext}"
+
+    try:
+        supabase = get_supabase()
+        supabase.storage.from_("recipe-photos").upload(
+            storage_path,
+            contents,
+            {"content-type": file.content_type}
+        )
+        public_url = supabase.storage.from_("recipe-photos").get_public_url(storage_path)
+        return {"url": public_url}
+    except Exception as e:
+        logger.error(f"Photo upload failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to upload photo")
+
+
 @router.get("/{recipe_id}")
 async def get_recipe(
     recipe_id: str,
@@ -116,6 +159,7 @@ async def add_recipe(
             'tags': recipe.tags,
             'photo': recipe.photo_url,
             'instructions': recipe.instructions,
+            'favorite': recipe.is_favorite,
             'ingredients': recipe.ingredients  # Store as JSONB
         })
 
@@ -160,6 +204,8 @@ async def update_recipe(
             update_data['photo'] = recipe.photo_url
         if recipe.instructions is not None:
             update_data['instructions'] = recipe.instructions
+        if recipe.is_favorite is not None:
+            update_data['favorite'] = recipe.is_favorite
         if recipe.ingredients is not None:
             update_data['ingredients'] = recipe.ingredients
 

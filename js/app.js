@@ -136,6 +136,7 @@ function renderPantryList(items) {
       category: item.category || 'Other',
       unit: item.unit || 'unit',
       min: item.min_threshold || item.min || 0,
+      preferredStore: item.preferred_store || '',
       totalQty: totalQty,
       locations: locations
     };
@@ -612,6 +613,18 @@ function clearLocalCheckedItems() {
   localStorage.removeItem('checkedShoppingItems');
 }
 
+// Shopping list group-by mode: 'category' (default) or 'store'
+window._shoppingGroupBy = 'category';
+
+function setShoppingGroupBy(mode) {
+  window._shoppingGroupBy = mode;
+  // Toggle active state on pills
+  document.getElementById('group-by-category')?.classList.toggle('active', mode === 'category');
+  document.getElementById('group-by-store')?.classList.toggle('active', mode === 'store');
+  // Re-render with current data
+  renderShoppingList(window.shoppingList || []);
+}
+
 function renderShoppingList(items) {
   // Store items globally for checkout (must happen before container check)
   window.shoppingList = items || [];
@@ -627,33 +640,49 @@ function renderShoppingList(items) {
   // Get locally tracked checked items
   const localChecked = getLocalCheckedItems();
 
-  // Group by category
-  const byCategory = {};
-  items.forEach(item => {
-    const cat = item.category || 'Other';
-    if (!byCategory[cat]) byCategory[cat] = [];
-
-    // Create unique key for items without IDs
+  // Enrich items with keys and checked state
+  const enriched = items.map(item => {
     const itemKey = item.id || `${item.name}|${item.unit}`;
-    // Check if item is checked (from backend or local)
     const isChecked = item.checked || localChecked[itemKey];
+    return { ...item, itemKey, isChecked };
+  });
 
-    byCategory[cat].push({ ...item, itemKey, isChecked });
+  // Group by selected mode
+  const groupBy = window._shoppingGroupBy || 'category';
+  const groups = {};
+
+  enriched.forEach(item => {
+    let groupKey;
+    if (groupBy === 'store') {
+      groupKey = item.preferred_store || 'No Store Set';
+    } else {
+      groupKey = item.category || 'Other';
+    }
+    if (!groups[groupKey]) groups[groupKey] = [];
+    groups[groupKey].push(item);
+  });
+
+  // Sort group keys (put "No Store Set" last when grouping by store)
+  const sortedKeys = Object.keys(groups).sort((a, b) => {
+    if (groupBy === 'store') {
+      if (a === 'No Store Set') return 1;
+      if (b === 'No Store Set') return -1;
+    }
+    return a.localeCompare(b);
   });
 
   let html = '';
 
-  for (const [category, categoryItems] of Object.entries(byCategory)) {
+  for (const groupKey of sortedKeys) {
+    const groupItems = groups[groupKey];
     html += `
       <div class="shopping-category">
-        <h3 class="category-title">${category}</h3>
+        <h3 class="category-title">${groupBy === 'store' ? '🏪 ' : ''}${groupKey}</h3>
         <div class="shopping-items">
-          ${categoryItems.map((item, idx) => {
-            // Escape special characters for use in attributes and onclick
+          ${groupItems.map((item, idx) => {
             const safeItemKey = item.itemKey.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-            const itemIndex = idx;
             return `
-            <div class="shopping-item ${item.isChecked ? 'checked' : ''}" data-key="${safeItemKey}" data-idx="${itemIndex}">
+            <div class="shopping-item ${item.isChecked ? 'checked' : ''}" data-key="${safeItemKey}" data-idx="${idx}">
               <label class="shopping-checkbox">
                 <input
                   type="checkbox"
@@ -664,6 +693,8 @@ function renderShoppingList(items) {
                 <span class="item-qty">${item.quantity} ${item.unit}</span>
               </label>
               ${item.source ? `<span class="item-source">${item.source}</span>` : ''}
+              ${groupBy !== 'store' && item.preferred_store ? `<span class="item-store-tag">${item.preferred_store}</span>` : ''}
+              ${groupBy === 'store' && item.category ? `<span class="item-source">${item.category}</span>` : ''}
               ${item.breakdown && item.breakdown.meals && item.breakdown.threshold ? `<span class="item-breakdown">${item.breakdown.meals} for meals, ${item.breakdown.threshold} to restock</span>` : ''}
               <div class="item-actions">
                 <button onclick="editShoppingItem('${safeItemKey}', '${item.name}', ${item.quantity}, '${item.unit}', '${item.category || 'Other'}')" class="btn-icon" title="Edit">✏️</button>
@@ -1322,6 +1353,10 @@ function openIngredientModal(item) {
             </div>
           </div>
           <div class="form-group">
+            <label>Preferred Store</label>
+            <input type="text" id="ing-preferred-store" value="${item.preferredStore || ''}" placeholder="e.g. Costco, Trader Joe's" list="store-suggestions">
+          </div>
+          <div class="form-group">
             <label>Locations & Quantities</label>
             <div id="locations-list">${locationsHTML}</div>
             <button type="button" class="btn-secondary btn-sm" onclick="addLocationRowWithDropdown()">+ Add Location</button>
@@ -1383,6 +1418,7 @@ async function saveIngredient(itemId) {
   const category = document.getElementById('ing-category').value;
   const unit = document.getElementById('ing-unit').value.trim() || 'unit';
   const min = parseFloat(document.getElementById('ing-min').value) || 0;
+  const preferredStore = (document.getElementById('ing-preferred-store')?.value || '').trim();
 
   const locationRows = document.querySelectorAll('.location-row');
   const locations = [];
@@ -1406,16 +1442,19 @@ async function saveIngredient(itemId) {
   // Locations are now optional - item can exist without specifying where it is
 
   try {
+    const payload = { name, category, unit, min_threshold: min, locations };
+    if (preferredStore) payload.preferred_store = preferredStore;
+
     if (itemId) {
       await API.call(`/pantry/${itemId}`, {
         method: 'PUT',
-        body: JSON.stringify({ name, category, unit, min_threshold: min, locations })
+        body: JSON.stringify(payload)
       });
       showSuccess('Pantry item updated!');
     } else {
       await API.call('/pantry/', {
         method: 'POST',
-        body: JSON.stringify({ name, category, unit, min_threshold: min, locations })
+        body: JSON.stringify(payload)
       });
       showSuccess('Pantry item added!');
     }
@@ -1562,9 +1601,15 @@ function openRecipeModal(recipeId) {
             <textarea id="recipe-instructions" rows="5">${recipe.instructions || ''}</textarea>
           </div>
           <div class="form-group">
-            <label>Photo URL</label>
-            <input type="url" id="recipe-photo-url" value="${recipe.photo || ''}" placeholder="https://example.com/photo.jpg">
-            ${recipe.photo ? `<img src="${recipe.photo}" alt="Preview" style="max-width:100%;max-height:120px;border-radius:8px;margin-top:0.5rem;object-fit:cover;">` : ''}
+            <label>Photo</label>
+            <div class="photo-upload-row" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+              <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0;" for="recipe-photo-file">Upload File</label>
+              <input type="file" id="recipe-photo-file" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none;">
+              <span style="opacity:0.5;font-size:0.85rem;">or</span>
+              <input type="url" id="recipe-photo-url" value="${recipe.photo || ''}" placeholder="Paste URL" style="flex:1;min-width:150px;">
+            </div>
+            <div id="photo-upload-status" style="font-size:0.8rem;margin-top:0.25rem;"></div>
+            ${recipe.photo ? `<img id="recipe-photo-preview" src="${recipe.photo}" alt="Preview" style="max-width:100%;max-height:120px;border-radius:8px;margin-top:0.5rem;object-fit:cover;">` : '<img id="recipe-photo-preview" style="display:none;max-width:100%;max-height:120px;border-radius:8px;margin-top:0.5rem;object-fit:cover;">'}
           </div>
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
@@ -1575,25 +1620,60 @@ function openRecipeModal(recipeId) {
     </div>
   `;
 
-  // Live photo preview
+  // Live photo preview from URL
   const photoInput = document.getElementById('recipe-photo-url');
-  if (photoInput) {
+  const photoPreview = document.getElementById('recipe-photo-preview');
+  if (photoInput && photoPreview) {
     photoInput.addEventListener('input', () => {
       const url = photoInput.value.trim();
-      const existing = photoInput.parentElement.querySelector('img');
       if (url) {
-        if (existing) {
-          existing.src = url;
-        } else {
-          const img = document.createElement('img');
-          img.alt = 'Preview';
-          img.style.cssText = 'max-width:100%;max-height:120px;border-radius:8px;margin-top:0.5rem;object-fit:cover;';
-          img.src = url;
-          img.onerror = () => img.remove();
-          photoInput.parentElement.appendChild(img);
+        photoPreview.src = url;
+        photoPreview.style.display = '';
+        photoPreview.onerror = () => { photoPreview.style.display = 'none'; };
+      } else {
+        photoPreview.style.display = 'none';
+      }
+    });
+  }
+
+  // File upload handler
+  const photoFileInput = document.getElementById('recipe-photo-file');
+  const photoStatus = document.getElementById('photo-upload-status');
+  if (photoFileInput) {
+    photoFileInput.addEventListener('change', async () => {
+      const file = photoFileInput.files[0];
+      if (!file) return;
+
+      if (file.size > 5 * 1024 * 1024) {
+        photoStatus.textContent = 'File must be under 5 MB';
+        photoStatus.style.color = 'var(--btn-danger, #c0392b)';
+        return;
+      }
+
+      photoStatus.textContent = 'Uploading...';
+      photoStatus.style.color = 'var(--clay-warm, #c49a6c)';
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const result = await API.call('/recipes/upload-photo', {
+          method: 'POST',
+          body: formData,
+          rawBody: true
+        });
+        if (result.url) {
+          photoInput.value = result.url;
+          if (photoPreview) {
+            photoPreview.src = result.url;
+            photoPreview.style.display = '';
+          }
+          photoStatus.textContent = 'Uploaded!';
+          photoStatus.style.color = 'var(--color-success, #27ae60)';
         }
-      } else if (existing) {
-        existing.remove();
+      } catch (err) {
+        console.error('Photo upload error:', err);
+        photoStatus.textContent = 'Upload failed: ' + (err.message || 'Unknown error');
+        photoStatus.style.color = 'var(--btn-danger, #c0392b)';
       }
     });
   }
@@ -1953,6 +2033,7 @@ async function loadApp() {
 
   createUnitDatalist();
   createIngredientDatalist();
+  if (typeof createStoreDatalist === 'function') createStoreDatalist();
   wireUpButtons();
   initRealtime();
   setupVisibilityReload();
@@ -2172,6 +2253,7 @@ async function loadDemoApp() {
   }
   if (typeof createUnitDatalist === 'function') createUnitDatalist();
   if (typeof createIngredientDatalist === 'function') createIngredientDatalist();
+  if (typeof createStoreDatalist === 'function') createStoreDatalist();
 
   // Trigger renders by touching data attributes
   const pantryDisplay = document.getElementById('pantry-display');

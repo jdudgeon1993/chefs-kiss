@@ -63,6 +63,7 @@
 | item_category | text | NULL | |
 | reserved_quantity | numeric | NULL | 0 |
 | min_threshold | numeric | NULL | 0 |
+| preferred_store | text | NULL | |
 
 ### pantry_locations
 | Column | Type | Nullable | Default |

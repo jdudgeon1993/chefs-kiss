@@ -96,13 +96,16 @@ async def add_pantry_item(
 
     def update():
         # Insert pantry item
-        item_data = db.pantry.create_item({
+        create_data = {
             'household_id': household_id,
             'name': item.name,
             'category': item.category,
             'unit': item.unit,
             'min_threshold': item.min_threshold
-        })
+        }
+        if item.preferred_store:
+            create_data['preferred_store'] = item.preferred_store
+        item_data = db.pantry.create_item(create_data)
 
         item_id = item_data[0]['id']
 
@@ -154,6 +157,8 @@ async def update_pantry_item(
             update_data['unit'] = item.unit
         if item.min_threshold is not None:
             update_data['min_threshold'] = item.min_threshold
+        if item.preferred_store is not None:
+            update_data['preferred_store'] = item.preferred_store
 
         if update_data:
             db.pantry.update_item(item_id, household_id, update_data)

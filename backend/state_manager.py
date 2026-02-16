@@ -187,6 +187,7 @@ class HouseholdState:
                     category=pantry_item.category if pantry_item else "Other",
                     source="Meals",
                     checked=False,
+                    preferred_store=pantry_item.preferred_store if pantry_item else None,
                     breakdown={"meals": meal_shortfall}
                 ))
                 added_keys.add(key)
@@ -220,6 +221,8 @@ class HouseholdState:
                             "meals": meal_qty,
                             "threshold": threshold_gap
                         }
+                        if not shop_item.preferred_store and item.preferred_store:
+                            shop_item.preferred_store = item.preferred_store
                         break
             else:
                 # Threshold-only item (no meal shortfall, but stock drops after cooking)
@@ -230,6 +233,7 @@ class HouseholdState:
                     category=item.category,
                     source="Threshold",
                     checked=False,
+                    preferred_store=item.preferred_store,
                     breakdown={"threshold": threshold_gap}
                 ))
 

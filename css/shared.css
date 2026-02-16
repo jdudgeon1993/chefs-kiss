@@ -4226,6 +4226,32 @@ body.dark-theme .form-group textarea {
   max-width: 450px;
 }
 
+/* Pill toggle buttons for shopping list group-by */
+.btn-pill-toggle {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--clay-warm, #c49a6c);
+  background: transparent;
+  color: var(--clay-warm, #c49a6c);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-pill-toggle.active {
+  background: var(--clay-warm, #c49a6c);
+  color: #fff;
+}
+
+/* Store tag on shopping items */
+.item-store-tag {
+  font-size: 0.7rem;
+  background: rgba(196, 154, 108, 0.15);
+  color: var(--clay-warm, #c49a6c);
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
 /* -------------------------------------------------------------------
    15. RECIPE MODAL SIZE FIX
    ------------------------------------------------------------------- */

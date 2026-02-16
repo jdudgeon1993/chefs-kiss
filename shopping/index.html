@@ -88,6 +88,12 @@
         <button class="btn-add-icon" id="btn-add-custom-item" title="Add custom item">+</button>
       </div>
 
+      <div class="shopping-group-toggle" style="display:flex;gap:0.5rem;margin:0.5rem 0;align-items:center;">
+        <span style="font-size:0.8rem;opacity:0.7;">Group by:</span>
+        <button class="btn-pill-toggle active" id="group-by-category" onclick="setShoppingGroupBy('category')">Category</button>
+        <button class="btn-pill-toggle" id="group-by-store" onclick="setShoppingGroupBy('store')">Store</button>
+      </div>
+
       <div id="shopping-list" class="shopping-list"></div>
 
       <div class="shopping-actions">

@@ -278,6 +278,7 @@
               ${recipe.isFavorite ? '⭐' : '☆'}
             </button>
           </div>
+          ${recipe.photo ? `<div class="recipe-vintage-card-photo" style="width:100%;max-height:240px;overflow:hidden;border-radius:8px;margin-bottom:1rem;"><img src="${recipe.photo}" alt="${recipe.name}" style="width:100%;height:100%;object-fit:cover;"></div>` : ''}
           <h1 class="recipe-vintage-card-title">${recipe.name || 'Untitled Recipe'}</h1>
           <div class="recipe-vintage-card-meta">
             <span><strong>YIELD:</strong> ${servings}</span>

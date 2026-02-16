@@ -24,6 +24,7 @@ class Recipe(BaseModel):
     tags: List[str] = []
     photo_url: Optional[str] = None
     instructions: Optional[str] = None
+    is_favorite: bool = False
     ingredients: List[RecipeIngredient] = []
 
     @classmethod
@@ -53,6 +54,7 @@ class Recipe(BaseModel):
             tags=recipe_data.get('tags', []),
             photo_url=recipe_data.get('photo', recipe_data.get('photo_url', recipe_data.get('image_url'))),
             instructions=recipe_data.get('instructions'),
+            is_favorite=recipe_data.get('favorite', False),
             ingredients=ingredients
         )
 
@@ -65,6 +67,7 @@ class RecipeCreate(BaseModel):
     tags: List[str] = Field(default=[])
     photo_url: Optional[str] = None
     instructions: Optional[str] = None
+    is_favorite: bool = False
     ingredients: List[dict] = Field(..., min_items=1)
 
     class Config:
@@ -91,4 +94,5 @@ class RecipeUpdate(BaseModel):
     tags: Optional[List[str]] = None
     photo_url: Optional[str] = None
     instructions: Optional[str] = None
+    is_favorite: Optional[bool] = None
     ingredients: Optional[List[dict]] = None
