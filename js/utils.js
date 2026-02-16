@@ -82,7 +82,7 @@ function startHeaderClock() {
   }
 
   update();
-  setInterval(update, 30000); // Update every 30 seconds
+  setInterval(update, 1000); // Update every second for live clock
 }
 
 // Start clock when DOM is ready
