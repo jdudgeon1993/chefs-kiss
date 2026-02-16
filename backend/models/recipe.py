@@ -63,6 +63,7 @@ class RecipeCreate(BaseModel):
     servings: int = Field(default=4, ge=1)
     category: str = Field(default="Uncategorized")
     tags: List[str] = Field(default=[])
+    photo_url: Optional[str] = None
     instructions: Optional[str] = None
     ingredients: List[dict] = Field(..., min_items=1)
 
@@ -88,5 +89,6 @@ class RecipeUpdate(BaseModel):
     servings: Optional[int] = Field(None, ge=1)
     category: Optional[str] = None
     tags: Optional[List[str]] = None
+    photo_url: Optional[str] = None
     instructions: Optional[str] = None
     ingredients: Optional[List[dict]] = None

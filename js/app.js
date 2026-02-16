@@ -1561,6 +1561,11 @@ function openRecipeModal(recipeId) {
             <label>Instructions</label>
             <textarea id="recipe-instructions" rows="5">${recipe.instructions || ''}</textarea>
           </div>
+          <div class="form-group">
+            <label>Photo URL</label>
+            <input type="url" id="recipe-photo-url" value="${recipe.photo || ''}" placeholder="https://example.com/photo.jpg">
+            ${recipe.photo ? `<img src="${recipe.photo}" alt="Preview" style="max-width:100%;max-height:120px;border-radius:8px;margin-top:0.5rem;object-fit:cover;">` : ''}
+          </div>
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
             <button type="submit" class="btn btn-primary">Save</button>
@@ -1569,6 +1574,29 @@ function openRecipeModal(recipeId) {
       </div>
     </div>
   `;
+
+  // Live photo preview
+  const photoInput = document.getElementById('recipe-photo-url');
+  if (photoInput) {
+    photoInput.addEventListener('input', () => {
+      const url = photoInput.value.trim();
+      const existing = photoInput.parentElement.querySelector('img');
+      if (url) {
+        if (existing) {
+          existing.src = url;
+        } else {
+          const img = document.createElement('img');
+          img.alt = 'Preview';
+          img.style.cssText = 'max-width:100%;max-height:120px;border-radius:8px;margin-top:0.5rem;object-fit:cover;';
+          img.src = url;
+          img.onerror = () => img.remove();
+          photoInput.parentElement.appendChild(img);
+        }
+      } else if (existing) {
+        existing.remove();
+      }
+    });
+  }
 
   const form = document.getElementById('recipe-form');
   form.onsubmit = async (e) => {
@@ -1593,6 +1621,7 @@ async function saveRecipe(recipeId) {
   const tagsStr = document.getElementById('recipe-tags').value;
   const tags = tagsStr.split(',').map(t => t.trim()).filter(t => t);
   const instructions = document.getElementById('recipe-instructions').value.trim();
+  const photoUrl = document.getElementById('recipe-photo-url')?.value.trim() || '';
 
   const ingredientRows = document.querySelectorAll('.ingredient-row');
   const ingredients = [];
@@ -1610,22 +1639,26 @@ async function saveRecipe(recipeId) {
     return;
   }
 
+  const recipeData = { name, servings, category, tags, instructions, ingredients, photo_url: photoUrl || null };
+
   try {
     if (recipeId) {
       await API.call(`/recipes/${recipeId}`, {
         method: 'PUT',
-        body: JSON.stringify({ name, servings, category, tags, instructions, ingredients })
+        body: JSON.stringify(recipeData)
       });
       showSuccess('Recipe updated!');
     } else {
       await API.call('/recipes/', {
         method: 'POST',
-        body: JSON.stringify({ name, servings, category, tags, instructions, ingredients })
+        body: JSON.stringify(recipeData)
       });
       showSuccess('Recipe created!');
     }
     closeModal();
     await loadRecipes();
+    // Refresh ingredient suggestions with any new ingredient names
+    sessionStorage.removeItem('ck-ingredient-names');
   } catch (error) {
     console.error('Error saving recipe:', error);
     showError('Failed to save recipe: ' + error.message);
@@ -1947,8 +1980,11 @@ function wireUpButtons() {
     btnNewPantry.addEventListener('click', () => {
       const pantrySection = document.getElementById('pantry-section');
       const onboardingSection = document.getElementById('onboarding-section');
-      if (pantrySection) pantrySection.classList.add('section-hidden');
-      if (onboardingSection) onboardingSection.classList.add('section-visible');
+      if (pantrySection) pantrySection.style.display = 'none';
+      if (onboardingSection) {
+        onboardingSection.style.display = '';
+        onboardingSection.classList.add('section-visible');
+      }
       initBulkEntry();
     });
   }
@@ -1992,14 +2028,25 @@ function wireUpButtons() {
     btnCheckout.addEventListener('click', openCheckoutModal);
   }
 
-  // Exit bulk entry — return to pantry view
+  // Exit bulk entry — return to pantry view (with unsaved changes warning)
   const btnExitOnboarding = document.getElementById('btn-exit-onboarding');
   if (btnExitOnboarding) {
     btnExitOnboarding.addEventListener('click', () => {
+      // Check if any rows have content that would be lost
+      const tbody = document.getElementById('bulk-entry-tbody-live');
+      const hasContent = tbody && Array.from(tbody.querySelectorAll('.bulk-name')).some(input => input.value.trim() !== '');
+      if (hasContent) {
+        if (!confirm('You have unsaved items in the bulk entry. Leave without saving?')) {
+          return;
+        }
+      }
       const pantrySection = document.getElementById('pantry-section');
       const onboardingSection = document.getElementById('onboarding-section');
-      if (onboardingSection) onboardingSection.classList.remove('section-visible');
-      if (pantrySection) pantrySection.classList.remove('section-hidden');
+      if (onboardingSection) {
+        onboardingSection.classList.remove('section-visible');
+        onboardingSection.style.display = 'none';
+      }
+      if (pantrySection) pantrySection.style.display = '';
     });
   }
 
