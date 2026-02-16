@@ -61,6 +61,37 @@ function closeModal() {
   }
 }
 
+// ── Header Date/Time Clock ──
+function startHeaderClock() {
+  const dateEl = document.getElementById('utility-date');
+  const timeEl = document.getElementById('utility-time');
+  if (!dateEl && !timeEl) return;
+
+  function update() {
+    const now = new Date();
+    if (dateEl) {
+      dateEl.textContent = now.toLocaleDateString('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric'
+      });
+    }
+    if (timeEl) {
+      timeEl.textContent = now.toLocaleTimeString('en-US', {
+        hour: 'numeric', minute: '2-digit'
+      });
+    }
+  }
+
+  update();
+  setInterval(update, 30000); // Update every 30 seconds
+}
+
+// Start clock when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startHeaderClock);
+} else {
+  startHeaderClock();
+}
+
 // Expose globally
 window.showToast = showToast;
 window.closeModal = closeModal;

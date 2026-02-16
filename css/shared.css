@@ -3,6 +3,9 @@
    Organized CSS Structure
    =================================================================== */
 
+/* @import MUST come before all other rules per CSS spec */
+@import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Lato:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Caveat:wght@600&family=Space+Mono&display=swap');
+
 /* -------------------------------------------------------------------
    1. RESET & GLOBAL STYLES
    ------------------------------------------------------------------- */
@@ -11,8 +14,6 @@
   margin: 0;
   padding: 0;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Lato:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Caveat:wght@600&family=Space+Mono&display=swap');
 
 html {
   scroll-behavior: smooth;
@@ -1670,7 +1671,7 @@ body:not([data-section]) .landing-page { display: block; }
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 2000;
+  z-index: 10001;
   padding: 2rem;
   overflow-y: auto;
 }
@@ -4229,27 +4230,11 @@ body.dark-theme .form-group textarea {
    15. RECIPE MODAL SIZE FIX
    ------------------------------------------------------------------- */
 
-.recipe-detail-modal {
-  max-width: 90vw !important;
-  max-height: 90vh !important;
-  overflow: hidden;
-}
-
+/* Overlay must fill viewport — constraints go on the content, not the overlay */
 .recipe-detail-modal-content {
-  max-height: 80vh;
+  max-width: 90vw;
+  max-height: 85vh;
   overflow-y: auto;
-}
-
-/* Make vintage recipe card fit better */
-.vintage-recipe-card {
-  max-width: 100%;
-  max-height: 75vh;
-  overflow-y: auto;
-}
-
-.vintage-recipe-card .recipe-image {
-  max-height: 200px;
-  object-fit: cover;
 }
 
 /* Pantry location row improvements */
@@ -4289,13 +4274,12 @@ body.dark-theme .form-group textarea {
 /* Mobile responsive */
 @media (max-width: 600px) {
   .recipe-detail-modal {
-    max-width: 95vw !important;
     padding: 0.5rem !important;
   }
 
-  .vintage-recipe-card {
-    padding: 1rem;
-    max-height: 70vh;
+  .recipe-detail-modal-content {
+    max-width: 95vw;
+    max-height: 85vh;
   }
 
   .location-row {

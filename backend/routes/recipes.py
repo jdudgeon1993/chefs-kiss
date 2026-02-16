@@ -114,6 +114,7 @@ async def add_recipe(
             'servings': recipe.servings,
             'category': recipe.category,
             'tags': recipe.tags,
+            'photo': recipe.photo_url,
             'instructions': recipe.instructions,
             'ingredients': recipe.ingredients  # Store as JSONB
         })
@@ -155,6 +156,8 @@ async def update_recipe(
             update_data['category'] = recipe.category
         if recipe.tags is not None:
             update_data['tags'] = recipe.tags
+        if recipe.photo_url is not None:
+            update_data['photo'] = recipe.photo_url
         if recipe.instructions is not None:
             update_data['instructions'] = recipe.instructions
         if recipe.ingredients is not None:
