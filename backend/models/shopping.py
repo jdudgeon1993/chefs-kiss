@@ -60,4 +60,5 @@ class ShoppingItemUpdate(BaseModel):
     checked: Optional[bool] = None
     quantity: Optional[float] = Field(None, gt=0)
     name: Optional[str] = Field(None, min_length=1, max_length=100)
+    unit: Optional[str] = Field(None, min_length=1, max_length=20)
     category: Optional[str] = None

@@ -170,9 +170,20 @@ class HouseholdState:
         shopping = []
         added_keys = set()  # Track to avoid duplicates
 
+        # Build set of manual item keys — manual overrides suppress auto-generated.
+        # When a user edits an auto-generated item, it becomes a manual item
+        # with the same name|unit key. The manual version takes precedence.
+        manual_keys = set()
+        for mi in self.manual_shopping_items:
+            manual_keys.add(f"{mi.name.lower()}|{mi.unit.lower()}")
+
         # Part 1: What meals need
         for key, needed_qty in self.reserved_ingredients.items():
             name, unit = key.split("|")
+
+            # Skip if user has a manual override for this item
+            if key in manual_keys:
+                continue
 
             pantry_item = self._find_pantry_item(name, unit)
             available = pantry_item.total_quantity if pantry_item else 0
@@ -198,6 +209,11 @@ class HouseholdState:
                 continue  # No threshold set
 
             key = f"{item.name.lower()}|{item.unit.lower()}"
+
+            # Skip if user has a manual override for this item
+            if key in manual_keys:
+                continue
+
             reserved = self.reserved_ingredients.get(key, 0)
 
             # What will on-hand be after meals consume reserved ingredients?
