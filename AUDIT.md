@@ -1,314 +1,317 @@
-# Chef's Kiss - Code & UX Audit
+# Chef's Kiss — Code & UX Audit + Phased Implementation Plan
 
-**Auditor:** Senior Product Architect & Lead Developer Review
 **Date:** 2026-02-17
-**Codebase Size:** ~16,000 lines across Python backend + vanilla JS frontend
 **Stack:** FastAPI / Supabase (PostgreSQL) / Redis / Vanilla JS / GitHub Pages
+**Philosophy:** HTML/CSS first. JavaScript makes the site breathe. Python makes it think.
 
 ---
 
-## The "Tough Love" Summary
+## How This App Works (The Pipeline)
 
-Chef's Kiss has a solid architectural foundation — the `StateManager` centralized calculation engine, the database provider abstraction layer, and the multi-household data model are genuinely well-conceived for a home kitchen app. However, the application has a **critical relational integrity gap**: deleting a recipe does not cascade to or warn about meal plans that reference it, which means your meal planner and shopping list will silently break. The frontend is carrying too much duplicated business logic (reserved ingredient calculations exist in both Python and JavaScript), and the mobile experience — where 80% of real cooking happens — forces users through a horizontally-scrolling pantry table that is hostile to one-handed phone use. This is a capable prototype that needs targeted hardening before it can be trusted as a daily-driver kitchen tool.
-
----
-
-## 1. Data Integrity & Relational Logic
-
-### 1A. Recipe Deletion Breaks Meal Plans (Critical)
-
-**Files:** `backend/routes/recipes.py:227-249`, `backend/state_manager.py:144-146`
-
-When a recipe is deleted, the `meal_plans` table rows referencing that `recipe_id` become **orphaned**. The deletion route (`DELETE /api/recipes/{recipe_id}`) only deletes the recipe row itself — there is no cascade, no cleanup of `meal_plans`, and no warning to the user.
-
-**What breaks:**
-- `StateManager._calculate_reserved()` at line 144 calls `self._get_recipe(meal.recipe_id)` for each uncooked meal plan. If the recipe was deleted, it returns `None` and silently `continue`s — so the meal plan still appears in the UI but contributes zero reserved ingredients.
-- The shopping list loses the shortfall for those meals. The user sees "Chicken Parmesan" on Tuesday's meal plan, but the shopping list doesn't include chicken or parmesan.
-- The `validate_can_cook_meal()` method at line 386 returns `{"can_cook": False, "error": "Recipe not found"}` — an opaque error with no suggestion to fix it.
-
-**Fix:** Before deleting a recipe, query `meal_plans` for any rows referencing that `recipe_id`. Either (a) block deletion with a clear error listing the affected meal dates, or (b) cascade-delete those meal plans and inform the user. Option (a) is safer for home cooks who might not realize the downstream effect.
-
-### 1B. Pantry Depletion on Cook — No Transaction Boundary (High)
-
-**File:** `backend/routes/meal_plans.py:194-256`
-
-The `mark_meal_cooked` endpoint iterates ingredients and updates pantry locations one at a time inside the `update()` closure. If any single `update_location` call fails mid-loop (network blip, Supabase timeout), you get **partial depletion**: some ingredients are deducted, others aren't, and the meal is not yet marked as cooked (so the user might retry and double-deduct).
-
-The Supabase Python SDK does not provide client-side transactions. The `update_and_invalidate` wrapper executes the function then invalidates cache, but there's no rollback mechanism.
-
-**Mitigation:** Collect all location updates into a batch, then execute them. If using Supabase, consider using an RPC (stored procedure) that wraps all the location updates + meal status change in a single PostgreSQL transaction.
-
-### 1C. Ingredient Matching is Fragile (Medium)
-
-**Files:** `backend/state_manager.py:88-90`, `backend/state_manager.py:149`
-
-Pantry-to-recipe matching uses a `(name.lower(), unit.lower())` tuple key. This means:
-- "Chicken Breast" in the pantry will NOT match "chicken breast" in a recipe ingredient if there's a casing inconsistency (handled by `.lower()`, good).
-- But "Chicken Breasts" (plural) will NOT match "Chicken Breast" (singular). There is no fuzzy matching, stemming, or alias system.
-- "oz" vs "ounce" vs "ounces" are treated as completely different units. There is no unit normalization.
-
-**Impact:** Users will have pantry items that appear "missing" from recipes when the naming is slightly inconsistent. The shopping list will tell them to buy "Chicken Breast" when they already have "Chicken Breasts" in the fridge.
-
-**Fix:** Add a normalization layer: strip trailing 's' for simple plurals, map common unit aliases (`oz` → `ounce`, `tbsp` → `tablespoon`, `lb` → `pound`), and consider a Levenshtein distance check with a confidence threshold for pantry matching.
-
-### 1D. Auto-Generated Shopping Items Cannot Be Checked Off on Backend (Medium)
-
-**Files:** `backend/state_manager.py:154-262`, `js/app.js:594-614`
-
-Auto-generated shopping items (from meal shortfall or threshold calculations) have no `id` — they exist only as computed output from `StateManager._calculate_shopping_list()`. When a user checks off "2 lbs Chicken" in the store, that checked state is stored **only in `localStorage`** on the client (`js/app.js:594-614`).
-
-**What breaks:**
-- If the user clears their browser data or switches phones, all auto-generated checked items reset.
-- Household members on different devices cannot see what the shopper already has in their cart — the real-time sync only covers manual items.
-- The `add-checked-to-pantry` endpoint at `shopping_list.py:196` checks `item.checked` which is only `True` for manual items. Auto-generated checked items won't be included unless the frontend manually tracks and sends them.
-
-**Fix:** When a user checks an auto-generated item, the frontend should create a manual item as an override (this pattern partially exists in `editShoppingItem` at `app.js:828` but not in `toggleShoppingItem`). This way the checked state persists server-side and syncs across devices.
-
-### 1E. Pickle-Based Redis Cache is a Security and Compatibility Risk (Medium)
-
-**File:** `backend/state_manager.py:42, 477, 491`
-
-The `StateManager` serializes full `HouseholdState` objects with `pickle.dumps()` and deserializes with `pickle.loads()`. Pickle deserialization of untrusted data is a known remote code execution vector. While the Redis data is generated internally, if an attacker gains write access to Redis (e.g., exposed Redis port, which is common in Railway misconfigurations), they can inject arbitrary Python objects.
-
-Additionally, any change to the Pydantic model structure (adding/removing fields) will break deserialization of cached data, causing `UnpicklingError` exceptions that the `try/except` at line 478 silently swallows — leading to a full cache miss on every request until TTL expires.
-
-**Fix:** Replace `pickle` with JSON serialization using Pydantic's `.model_dump()` / `.model_validate()`. This is safer and version-tolerant.
-
----
-
-## 2. The "Mobile-First" Reality — UX Friction Points
-
-### 2A. Pantry Table Requires Horizontal Scrolling on Mobile (Critical)
-
-**File:** `css/shared.css:3031-3035`
-
-```css
-.unified-ledger-table {
-  font-size: 0.75rem;
-  min-width: 700px;    /* Forces horizontal scroll on any phone */
-  table-layout: auto;
-}
+```
+Pantry (Inventory) → Recipes (Cookbook) → Meals (Strategy) → Shopping (Output)
 ```
 
-The pantry ledger is a 7-column table with a `min-width: 700px`. On a phone screen (320–414px wide), users must scroll horizontally to see expiration dates and action buttons. This is the **most-visited section** of a kitchen app, and it's essentially unusable with one hand while the other holds a grocery bag or stirs a pot.
+- **Pantry** is the foundation. It tracks what the household physically has — items, locations, quantities, expiration dates, minimum thresholds.
+- **Recipes** is the cookbook. Browse, search, filter, favorite. Each recipe has ingredients that map to pantry items by `name|unit`.
+- **Meals** is the strategy. A calendar where you assign recipes to dates. Planning a meal **reserves** pantry ingredients and **generates** shopping list entries for anything missing.
+- **Shopping** is the output. Python calculates it automatically from three sources: meal shortfall, threshold replenishment, and manual items. Focus Mode is the in-store execution tool — activated when the user is ready to shop.
 
-**Fix:** On mobile, replace the table with a card-based layout. Each pantry item becomes a tappable card showing name, total quantity, and an expiry indicator. Tap to expand for location details. This is a common pattern in inventory apps (e.g., Paprika, AnyList).
+The `StateManager` in Python is the engine. Every data change invalidates cache, reloads from DB, and recalculates reserved ingredients, shopping lists, and ready-to-cook status. One source of truth.
 
-### 2B. Modals Are the Only Way to Edit — Too Click-Heavy (High)
+---
 
-**Files:** `js/app.js:1328-1407` (pantry modal), `js/app.js:1571-1714` (recipe modal)
+## Phase 1 — Protect the Pipeline
 
-Every edit operation requires: tap item → modal opens → scroll modal → edit field → save → modal closes → list reloads. On a phone, modals that fill the screen are disorienting, and the user loses context of where they were in the list.
+**Why this phase first:** These are bugs that silently break the Inventory → Cookbook → Plan → Shop chain. A real user will hit these within the first week of daily use. None of these are features — they're holes in the existing logic.
 
-The recipe modal (`openRecipeModal`) is particularly heavy — it contains name, servings, category, tags, a dynamic ingredient list, instructions textarea, and photo upload. On a 5" phone, this is a scrollable form inside a scrollable overlay.
+---
 
-**Fix:** For quick operations (updating quantity, marking items), use inline editing or swipe actions. Reserve modals for complex creation flows. The `openQuickDepleteModal` at `app.js:1500` is a good start — extend this pattern to cover quick quantity adjustments directly from the pantry list.
+### 1.1 Recipe Deletion Orphans Meal Plans
 
-### 2C. Touch Targets Under 44px in Multiple Places (Medium)
+**The problem:** Deleting a recipe leaves `meal_plans` rows pointing at a `recipe_id` that no longer exists.
 
-**File:** `css/shared.css:555-568`
+**What breaks downstream:**
+- `StateManager._calculate_reserved()` (`state_manager.py:144`) looks up the recipe for each meal plan. Deleted recipe returns `None`, the meal is silently skipped. No ingredients get reserved for that meal.
+- The shopping list loses the shortfall. User sees "Chicken Parm" on Tuesday's calendar but the shopping list doesn't include chicken or parmesan.
+- `validate_can_cook_meal()` (`state_manager.py:386`) returns `"error": "Recipe not found"` — no explanation, no fix.
+- The meal calendar (`meals.js:createDayCell`) renders the meal but can't find the recipe name, so it shows "Unknown Recipe."
 
-```css
-.shopping-remove, .shopping-edit {
-  width: 24px;    /* Below Apple's 44px minimum */
-  height: 24px;
-}
+**Where to fix:** `backend/routes/recipes.py:227-249`
+
+**The fix:** Before `db.recipes.delete()`, query `meal_plans` for any uncooked rows referencing that `recipe_id`. If found, return a 409 Conflict with the list of affected dates. The frontend shows: *"This recipe is scheduled for Feb 20, Feb 24. Remove it from the meal plan first."*
+
+This is Python-side only. The frontend `deleteRecipe()` in `app.js:210` already has a `confirm()` dialog and an error handler — just surface the backend message.
+
+**Why not cascade-delete the meal plans?** Because a home cook might not realize "Delete recipe" means "also cancel Tuesday's dinner." Block and explain is safer.
+
+---
+
+### 1.2 Cook-Meal Depletion Has No Atomicity
+
+**The problem:** `mark_meal_cooked` (`meal_plans.py:194-256`) depletes pantry locations one at a time in a loop. If a network error or Supabase timeout happens mid-loop, some ingredients are deducted but others aren't, and the meal isn't marked cooked.
+
+**What breaks:**
+- Partial depletion: 3 of 5 ingredients are deducted. Pantry is wrong.
+- Meal stays `is_cooked: False`, so the user retries. Now those 3 ingredients get deducted *again*.
+- The shopping list recalculates based on wrong pantry quantities.
+
+**Where to fix:** `backend/routes/meal_plans.py:194-256`
+
+**The fix:** Collect all location updates into a list first, then execute them. Better: create a Supabase RPC (PostgreSQL stored procedure) that takes `meal_id` as input and does all depletion + status change in a single database transaction. If any step fails, the whole thing rolls back.
+
+Minimum viable: even without an RPC, restructure the `update()` closure to set `is_cooked: True` **first**, then deplete. If depletion partially fails, the meal is at least marked cooked (no double-deduct on retry) and the user can manually adjust quantities. This is the safer failure mode.
+
+---
+
+### 1.3 Ingredient Matching Breaks on Plurals and Unit Aliases
+
+**The problem:** The entire pipeline connects Pantry ↔ Recipe ↔ Shopping via `name.lower() + "|" + unit.lower()` exact string matching (`state_manager.py:88-90, 149`).
+
+**What breaks:**
+- Pantry has "Chicken Breasts" (plural). Recipe calls for "Chicken Breast" (singular). No match. Shopping list says "buy Chicken Breast" even though the user has it.
+- User enters "oz" in the recipe. Pantry item uses "ounce." No match. Same problem.
+- Over months of family use, these mismatches accumulate. The shopping list gets noisy and untrustworthy. Users stop trusting the app and go back to pen and paper.
+
+**Where to fix:** New utility in `backend/`, called from `state_manager.py`
+
+**The fix:** Create a `normalize_ingredient(name, unit)` function:
+1. **Unit alias map:** `{"oz": "ounce", "ounces": "ounce", "tbsp": "tablespoon", "tbs": "tablespoon", "lb": "pound", "lbs": "pound", "c": "cup"}` — normalize both sides before matching.
+2. **Simple plural stripping:** If a name ends in "s" and the non-"s" version exists in the pantry, treat them as the same item. (Skip words ending in "ss" like "grass.")
+3. Apply normalization in `_pantry_lookup` key generation and in `_calculate_reserved()` key generation.
+
+This lives entirely in Python. No frontend changes. The shopping list just gets smarter.
+
+---
+
+### 1.4 Auto-Generated Shopping Items Only Track Checked State Locally
+
+**The problem:** Auto-generated items (from meal shortfall / threshold) have no database `id`. When a user checks one off at the store, it's stored in `localStorage` only (`app.js:594-614`).
+
+**What breaks:**
+- Switch phones, clear browser data, or use a different browser → checked state gone.
+- Household member on another device can't see what's already in the cart. Real-time sync only covers manual items.
+- The checkout flow (`add-checked-to-pantry`) only sees `item.checked` for manual items. Auto-generated checked items silently get skipped.
+
+**Where to fix:** `js/app.js:859-882` (`toggleShoppingItem`)
+
+**The fix:** When the user checks an auto-generated item, instead of just writing to `localStorage`, create a manual item override via `POST /shopping-list/items`. The backend already supports this — `_calculate_shopping_list()` (`state_manager.py:176-178`) suppresses auto-generated items when a matching manual item exists. The pattern already works for the edit flow (`editShoppingItem` at `app.js:828`). Extend it to the toggle.
+
+This means every checked item has a backend ID, syncs via real-time, and is visible to all household members.
+
+---
+
+## Phase 2 — Make the Shopping List Survive the Store
+
+**Why this phase second:** Phases 1 protects the data pipeline. Phase 2 protects the one feature used outside the home. Every other section (Pantry, Recipes, Meals) is used at home on WiFi. The shopping list is used in grocery stores where connectivity is unreliable. If it doesn't work offline, the app fails at the moment it matters most.
+
+---
+
+### 2.1 Cache the Shopping List for Offline Use
+
+**The problem:** There is no service worker, no IndexedDB, no `localStorage` cache of the list. Opening the shopping page with no signal shows nothing. Focus Mode sets `this.shoppingList = []` on API failure (`shopping-focus-mode.js:93`).
+
+**The `.offline-banner` CSS class exists** (`shared.css:116-141`) but nothing wires it up.
+
+**Where to fix:** `js/app.js` (shopping list loading), `js/shopping-focus-mode.js`, new file for offline logic
+
+**The fix (minimum viable — no service worker needed):**
+
+1. **Cache on success:** Every time `loadShoppingList()` gets a successful API response, write it to `localStorage`:
+   ```javascript
+   localStorage.setItem('cached-shopping-list', JSON.stringify(list));
+   localStorage.setItem('cached-shopping-list-time', Date.now());
+   ```
+
+2. **Load from cache first:** On page load, immediately render from cache. Then attempt API fetch in background. If fetch succeeds, update the display. If it fails, the user still has the cached list.
+
+3. **Queue mutations offline:** When a check-off or add fails (network error), store the mutation in `localStorage` as a pending queue. On next successful API contact, replay the queue.
+
+4. **Wire up the offline banner:** Add `navigator.onLine` detection. Show the existing `.offline-banner` when offline. Show "Last synced X min ago" in the shopping header.
+
+This is JavaScript-only. No Python changes. No service worker complexity. It covers 90% of the real-world grocery store scenario.
+
+---
+
+### 2.2 Focus Mode Should Surface the Offline Indicator
+
+**The problem:** Focus Mode is the in-store tool. If the user is offline, Focus Mode needs to show it clearly — not just fail silently.
+
+**Where to fix:** `js/shopping-focus-mode.js`
+
+**The fix:** In `ShoppingFocusMode.enter()`, if cached data exists but the API call fails, render from cache and show a "Working offline" indicator in the focus header. This pairs with 2.1 — once the cache exists, Focus Mode reads from it as fallback.
+
+---
+
+## Phase 3 — Clean Up the Architecture
+
+**Why this phase third:** These aren't bugs — they're violations of the HTML/CSS first, Python-thinks principle. Fixing these makes the codebase honest about where logic lives, and makes future development faster.
+
+---
+
+### 3.1 Remove the Duplicated Reserved Ingredient Calculation
+
+**The problem:** The same calculation exists in Python (`state_manager.py:126-152`) and JavaScript (`app.js:282-325`). The Python version is authoritative. The JS version is a client-side mirror that can drift.
+
+**Why it matters for the architecture:** JavaScript should not be doing Python's job. The backend already returns `reserved_ingredients` in the `GET /meal-plans/` response. The frontend should use that.
+
+**Where to fix:** `js/app.js:282-325` (remove), `pantry/pantry.js` (update to read from API data)
+
+**The fix:**
+1. Store the `reserved_ingredients` from the meal plans API response in a `window.reservedIngredients` variable during `loadMealPlans()`.
+2. Update `pantry.js` to read from `window.reservedIngredients` instead of calling `window.calculateReservedIngredients()`.
+3. Delete `calculateReservedIngredients()` from `app.js`.
+
+Now the reserved calculation lives in one place: Python. As it should.
+
+---
+
+### 3.2 Replace Pickle with JSON in Redis Cache
+
+**The problem:** `state_manager.py:477,491` uses `pickle.dumps()` / `pickle.loads()`. Two issues:
+1. **Security:** Pickle deserialization is a known RCE vector. If Redis is exposed (common Railway misconfiguration), an attacker can inject arbitrary Python objects.
+2. **Brittleness:** Any change to Pydantic model fields breaks deserialization of cached data. The `try/except` swallows the error, causing a full cache miss on every request until TTL expires. Every deploy that changes models triggers 5 minutes of degraded performance.
+
+**Where to fix:** `backend/state_manager.py:462-497`
+
+**The fix:** Replace:
+```python
+pickle.dumps(state)  →  json.dumps(state.to_cache_dict())
+pickle.loads(data)   →  HouseholdState.from_cache_dict(json.loads(data))
 ```
 
-The shopping list edit (pencil) and delete (trash) buttons are 24x24px. Apple's Human Interface Guidelines and WCAG recommend a minimum of 44x44px for touch targets. This is addressed for the generic `.btn` class at `shared.css:3134-3137` (`min-height: 44px`), but these specific icon buttons escape that rule because they're styled with explicit dimensions.
+Add `to_cache_dict()` and `from_cache_dict()` methods to `HouseholdState` using Pydantic's `.model_dump()` / `.model_validate()`. JSON is safe, version-tolerant, and debuggable (you can inspect Redis keys directly).
 
-Other undersized targets:
+---
+
+### 3.3 Move Modal HTML to `<template>` Elements
+
+**The problem:** `app.js` generates modal HTML with template literals — 80+ lines for the pantry modal (`openIngredientModal`), 130+ lines for the recipe modal (`openRecipeModal`), 50+ lines for checkout (`openCheckoutModal`). This is JavaScript doing HTML's job.
+
+**Why it matters for the architecture:** The HTML/CSS-first principle says structure lives in HTML. JavaScript populates data. Right now, JavaScript is authoring structure.
+
+**Where to fix:** Each section's `index.html`, `js/app.js`
+
+**The fix:** Define modal shells as `<template>` elements in the HTML. JavaScript clones the template, populates data fields, and appends to `#modal-root`. This:
+- Keeps HTML structure in HTML files where it belongs
+- Makes modals inspectable in the browser without triggering JavaScript
+- Reduces `app.js` line count significantly
+- Makes CSS styling easier (you can see the full structure in the HTML)
+
+This is a medium effort refactor — do it incrementally, one modal at a time.
+
+---
+
+## Phase 4 — CSS/UX Polish for Real Devices
+
+**Why this phase fourth:** The app works correctly after Phases 1-3. Phase 4 makes it feel right on the devices people actually use. These are CSS-first fixes — no business logic changes.
+
+---
+
+### 4.1 Touch Targets: Enforce 44px Minimum
+
+**The problem:** Several interactive elements are under Apple's 44px guideline:
+- `.shopping-remove`, `.shopping-edit`: 24x24px (`shared.css:555-568`)
 - `.shopping-check` checkbox: 18x18px (`shared.css:516-521`)
-- `.btn-remove` in location rows: no explicit size, inherits from `.btn-icon`
-- `.ledger-col-actions .btn-ledger-action`: 36x36px on mobile (close but still under 44px)
+- `.btn-ledger-action`: 36x36px on mobile (`shared.css:3075-3078`)
 
-### 2D. Header Consumes 120px on Mobile (Medium)
+**Where to fix:** `css/shared.css` — mobile media queries
 
-**File:** `css/shared.css:2878-2879`
-
-```css
-body {
-  padding-top: 120px;
-  padding-bottom: 70px;
-}
-```
-
-On a 667px-tall iPhone SE screen, the fixed header (120px) + bottom nav (70px) = 190px of chrome. That leaves only **477px** of usable viewport — less than 72% of the screen. Add the shopping list header, add-item input, and group-by toggle, and the actual list content gets maybe 300px. The user sees roughly 3 shopping items at a time.
-
-**Fix:** Collapse the header on scroll (common pattern: shrink to 50px showing only the brand and key actions). Alternatively, use a single-row compact header on mobile that hides the datetime display (already partially done at `shared.css:3572-3575` for screens < 400px, but the breakpoint should be 768px).
-
-### 2E. Focus Mode is the Right Idea but Discovery is Poor (Low)
-
-**File:** `js/shopping-focus-mode.js`, `css/shopping-focus-mode.css`
-
-The shopping Focus Mode is well-implemented — large checkboxes, category grouping, distraction-free UI. But it's activated by a button that's below the fold on most phones because the header, add-item input, and group-by pills push it down. A user in a grocery store who has never seen the feature may never discover it.
-
-**Fix:** Make Focus Mode the **default** view when the shopping list has > 0 items and the device is mobile. Show a small "Exit to full view" link. The detailed view becomes the secondary option for desktop/planning use.
+**The fix:** In the `@media (max-width: 768px)` block, override these elements to minimum 44x44px. For checkboxes, increase the clickable area with padding while keeping the visual checkbox small. This is pure CSS — no JS changes.
 
 ---
 
-## 3. Redundancy & Optimization
+### 4.2 Compact Mobile Header
 
-### 3A. Duplicated Reserved Ingredient Calculation (High)
+**The problem:** On mobile, `body` has `padding-top: 120px` + `padding-bottom: 70px` = 190px of fixed chrome. On an iPhone SE (667px viewport), that's 28% of the screen gone before any content loads.
 
-**Files:** `backend/state_manager.py:126-152` vs `js/app.js:282-325`
+**The cause:** The header wraps on mobile because the brand name, datetime, and action buttons don't fit in one row. The 120px padding accommodates the wrapped header.
 
-The reserved ingredient calculation exists in two places:
-- **Python** (`_calculate_reserved`): Authoritative server-side calculation
-- **JavaScript** (`calculateReservedIngredients`): Client-side mirror for the pantry ledger display
+**Where to fix:** `css/shared.css:2877-2920`
 
-These implementations can drift. The Python version uses `meal.serving_multiplier`, while the JS version checks both `meal.servingMultiplier` and `meal.serving_multiplier` (accommodating inconsistent data shapes). If the Python logic changes (e.g., adding a "partially cooked" state), the JS version won't know.
+**The fix:**
+1. Hide `.header-datetime` on screens below 768px (currently hidden only below 400px at `shared.css:3572`).
+2. Shrink `.header-brand` further on mobile or abbreviate to an icon/logo.
+3. This lets the header stay single-row at 60-70px, recovering ~50px of content space.
+4. Reduce `body` `padding-top` to 70px to match.
 
-**Fix:** The backend already returns `reserved_ingredients` in the meal plan GET response. The frontend should consume that directly instead of recalculating. Remove `calculateReservedIngredients()` from `app.js` and have the pantry ledger script read from the API response data stored in `window.planner`.
+Pure CSS. The datetime is already low-priority information on mobile — the user's phone has a clock.
 
-### 3B. Every Mutation Returns Full State — Excessive Payload (Medium)
+---
 
-**Files:** All route files (`pantry.py`, `recipes.py`, `meal_plans.py`, `shopping_list.py`)
+### 4.3 Pantry Mobile View — Evaluate Table vs. Cards
 
-Every POST/PUT/DELETE endpoint follows this pattern:
+**Context I previously missed:** The pantry ledger is an inventory management tool. It's a table on purpose — it shows 7 columns of data that a home cook needs to see in context. The primary use case may be at the kitchen counter on a tablet, not on a phone.
+
+**What I recommend now:** Don't blindly replace the table with cards. Instead:
+
+1. **Check your analytics** (or your own usage) — are people opening the pantry on phones?
+2. If yes: add a CSS-only card view for `< 768px` that shows Name, Total Qty, and an expiry indicator per card. Tap to expand. Keep the table for `>= 768px`.
+3. If no (mostly tablet/desktop): keep the table but remove the `min-width: 700px` constraint on mobile. Let the table naturally compress — hide the "Reserved" and "Available" columns on mobile (they're expert-level detail) and let the remaining columns fit.
+
+Either approach is CSS + minor `pantry.js` rendering logic. No Python changes.
+
+---
+
+## Phase 5 — Performance & Hardening (Before Scale)
+
+**Why this phase last:** These are optimizations that don't affect correctness but matter when the household has 200+ pantry items or multiple family members using the app simultaneously. Do these before inviting beta users beyond your own household.
+
+---
+
+### 5.1 Partial Responses for Simple Mutations
+
+**The problem:** Every POST/PUT/DELETE across all route files does:
 ```python
 StateManager.update_and_invalidate(household_id, update)
-state = StateManager.get_state(household_id)  # Full reload from DB
-return {"pantry_items": [...], "shopping_list": [...], ...}
+state = StateManager.get_state(household_id)
+return { full state dump }
 ```
+Checking off one shopping item triggers 4 parallel DB queries + full recalculation.
 
-This means every single item check-off in the shopping list triggers:
-1. A DB write
-2. A cache invalidation
-3. A full state reload (4 parallel DB queries)
-4. Full recalculation of reserved ingredients, shopping list, and ready recipes
-5. Serialization of the entire household state as JSON response
+**The fix:** For operations that don't affect calculations (checking a shopping item, toggling a recipe favorite, updating a tag), return only the affected item. The frontend already has the full list in memory — just update the one item client-side.
 
-For a household with 200 pantry items, 50 recipes, and 14 meal plans, this is significant work for a checkbox toggle.
+Reserve full-state returns for operations that genuinely change calculations: adding/deleting meal plans, cooking a meal, changing pantry quantities.
 
-**Fix:** For simple mutations (checking a shopping item, toggling a favorite), return only the affected item and let the frontend optimistically update. Reserve full-state returns for operations that genuinely affect calculations (adding/removing meal plans, cooking meals, changing pantry quantities).
-
-### 3C. Frontend Loads Pantry Data on the Shopping Page (Low)
-
-**File:** `js/app.js:2046-2050`
-
-```javascript
-case 'shopping':
-  await Promise.all([
-    loadShoppingList().then(() => updateLoaderProgress(70)),
-    loadPantry().then(() => updateLoaderProgress(85))
-  ]);
-```
-
-The shopping page loads the full pantry just for the checkout modal's item-matching logic. But checkout is a rare action (once per shopping trip). Loading 200+ pantry items on every shopping page visit adds latency for a feature used once a week.
-
-**Fix:** Lazy-load pantry data only when the checkout modal opens (which already has a fresh-fetch pattern at `app.js:1029-1051`). Remove the pantry preload from the shopping page init.
-
-### 3D. No Request Deduplication — Multiple Tabs Hammer the API (Low)
-
-**File:** `js/realtime.js:111-137`
-
-When a realtime event fires, `reloadSection` calls `loadPantry()`, `loadShoppingList()`, etc. If the user has the pantry page and shopping page open in two tabs, a single pantry change triggers: Tab 1 reloads pantry + shopping, Tab 2 reloads pantry + shopping. That's 4 API calls from one DB change, each triggering a full state rebuild. With a household of 2-3 members, this multiplies further.
-
-The 500ms debounce in `handleRealtimeEvent` helps within a single tab, but cross-tab coordination is absent.
+**Where to fix:** All route files, `js/app.js` (update handlers to do optimistic client-side updates)
 
 ---
 
-## 4. Edge Case Failure Analysis
+### 5.2 Lazy-Load Pantry on Shopping Page
 
-### 4A. Offline in the Grocery Store — Shopping List is Useless (Critical)
+**The problem:** The shopping page loads the full pantry on init (`app.js:2046-2050`) just for the checkout modal. Checkout happens once per shopping trip.
 
-**Files:** `js/shopping-focus-mode.js:86-93`, `js/api.js:138`
+**The fix:** Remove pantry from the shopping page's `loadApp()` switch case. The checkout flow already fetches fresh pantry data when it opens (`app.js:1029-1051`). Let that be the only fetch point.
 
-There is **no service worker, no offline cache, and no IndexedDB fallback**. The shopping list is fetched fresh from the API on every page load (`ShoppingFocusMode.loadShoppingList` at line 86). If the user is in a concrete-walled grocery store with no signal:
+**Where to fix:** `js/app.js:2046-2050`
 
-- Opening the shopping page shows nothing (API call fails)
-- Focus mode fails silently (`this.shoppingList = []` at line 93)
-- Checking items off fails (PATCH calls to backend)
-- Quick-adding a forgotten item fails
+---
 
-The `css/shared.css:116-141` defines an `.offline-banner` class, suggesting offline awareness was planned, but it's not wired up to any detection logic.
+### 5.3 Proportional Health Score
 
-**Fix (minimum viable):** Cache the last-known shopping list in `localStorage` on every successful API response. On load, display cached data immediately, then attempt an API refresh in the background. For check-offs, queue mutations in `localStorage` and sync when connectivity returns. This is the "optimistic offline" pattern used by Todoist, Google Keep, and similar apps.
+**The problem:** `state_manager.py:426-430` subtracts flat penalties per item. A household with 200 items and 12 below threshold (6%) gets the same "poor" score as one with 20 items and 12 below threshold (60%).
 
-### 4B. Duplicate Items in Shopping List (Medium)
-
-**File:** `backend/state_manager.py:170-262`
-
-The `_calculate_shopping_list` method tracks duplicates via `added_keys` (a set of `name|unit` keys). This correctly prevents the same ingredient from appearing twice when it's needed for both meals and thresholds. However:
-
-- If a user manually adds "Eggs, 1 dozen" and the auto-calculation also generates "Eggs, 1 dozen", the manual override suppresses the auto-generated version (via `manual_keys` at line 176-178). This is correct.
-- But if the user manually adds "eggs, 1 dozen" (lowercase) and the pantry has "Eggs" (titlecase), the `manual_keys` check uses `.lower()` so this works.
-- **The gap:** If a user adds "Egg, 1 dozen" (singular) manually and the recipe calls for "Eggs, 1 dozen" (plural), these are treated as different items. The shopping list shows both.
-
-### 4C. Health Score Overflows for Large Pantries (Low)
-
-**File:** `backend/state_manager.py:426-430`
-
+**The fix:** Normalize by pantry size:
 ```python
-health_score = 100
-health_score -= below_threshold * 10
-health_score -= expiring_soon * 5
-health_score = max(0, health_score)
+if total_items > 0:
+    health_score -= (below_threshold / total_items) * 50
+    health_score -= (expiring_soon / total_items) * 30
 ```
 
-If a household has 15 items below threshold, the score hits -50 before being clamped to 0. This is fine mathematically, but the scoring doesn't scale. A household with 200 items and 12 below threshold (6% non-compliant) gets the same "poor" rating as a household with 20 items and 12 below threshold (60% non-compliant). The score should be proportional to the pantry size.
-
-### 4D. Token Stored in localStorage — XSS Exposure (Low)
-
-**File:** `js/api.js:16-28`
-
-Auth tokens and refresh tokens are stored in `localStorage`, which is accessible to any JavaScript running on the page. If an XSS vulnerability exists anywhere in the HTML rendering (and with `innerHTML` assignments throughout `app.js`, the surface area is large), an attacker can steal both tokens.
-
-The app does use `safeSetInnerHTMLById` from `utils.js`, but many rendering functions in `app.js` directly assign to `.innerHTML` (e.g., `renderMealCalendar` at line 493, `renderDashboard` at line 1189, `editShoppingItem` at line 766).
+**Where to fix:** `backend/state_manager.py:418-440`
 
 ---
 
-## 5. Feature Gap Analysis — The Single Most Important Missing Feature
+## Summary: The Five Phases
 
-### Offline-First Shopping List with Sync
+| Phase | Name | What It Protects | Items | Effort |
+|-------|------|------------------|-------|--------|
+| **1** | Protect the Pipeline | Data integrity across Pantry→Recipe→Meal→Shopping | 4 fixes | Small-Medium |
+| **2** | Survive the Store | Shopping list works offline | 2 fixes | Medium |
+| **3** | Clean the Architecture | HTML/CSS first, Python thinks, JS breathes | 3 fixes | Medium |
+| **4** | CSS/UX Polish | Real-device usability | 3 fixes | Small |
+| **5** | Performance & Hardening | Scale readiness | 3 fixes | Small-Medium |
 
-Based on the codebase's current architecture and its intended use case (home cooking, grocery shopping), the single most impactful missing feature is **an offline-capable shopping list with background sync**.
-
-**Why this above all else:**
-1. The shopping list is the one feature used **outside the home** where connectivity is unreliable.
-2. The Focus Mode UI (`shopping-focus-mode.js`) is already well-designed for in-store use — it just needs to work without internet.
-3. The `localStorage` checked-item tracking (`app.js:594-614`) proves the team already recognizes the need for client-side state — it just needs to be extended to the full list.
-4. Every other feature (pantry management, recipe editing, meal planning) is done at home on WiFi. The shopping list is the one that must survive a dead zone.
-
-**Implementation approach:**
-- Use a Service Worker to cache the shopping page shell and its JS/CSS assets.
-- On every successful `GET /shopping-list/`, write the response to IndexedDB.
-- On page load, render from IndexedDB immediately; fetch API in background and merge.
-- For mutations (check/uncheck, add item), write to a pending-mutations queue in IndexedDB. Process the queue when online.
-- Add a visible sync indicator: "Last synced 3 min ago" / "Offline — changes will sync when connected".
-
----
-
-## 6. Actionable Enhancements — Prioritized for Next Iteration
-
-### Tier 1: Fix Before Real Users Touch It
-
-| # | Issue | Files | Effort |
-|---|-------|-------|--------|
-| 1 | **Recipe deletion orphans meal plans** — add cascade check/delete | `routes/recipes.py:227-249`, add query to `meal_plans` table | Small |
-| 2 | **Offline shopping list** — cache in localStorage/IndexedDB, queue mutations | `js/shopping-focus-mode.js`, new service worker | Medium |
-| 3 | **Mobile pantry card view** — replace horizontal-scroll table with cards on < 768px | `css/shared.css:3023-3065`, `pantry/pantry.js` | Medium |
-
-### Tier 2: Significant UX Improvements
-
-| # | Issue | Files | Effort |
-|---|-------|-------|--------|
-| 4 | **Remove duplicated reserved calculation** — frontend should read from API response | `js/app.js:282-325` (delete), update pantry ledger to use server data | Small |
-| 5 | **Touch target audit** — enforce 44px minimum on all interactive elements | `css/shared.css` (shopping buttons, checkboxes) | Small |
-| 6 | **Ingredient name normalization** — plural stripping + unit alias map | New utility in `backend/`, update `state_manager.py` matching | Medium |
-| 7 | **Compact mobile header** — collapse to single row on scroll | `css/shared.css:2877-2903` | Small |
-
-### Tier 3: Robustness & Performance
-
-| # | Issue | Files | Effort |
-|---|-------|-------|--------|
-| 8 | **Replace pickle with JSON serialization** in Redis cache | `backend/state_manager.py:477-496` | Small |
-| 9 | **Partial-response mutations** — return only changed data for simple ops | All route files | Medium |
-| 10 | **Wrap cook-meal depletion in DB transaction** | `routes/meal_plans.py:194-256`, new Supabase RPC | Medium |
-| 11 | **Lazy-load pantry on shopping page** — only fetch for checkout | `js/app.js:2046-2050` | Small |
-| 12 | **Proportional health score** — normalize by pantry size | `backend/state_manager.py:418-440` | Small |
-
----
-
-*This audit prioritizes issues by real-world impact for home cooks. The codebase demonstrates strong architectural thinking — the StateManager pattern, provider abstraction, and multi-household model are above average for a personal project. The gaps identified are the kind that only surface under real daily use: spotty grocery store WiFi, one-handed phone operation with messy hands, and the accumulation of slightly-misspelled ingredients over months of family cooking.*
+**Phase 1 is non-negotiable** — these are data integrity bugs that will break trust.
+**Phase 2 is the highest-impact feature gap** — the app fails at the moment it matters most.
+**Phases 3-5 are quality and polish** — they make the app professional, not just functional.
