@@ -28,8 +28,16 @@ function _getToastContainer() {
   return container;
 }
 
+const MAX_TOASTS = 5;
+
 function showToast(message, type = 'info', duration = 4000) {
   const container = _getToastContainer();
+
+  // Cap concurrent toasts — remove oldest if at limit
+  while (container.children.length >= MAX_TOASTS) {
+    container.firstChild.remove();
+  }
+
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   const icons = { success: '✓', error: '✗', info: 'ℹ', sync: '🔄' };

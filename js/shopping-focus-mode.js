@@ -421,12 +421,13 @@ class ShoppingFocusMode {
   }
 
   /**
-   * Dispatch event to keep main app in sync with focus mode changes
+   * Sync focus mode state to main app without dispatching events.
+   * The main app refreshes from API on focus mode exit, so we only
+   * need to keep window.shoppingList current (for checkout modal etc).
+   * NOT dispatching 'shopping-list-updated' avoids triggering our own handler.
    */
   _notifyMainApp() {
-    window.dispatchEvent(new CustomEvent('shopping-list-updated', {
-      detail: this.shoppingList
-    }));
+    window.shoppingList = this.shoppingList;
   }
 
   /**
@@ -660,32 +661,45 @@ class ShoppingFocusMode {
     this._updateHandler = (event) => {
       if (!this.isActive) return;
 
-      // Preserve our local checked state before overwriting
-      const localCheckedState = {};
-      this.shoppingList.forEach(item => {
-        if (item.checked) {
+      // Debounce: coalesce rapid updates (e.g. realtime bursts)
+      if (this._updateDebounce) clearTimeout(this._updateDebounce);
+      this._pendingUpdateEvent = event;
+
+      this._updateDebounce = setTimeout(() => {
+        this._updateDebounce = null;
+        const ev = this._pendingUpdateEvent;
+        if (!ev) return;
+
+        // Preserve our local checked state before overwriting
+        const localCheckedState = {};
+        this.shoppingList.forEach(item => {
+          if (item.checked) {
+            const key = item.id || `${item.name}|${item.unit}`;
+            localCheckedState[key] = true;
+          }
+        });
+
+        // Update list from event
+        this.shoppingList = ev.detail || [];
+
+        // Re-apply local checked state + localStorage state
+        this._mergeLocalCheckedState();
+        this.shoppingList.forEach(item => {
           const key = item.id || `${item.name}|${item.unit}`;
-          localCheckedState[key] = true;
+          if (localCheckedState[key]) {
+            item.checked = true;
+          }
+        });
+
+        this.render();
+
+        // Rate-limit the "List synced" toast (max once per 10s)
+        const now = Date.now();
+        if (window.showToast && (!this._lastSyncToast || now - this._lastSyncToast > 10000)) {
+          this._lastSyncToast = now;
+          window.showToast('List synced', 'sync', 2000);
         }
-      });
-
-      // Update list from event
-      this.shoppingList = event.detail || [];
-
-      // Re-apply local checked state + localStorage state
-      this._mergeLocalCheckedState();
-      this.shoppingList.forEach(item => {
-        const key = item.id || `${item.name}|${item.unit}`;
-        if (localCheckedState[key]) {
-          item.checked = true;
-        }
-      });
-
-      this.render();
-
-      if (window.showToast) {
-        window.showToast('List synced', 'sync', 2000);
-      }
+      }, 300);
     };
 
     window.addEventListener('shopping-list-updated', this._updateHandler);
@@ -700,6 +714,11 @@ class ShoppingFocusMode {
       window.removeEventListener('shopping-list-updated', this._updateHandler);
       this._updateHandler = null;
     }
+    if (this._updateDebounce) {
+      clearTimeout(this._updateDebounce);
+      this._updateDebounce = null;
+    }
+    this._pendingUpdateEvent = null;
   }
 
   /**
