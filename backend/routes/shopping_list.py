@@ -126,6 +126,9 @@ async def update_shopping_item(
         if update.name is not None:
             update_data['name'] = update.name
 
+        if update.unit is not None:
+            update_data['unit'] = update.unit
+
         if update.category is not None:
             update_data['category'] = update.category
 
