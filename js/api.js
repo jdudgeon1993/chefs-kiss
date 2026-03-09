@@ -159,7 +159,12 @@ class API {
         throw new Error('Session expired');
       }
 
-      throw new Error(error.detail || response.statusText);
+      // error.detail may be a string or structured object like {message: "...", missing: [...]}
+      const detail = error.detail;
+      const message = typeof detail === 'object' && detail !== null
+        ? detail.message || JSON.stringify(detail)
+        : detail || response.statusText;
+      throw new Error(message);
     }
 
     return response.json();

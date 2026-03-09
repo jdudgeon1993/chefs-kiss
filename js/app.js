@@ -1933,15 +1933,33 @@ function openCookNowModal(recipe, dateKey, mealId) {
 /**
  * Mark a meal as cooked and deduct from pantry
  */
-async function markMealCooked(dateKey, mealId) {
+async function markMealCooked(dateKey, mealId, force = false) {
   try {
-    await API.call(`/meal-plans/${mealId}/cook`, { method: 'POST' });
+    const url = force
+      ? `/meal-plans/${mealId}/cook?force=true`
+      : `/meal-plans/${mealId}/cook`;
+    await API.call(url, { method: 'POST' });
     closeModal();
     await Promise.all([loadMealPlans(), loadPantry(), loadShoppingList()]);
-    showSuccess('Meal cooked! Ingredients deducted from pantry.');
+    showSuccess(force
+      ? 'Meal marked as cooked (pantry unchanged).'
+      : 'Meal cooked! Ingredients deducted from pantry.');
   } catch (error) {
     console.error('Error marking meal as cooked:', error);
-    showError('Failed to cook meal: ' + error.message);
+
+    // If validation failed (not enough ingredients), offer force-cook
+    if (!force && error.message && error.message.includes('Not enough ingredients')) {
+      const forceIt = confirm(
+        error.message +
+        '\n\nMark as cooked anyway without deducting from pantry?' +
+        '\n(Useful for past meals or after a pantry recount)'
+      );
+      if (forceIt) {
+        return markMealCooked(dateKey, mealId, true);
+      }
+    } else {
+      showError('Failed to cook meal: ' + error.message);
+    }
   }
 }
 
