@@ -199,6 +199,14 @@ async def mark_meal_cooked(
         if not meal_data:
             raise HTTPException(404, "Meal not found")
 
+        # Mark meal as cooked FIRST — prevents double-deduct on retry
+        # if depletion partially fails below
+        db.meal_plans.update_by_id(meal_id, {'is_cooked': True})
+
+        # When forced, skip pantry depletion entirely (e.g. past meals after recount)
+        if force:
+            return
+
         meal = meal_data[0]
         serving_multiplier = meal.get('serving_multiplier', 1.0) or 1.0
 
@@ -206,14 +214,10 @@ async def mark_meal_cooked(
         recipe_data = db.recipes.get_by_id(meal['recipe_id'])
 
         if not recipe_data:
-            raise HTTPException(404, "Recipe not found")
+            return  # Recipe deleted — nothing to deplete
 
         recipe = recipe_data[0]
         ingredients = recipe.get('ingredients', []) or []
-
-        # Mark meal as cooked FIRST — prevents double-deduct on retry
-        # if depletion partially fails below
-        db.meal_plans.update_by_id(meal_id, {'is_cooked': True})
 
         # Deplete pantry for each ingredient
         for ingredient in ingredients:
