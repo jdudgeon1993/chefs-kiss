@@ -231,11 +231,35 @@ async def delete_recipe(
 ):
     """
     Delete recipe.
+
+    Blocks deletion if uncooked current/future meals reference this recipe.
+    Past cooked meals don't block — only active meal plans matter.
     """
+    from datetime import date as date_type
+
+    # Check for uncooked meals referencing this recipe
+    state = StateManager.get_state(household_id)
+    today = date_type.today()
+    blocking_meals = [
+        meal for meal in state.meal_plans
+        if meal.recipe_id == recipe_id
+        and not meal.cooked
+        and meal.date >= today
+    ]
+
+    if blocking_meals:
+        dates = [meal.date.strftime("%b %d") for meal in blocking_meals]
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": f"This recipe is scheduled for {', '.join(dates)}. Remove it from the meal plan first.",
+                "scheduled_dates": [meal.date.isoformat() for meal in blocking_meals]
+            }
+        )
+
     db = get_db()
 
     def update():
-        # Delete recipe (ingredients stored as JSONB, no separate table)
         db.recipes.delete(recipe_id, household_id)
 
     StateManager.update_and_invalidate(household_id, update)

@@ -854,9 +854,17 @@ window.editShoppingItem = editShoppingItem;
 /**
  * Toggle shopping item checked state
  * For items with IDs: update backend
- * For auto-generated items: track locally
+ * For auto-generated items: create manual override so state syncs across devices
  */
 async function toggleShoppingItem(itemKey, itemId, checked) {
+  // Update UI immediately for responsiveness
+  const itemElement = document.querySelector(`[data-key="${itemKey}"]`);
+  if (itemElement) {
+    itemElement.classList.toggle('checked', checked);
+  }
+
+  if (typeof markLocalWrite === 'function') markLocalWrite();
+
   if (itemId) {
     // Manual item with ID - update backend
     try {
@@ -866,18 +874,40 @@ async function toggleShoppingItem(itemKey, itemId, checked) {
       });
     } catch (error) {
       console.error('Error updating item:', error);
-      // Still track locally as fallback
       setLocalCheckedItem(itemKey, checked);
     }
   } else {
-    // Auto-generated item - track locally
-    setLocalCheckedItem(itemKey, checked);
-  }
+    // Auto-generated item — create a manual override in backend
+    // so checked state syncs across devices and survives browser clears
+    const items = window.shoppingList || [];
+    const item = items.find(i => {
+      const key = i.id || `${i.name}|${i.unit}`;
+      return key === itemKey;
+    });
 
-  // Update UI immediately
-  const itemElement = document.querySelector(`[data-key="${itemKey}"]`);
-  if (itemElement) {
-    itemElement.classList.toggle('checked', checked);
+    if (item) {
+      try {
+        await API.call('/shopping-list/items', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: item.name,
+            quantity: item.quantity,
+            unit: item.unit,
+            category: item.category || 'Other',
+            checked: checked
+          })
+        });
+        // Clear old localStorage entry since it's now backend-tracked
+        setLocalCheckedItem(itemKey, false);
+      } catch (error) {
+        console.error('Error creating manual override:', error);
+        // Fall back to localStorage if offline/error
+        setLocalCheckedItem(itemKey, checked);
+      }
+    } else {
+      // Can't find item data — fall back to localStorage
+      setLocalCheckedItem(itemKey, checked);
+    }
   }
 }
 

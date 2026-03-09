@@ -38,11 +38,16 @@ class ShoppingItem(BaseModel):
 
 
 class ManualShoppingItemCreate(BaseModel):
-    """Create manual shopping list item (toilet paper, soap, etc.)"""
+    """Create manual shopping list item (toilet paper, soap, etc.)
+
+    Also used as a manual override when checking off auto-generated items —
+    creating a manual item with checked=True suppresses the auto-generated version.
+    """
     name: str = Field(..., min_length=1, max_length=100)
     quantity: float = Field(..., gt=0)
     unit: str = Field(..., min_length=1, max_length=20)
     category: str = Field(default="Other")
+    checked: bool = Field(default=False)
 
     class Config:
         json_schema_extra = {

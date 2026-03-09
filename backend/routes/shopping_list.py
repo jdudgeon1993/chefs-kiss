@@ -78,7 +78,7 @@ async def add_manual_item(
             'quantity': item.quantity,
             'unit': item.unit,
             'category': item.category,
-            'checked': False
+            'checked': item.checked
         })
 
         return result[0]['id']
