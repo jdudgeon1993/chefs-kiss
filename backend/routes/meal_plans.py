@@ -10,6 +10,7 @@ import logging
 
 from models.meal_plan import MealPlanCreate, MealPlanUpdate
 from utils.auth import get_current_household
+from utils.normalize import normalize_unit
 from db import get_db
 from state_manager import StateManager
 
@@ -210,6 +211,10 @@ async def mark_meal_cooked(
         recipe = recipe_data[0]
         ingredients = recipe.get('ingredients', []) or []
 
+        # Mark meal as cooked FIRST — prevents double-deduct on retry
+        # if depletion partially fails below
+        db.meal_plans.update_by_id(meal_id, {'is_cooked': True})
+
         # Deplete pantry for each ingredient
         for ingredient in ingredients:
             ing_name = ingredient.get('name', '')
@@ -223,10 +228,10 @@ async def mark_meal_cooked(
             # Find pantry item by name (case-insensitive) and unit
             pantry_items = db.pantry.find_by_name_ilike(household_id, ing_name)
 
-            # Filter by unit match
+            # Filter by unit match (normalized to handle oz/ounce, etc.)
             matching_items = [
                 item for item in pantry_items
-                if item.get('unit', '').lower() == ing_unit.lower()
+                if normalize_unit(item.get('unit', '')) == normalize_unit(ing_unit)
             ]
 
             if matching_items:
@@ -251,9 +256,6 @@ async def mark_meal_cooked(
                     else:
                         remaining -= loc_qty
                         db.pantry.update_location(location['id'], {'quantity': 0})
-
-        # Mark meal as cooked
-        db.meal_plans.update_by_id(meal_id, {'is_cooked': True})
 
     StateManager.update_and_invalidate(household_id, update)
 

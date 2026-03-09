@@ -18,6 +18,8 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 import redis
 import pickle
+
+from utils.normalize import normalize_name, normalize_unit, normalize_key
 import logging
 import os
 
@@ -84,9 +86,10 @@ class HouseholdState:
         self.manual_shopping_items = manual_shopping_items or []
 
         # O(1) lookup dictionaries (built once, used many times)
+        # Uses normalized names/units so "chicken breasts" matches "chicken breast"
         self._pantry_lookup: Dict[tuple, PantryItem] = {}
         for item in self.pantry_items:
-            key = (item.name.lower(), item.unit.lower())
+            key = (normalize_name(item.name), normalize_unit(item.unit))
             self._pantry_lookup[key] = item
 
         self._recipe_lookup: Dict[str, Recipe] = {}
@@ -146,7 +149,7 @@ class HouseholdState:
                 continue
 
             for ingredient in recipe.ingredients:
-                key = f"{ingredient.name.lower()}|{ingredient.unit.lower()}"
+                key = normalize_key(ingredient.name, ingredient.unit)
                 reserved[key] += ingredient.quantity * meal.serving_multiplier
 
         return dict(reserved)
@@ -175,7 +178,7 @@ class HouseholdState:
         # with the same name|unit key. The manual version takes precedence.
         manual_keys = set()
         for mi in self.manual_shopping_items:
-            manual_keys.add(f"{mi.name.lower()}|{mi.unit.lower()}")
+            manual_keys.add(normalize_key(mi.name, mi.unit))
 
         # Part 1: What meals need
         for key, needed_qty in self.reserved_ingredients.items():
@@ -208,7 +211,7 @@ class HouseholdState:
             if item.min_threshold <= 0:
                 continue  # No threshold set
 
-            key = f"{item.name.lower()}|{item.unit.lower()}"
+            key = normalize_key(item.name, item.unit)
 
             # Skip if user has a manual override for this item
             if key in manual_keys:
@@ -228,8 +231,8 @@ class HouseholdState:
             if key in added_keys:
                 # Already have a meal shortfall item — add threshold gap on top
                 for shop_item in shopping:
-                    if (shop_item.name.lower() == item.name.lower() and
-                        shop_item.unit.lower() == item.unit.lower()):
+                    if (normalize_name(shop_item.name) == normalize_name(item.name) and
+                        normalize_unit(shop_item.unit) == normalize_unit(item.unit)):
                         meal_qty = shop_item.quantity
                         shop_item.quantity = round(meal_qty + threshold_gap, 2)
                         shop_item.source = "Meals + Threshold"
@@ -280,7 +283,7 @@ class HouseholdState:
                 available = pantry_item.total_quantity if pantry_item else 0
 
                 # Subtract reserved ingredients
-                key = f"{ingredient.name.lower()}|{ingredient.unit.lower()}"
+                key = normalize_key(ingredient.name, ingredient.unit)
                 reserved = self.reserved_ingredients.get(key, 0)
 
                 actual_available = available - reserved
@@ -352,7 +355,7 @@ class HouseholdState:
             matching_recipes = []
             for recipe in self.recipes:
                 for ingredient in recipe.ingredients:
-                    if ingredient.name.lower() == exp_item['item_name'].lower():
+                    if normalize_name(ingredient.name) == normalize_name(exp_item['item_name']):
                         matching_recipes.append({
                             "id": recipe.id,
                             "name": recipe.name,
@@ -442,8 +445,8 @@ class HouseholdState:
     # ===== HELPER METHODS =====
 
     def _find_pantry_item(self, name: str, unit: str) -> Optional[PantryItem]:
-        """Find pantry item by name and unit — O(1) dictionary lookup"""
-        return self._pantry_lookup.get((name.lower(), unit.lower()))
+        """Find pantry item by name and unit — O(1) normalized lookup"""
+        return self._pantry_lookup.get((normalize_name(name), normalize_unit(unit)))
 
     def _get_recipe(self, recipe_id: str) -> Optional[Recipe]:
         """Get recipe by ID — O(1) dictionary lookup"""
@@ -516,7 +519,7 @@ class StateManager:
 
         def load_meals():
             try:
-                rows = db.meal_plans.get_upcoming(household_id, date.today().isoformat())
+                rows = db.meal_plans.get_active(household_id, date.today().isoformat())
                 plans = []
                 for meal_data in rows:
                     try:

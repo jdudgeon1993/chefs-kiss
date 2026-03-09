@@ -158,6 +158,15 @@ class MealPlanProvider(ABC):
         ...
 
     @abstractmethod
+    def get_active(self, household_id: str, from_date: str) -> List[dict]:
+        """Get upcoming meal plans + any past uncooked meals.
+
+        Past meals should remain visible and cookable until the user
+        explicitly marks them cooked or deletes them.
+        """
+        ...
+
+    @abstractmethod
     def get_by_id(self, meal_id: str, household_id: str) -> List[dict]:
         """Get a specific meal plan."""
         ...
