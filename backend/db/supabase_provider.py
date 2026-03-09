@@ -201,6 +201,14 @@ class SupabaseMealPlanProvider(MealPlanProvider):
             .execute()
         return resp.data
 
+    def get_active(self, household_id: str, from_date: str) -> List[dict]:
+        resp = self._client.table('meal_plans')\
+            .select('*')\
+            .eq('household_id', household_id)\
+            .or_(f'planned_date.gte.{from_date},is_cooked.eq.false')\
+            .execute()
+        return resp.data
+
     def get_by_id(self, meal_id: str, household_id: str) -> List[dict]:
         resp = self._client.table('meal_plans')\
             .select('*')\

@@ -516,7 +516,7 @@ class StateManager:
 
         def load_meals():
             try:
-                rows = db.meal_plans.get_upcoming(household_id, date.today().isoformat())
+                rows = db.meal_plans.get_active(household_id, date.today().isoformat())
                 plans = []
                 for meal_data in rows:
                     try:
