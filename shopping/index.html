@@ -116,6 +116,40 @@
   <div id="modal-root"></div>
 
   <!-- Modal Templates -->
+  <template id="tpl-edit-shopping-modal">
+    <div class="modal-overlay" onclick="closeModal()">
+      <div class="modal-content edit-shopping-modal" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <h2>Edit Shopping Item</h2>
+        <p class="help-text" data-field="source-note" style="margin-bottom:0.75rem;font-size:0.8rem;display:none;"></p>
+        <form id="edit-shopping-form">
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="edit-item-name" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Quantity</label>
+              <input type="number" id="edit-item-qty" step="0.1" min="0.1" required>
+            </div>
+            <div class="form-group">
+              <label>Unit</label>
+              <input type="text" id="edit-item-unit" placeholder="lb, oz, etc" list="unit-suggestions">
+            </div>
+            <div class="form-group">
+              <label>Category</label>
+              <select id="edit-item-category"></select>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary" data-field="submit-btn">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </template>
+
   <template id="tpl-checkout-modal">
     <div class="modal-overlay" onclick="closeModal()">
       <div class="modal-content checkout-modal" onclick="event.stopPropagation()">
