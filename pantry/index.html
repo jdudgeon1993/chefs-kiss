@@ -163,6 +163,57 @@
   <div id="modal-root"></div>
 
   <!-- Modal Templates -->
+  <template id="tpl-ingredient-modal">
+    <div class="modal-overlay" onclick="closeModal()">
+      <div class="modal-content ingredient-modal" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <h2 data-field="heading">Add Pantry Item</h2>
+        <form id="ingredient-form">
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="ing-name" required list="ingredient-suggestions">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Category</label>
+              <select id="ing-category"></select>
+            </div>
+            <div class="form-group">
+              <label>Unit</label>
+              <input type="text" id="ing-unit" placeholder="lb, oz, etc" list="unit-suggestions">
+            </div>
+            <div class="form-group">
+              <label>Min Stock</label>
+              <input type="number" id="ing-min" value="0" step="0.1" min="0">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Preferred Store</label>
+            <input type="text" id="ing-preferred-store" placeholder="e.g. Costco, Trader Joe's" list="store-suggestions">
+          </div>
+          <div class="form-group">
+            <label>Locations &amp; Quantities</label>
+            <div id="locations-list"></div>
+            <button type="button" class="btn-secondary btn-sm" onclick="addLocationRowWithDropdown()">+ Add Location</button>
+          </div>
+          <div class="form-actions" data-field="actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-location-row">
+    <div class="location-row">
+      <select class="loc-name"></select>
+      <input type="number" class="loc-qty" value="1" step="0.1" min="0" placeholder="Qty">
+      <input type="date" class="loc-expiry">
+      <button type="button" class="btn-icon btn-remove" onclick="this.parentElement.remove()">&times;</button>
+    </div>
+  </template>
+
   <template id="tpl-quick-use-modal">
     <div class="modal-overlay" onclick="closeModal()">
       <div class="modal-content quick-use-modal" onclick="event.stopPropagation()">

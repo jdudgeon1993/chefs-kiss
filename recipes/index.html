@@ -112,5 +112,85 @@
   </div>
 
   <div id="modal-root"></div>
+
+  <!-- Modal Templates -->
+  <template id="tpl-recipe-modal">
+    <div class="modal-overlay" onclick="closeModal()">
+      <div class="modal-content recipe-modal" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <h2 data-field="heading">Add Recipe</h2>
+        <form id="recipe-form">
+          <div class="form-group">
+            <label>Recipe Name</label>
+            <input type="text" id="recipe-name" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Servings</label>
+              <input type="number" id="recipe-servings" value="4" min="1">
+            </div>
+            <div class="form-group">
+              <label>Category</label>
+              <select id="recipe-category">
+                <option value="Breakfast">Breakfast</option>
+                <option value="Brunch">Brunch</option>
+                <option value="Lunch">Lunch</option>
+                <option value="Dinner">Dinner</option>
+                <option value="Lunch & Dinner">Lunch &amp; Dinner</option>
+                <option value="Breakfast & Lunch">Breakfast &amp; Lunch</option>
+                <option value="Appetizer">Appetizer</option>
+                <option value="Side">Side</option>
+                <option value="Dessert">Dessert</option>
+                <option value="Snack">Snack</option>
+                <option value="Beverage">Beverage</option>
+                <option value="Sauce & Dressing">Sauce &amp; Dressing</option>
+                <option value="Soup & Stew">Soup &amp; Stew</option>
+                <option value="Salad">Salad</option>
+                <option value="Baked Goods">Baked Goods</option>
+                <option value="Meal Prep">Meal Prep</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Tags (comma separated)</label>
+              <input type="text" id="recipe-tags" placeholder="Italian, Quick, etc">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Ingredients</label>
+            <div id="ingredients-list"></div>
+            <button type="button" class="btn-secondary btn-sm" onclick="addIngredientRow()">+ Add Ingredient</button>
+          </div>
+          <div class="form-group">
+            <label>Instructions</label>
+            <textarea id="recipe-instructions" rows="5"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Photo</label>
+            <div class="photo-upload-row" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+              <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0;" for="recipe-photo-file">Upload File</label>
+              <input type="file" id="recipe-photo-file" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none;">
+              <span style="opacity:0.5;font-size:0.85rem;">or</span>
+              <input type="url" id="recipe-photo-url" placeholder="Paste URL" style="flex:1;min-width:150px;">
+            </div>
+            <div id="photo-upload-status" style="font-size:0.8rem;margin-top:0.25rem;"></div>
+            <img id="recipe-photo-preview" style="display:none;max-width:100%;max-height:120px;border-radius:8px;margin-top:0.5rem;object-fit:cover;">
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-ingredient-row">
+    <div class="ingredient-row">
+      <input type="text" class="ing-name" placeholder="Ingredient" list="ingredient-suggestions">
+      <input type="number" class="ing-qty" value="1" step="0.1" min="0">
+      <input type="text" class="ing-unit" placeholder="unit" list="unit-suggestions">
+    </div>
+  </template>
 </body>
 </html>

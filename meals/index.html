@@ -95,6 +95,45 @@
   <div id="modal-root"></div>
 
   <!-- Modal Templates -->
+  <template id="tpl-day-modal">
+    <div class="modal-overlay" onclick="closeModal()">
+      <div class="modal-content day-modal" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <h2 data-field="heading"></h2>
+        <div class="scheduled-meals" data-field="meals"></div>
+        <hr>
+        <h3>Add Meal</h3>
+        <form id="add-meal-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Recipe</label>
+              <select id="meal-recipe" required>
+                <option value="">Select recipe...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Meal Type</label>
+              <select id="meal-type">
+                <option value="Breakfast">Breakfast</option>
+                <option value="Lunch">Lunch</option>
+                <option value="Dinner" selected>Dinner</option>
+                <option value="Snack">Snack</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">Add to Plan</button>
+        </form>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-scheduled-meal-row">
+    <div class="scheduled-meal-row">
+      <span data-field="label"></span>
+      <button type="button" class="btn-sm btn-danger" data-action="remove">Remove</button>
+    </div>
+  </template>
+
   <template id="tpl-cook-now-modal">
     <div class="modal-overlay" onclick="closeModal()">
       <div class="modal-content cook-modal" onclick="event.stopPropagation()">
