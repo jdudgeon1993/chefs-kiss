@@ -25,6 +25,19 @@
   flex-direction: column;
 }
 
+/* Offline Banner */
+.focus-offline-banner {
+  background: #FFF3CD;
+  color: #856404;
+  text-align: center;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 12px;
+  border: 1px solid #FFEEBA;
+}
+
 /* Header */
 .focus-header {
   text-align: center;
