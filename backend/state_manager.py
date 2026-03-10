@@ -17,13 +17,13 @@ from datetime import datetime, date, timedelta
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 import redis
-import pickle
+import json
 
 from utils.normalize import normalize_name, normalize_unit, normalize_key
 import logging
 import os
 
-from models.pantry import PantryItem
+from models.pantry import PantryItem, PantryLocation
 from models.recipe import Recipe
 from models.meal_plan import MealPlan
 from models.shopping import ShoppingItem
@@ -40,7 +40,7 @@ try:
         # Railway/production environment
         redis_client = redis.from_url(
             redis_url,
-            decode_responses=False,  # We use pickle for complex objects
+            decode_responses=False,  # Raw bytes for JSON cache values
             socket_connect_timeout=2
         )
         logger.info("🔗 Connecting to Redis via REDIS_URL...")
@@ -77,7 +77,8 @@ class HouseholdState:
         pantry_items: List[PantryItem],
         recipes: List[Recipe],
         meal_plans: List[MealPlan],
-        manual_shopping_items: List[ShoppingItem] = None
+        manual_shopping_items: List[ShoppingItem] = None,
+        _skip_calculate: bool = False
     ):
         self.household_id = household_id
         self.pantry_items = pantry_items
@@ -103,8 +104,48 @@ class HouseholdState:
 
         self.last_updated = datetime.now()
 
-        # Calculate everything on initialization
-        self.calculate_all()
+        # Calculate everything on initialization (unless restoring from cache)
+        if not _skip_calculate:
+            self.calculate_all()
+
+    def to_cache_dict(self) -> dict:
+        """Serialize state to a JSON-safe dictionary for Redis caching."""
+        return {
+            "household_id": self.household_id,
+            "pantry_items": [item.model_dump(mode='json') for item in self.pantry_items],
+            "recipes": [recipe.model_dump(mode='json') for recipe in self.recipes],
+            "meal_plans": [meal.model_dump(mode='json') for meal in self.meal_plans],
+            "manual_shopping_items": [item.model_dump(mode='json') for item in self.manual_shopping_items],
+            "reserved_ingredients": self.reserved_ingredients,
+            "shopping_list": [item.model_dump(mode='json') for item in self.shopping_list],
+            "ready_to_cook_recipe_ids": self.ready_to_cook_recipe_ids,
+            "last_updated": self.last_updated.isoformat()
+        }
+
+    @classmethod
+    def from_cache_dict(cls, data: dict) -> 'HouseholdState':
+        """Restore state from a cached JSON dictionary (skips recalculation)."""
+        pantry_items = [PantryItem.model_validate(item) for item in data["pantry_items"]]
+        recipes = [Recipe.model_validate(recipe) for recipe in data["recipes"]]
+        meal_plans = [MealPlan.model_validate(meal) for meal in data["meal_plans"]]
+        manual_shopping = [ShoppingItem.model_validate(item) for item in data.get("manual_shopping_items", [])]
+
+        state = cls(
+            household_id=data["household_id"],
+            pantry_items=pantry_items,
+            recipes=recipes,
+            meal_plans=meal_plans,
+            manual_shopping_items=manual_shopping,
+            _skip_calculate=True
+        )
+
+        # Restore pre-calculated values
+        state.reserved_ingredients = data["reserved_ingredients"]
+        state.shopping_list = [ShoppingItem.model_validate(item) for item in data.get("shopping_list", [])]
+        state.ready_to_cook_recipe_ids = data.get("ready_to_cook_recipe_ids", [])
+        state.last_updated = datetime.fromisoformat(data["last_updated"])
+
+        return state
 
     def calculate_all(self):
         """
@@ -426,11 +467,12 @@ class HouseholdState:
         )
         expiring_soon = len(self.get_expiring_soon(days=3))
 
-        # Calculate health score (0-100)
+        # Calculate health score (0-100), proportional to pantry size
         health_score = 100
-        health_score -= below_threshold * 10  # -10 per item below threshold
-        health_score -= expiring_soon * 5  # -5 per expiring item
-        health_score = max(0, health_score)
+        if total_items > 0:
+            health_score -= (below_threshold / total_items) * 50
+            health_score -= (expiring_soon / total_items) * 30
+        health_score = max(0, round(health_score))
 
         return {
             "total_items": total_items,
@@ -477,7 +519,7 @@ class StateManager:
 
                 if cached_data:
                     logger.info(f"💰 Cache HIT for household {household_id}")
-                    return pickle.loads(cached_data)
+                    return HouseholdState.from_cache_dict(json.loads(cached_data))
             except Exception as e:
                 logger.warning(f"Cache read error: {e}")
 
@@ -492,7 +534,7 @@ class StateManager:
                 redis_client.setex(
                     cache_key,
                     cls.CACHE_TTL,
-                    pickle.dumps(state)
+                    json.dumps(state.to_cache_dict())
                 )
                 logger.info(f"💾 Cached state for household {household_id}")
             except Exception as e:

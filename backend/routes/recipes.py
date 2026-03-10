@@ -215,7 +215,18 @@ async def update_recipe(
 
     StateManager.update_and_invalidate(household_id, update)
 
-    # Return fresh state
+    # For metadata-only updates (favorite, tags), skip the expensive full-state
+    # reload. These don't affect calculated fields (shopping list, ready-to-cook).
+    is_metadata_only = (
+        recipe.ingredients is None and
+        recipe.name is None and
+        recipe.servings is None
+    )
+
+    if is_metadata_only:
+        return {"success": True}
+
+    # Full edit (ingredients/name/servings changed) — return fresh state
     state = StateManager.get_state(household_id)
 
     return {
