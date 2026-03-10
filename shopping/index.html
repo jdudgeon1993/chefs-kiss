@@ -22,6 +22,14 @@
   <script src="../js/realtime.js"></script>
   <script defer src="../js/app.js"></script>
   <script src="../js/shopping-focus-mode.js"></script>
+  <script>
+    // Register service worker for offline shopping list support
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('../service-worker.js')
+        .then(reg => console.log('SW registered:', reg.scope))
+        .catch(err => console.warn('SW registration failed:', err));
+    }
+  </script>
 
 </head>
 <body data-section="shopping">

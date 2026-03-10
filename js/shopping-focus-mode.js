@@ -20,6 +20,9 @@ class ShoppingFocusMode {
     this.overlay = null;
     this._updateHandler = null;
     this.groupMode = 'category'; // 'category' or 'store'
+    this._offline = !navigator.onLine;
+    this._onlineHandler = () => { this._offline = false; this._updateOfflineBanner(); };
+    this._offlineHandler = () => { this._offline = true; this._updateOfflineBanner(); };
   }
 
   /**
@@ -44,6 +47,11 @@ class ShoppingFocusMode {
 
     // Listen for shopping list updates from main app
     this.subscribeToUpdates();
+
+    // Listen for online/offline changes
+    this._offline = !navigator.onLine;
+    window.addEventListener('online', this._onlineHandler);
+    window.addEventListener('offline', this._offlineHandler);
 
     if (window.showToast) {
       window.showToast('Focus mode active', 'info', 2000);
@@ -70,6 +78,10 @@ class ShoppingFocusMode {
     // Unsubscribe from updates
     this.unsubscribeFromUpdates();
 
+    // Remove online/offline listeners
+    window.removeEventListener('online', this._onlineHandler);
+    window.removeEventListener('offline', this._offlineHandler);
+
     // Restore body scrolling
     document.body.style.overflow = '';
 
@@ -90,6 +102,25 @@ class ShoppingFocusMode {
     } catch (error) {
       console.error('Failed to load shopping list:', error);
       this.shoppingList = [];
+    }
+  }
+
+  /**
+   * Update offline banner without full re-render (avoids losing scroll position)
+   */
+  _updateOfflineBanner() {
+    if (!this.overlay) return;
+    const existing = this.overlay.querySelector('#focus-offline-banner');
+    if (this._offline && !existing) {
+      const banner = document.createElement('div');
+      banner.className = 'focus-offline-banner';
+      banner.id = 'focus-offline-banner';
+      banner.textContent = "📡 You're offline — showing cached list. Changes will sync when back online.";
+      const container = this.overlay.querySelector('.focus-container');
+      if (container) container.prepend(banner);
+    } else if (!this._offline && existing) {
+      existing.remove();
+      if (window.showToast) window.showToast('Back online!', 'success', 2000);
     }
   }
 
@@ -185,6 +216,13 @@ class ShoppingFocusMode {
 
     this.overlay.innerHTML = `
       <div class="focus-container">
+        <!-- Offline Banner -->
+        ${this._offline ? `
+          <div class="focus-offline-banner" id="focus-offline-banner">
+            📡 You're offline — showing cached list. Changes will sync when back online.
+          </div>
+        ` : ''}
+
         <!-- Header -->
         <div class="focus-header">
           <h1>Shopping List</h1>
@@ -366,9 +404,27 @@ class ShoppingFocusMode {
           body: JSON.stringify({ checked })
         });
       } else {
-        // Auto-generated item — persist in localStorage (shared with main app)
-        if (typeof setLocalCheckedItem === 'function') {
-          setLocalCheckedItem(itemKey, checked);
+        // Auto-generated item — create manual override in backend
+        // so checked state syncs across devices (same as main app)
+        try {
+          await API.call('/shopping-list/items', {
+            method: 'POST',
+            body: JSON.stringify({
+              name: item.name,
+              quantity: item.quantity,
+              unit: item.unit,
+              category: item.category || 'Other',
+              checked: checked
+            })
+          });
+          if (typeof setLocalCheckedItem === 'function') {
+            setLocalCheckedItem(itemKey, false); // clear localStorage since backend owns it now
+          }
+        } catch {
+          // Offline fallback — persist in localStorage
+          if (typeof setLocalCheckedItem === 'function') {
+            setLocalCheckedItem(itemKey, checked);
+          }
         }
       }
 
