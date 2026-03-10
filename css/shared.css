@@ -3100,6 +3100,12 @@ body[data-section] .floating-action-menu {
     margin-bottom: 0.75rem;
   }
 
+  /* Hide expert-level pantry columns on mobile — RS and AVAIL */
+  .ledger-col-reserved,
+  .ledger-col-available {
+    display: none;
+  }
+
   /* Modal Responsive - Center on viewport */
   .modal-overlay {
     align-items: center;
