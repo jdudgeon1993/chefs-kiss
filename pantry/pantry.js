@@ -88,8 +88,8 @@
       grouped[item.category].push(item);
     });
 
-    // Calculate reserved quantities
-    const reserved = window.calculateReservedIngredients ? window.calculateReservedIngredients() : {};
+    // Reserved quantities from backend API (set during loadMealPlans)
+    const reserved = window.reservedIngredients || {};
 
     // Build single unified ledger table
     ledgerDisplay.innerHTML = '';

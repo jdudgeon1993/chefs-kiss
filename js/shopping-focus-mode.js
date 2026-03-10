@@ -236,9 +236,9 @@ class ShoppingFocusMode {
           </div>
 
           <!-- Group Toggle -->
-          <div class="focus-group-toggle" style="display:flex;gap:0.5rem;justify-content:center;margin:0.5rem 0;">
-            <button class="focus-btn ${this.groupMode === 'category' ? 'primary' : 'secondary'}" style="padding:0.25rem 0.75rem;font-size:0.8rem;" onclick="window.shoppingFocus.setGroupMode('category')">By Category</button>
-            <button class="focus-btn ${this.groupMode === 'store' ? 'primary' : 'secondary'}" style="padding:0.25rem 0.75rem;font-size:0.8rem;" onclick="window.shoppingFocus.setGroupMode('store')">By Store</button>
+          <div class="focus-group-toggle">
+            <button class="focus-toggle-btn ${this.groupMode === 'category' ? 'active' : ''}" onclick="window.shoppingFocus.setGroupMode('category')">By Category</button>
+            <button class="focus-toggle-btn ${this.groupMode === 'store' ? 'active' : ''}" onclick="window.shoppingFocus.setGroupMode('store')">By Store</button>
           </div>
 
           <!-- Quick Add -->

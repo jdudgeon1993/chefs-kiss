@@ -275,57 +275,8 @@ function renderRecipeList(recipes) {
    RESERVED INGREDIENTS CALCULATION
 ============================================================================ */
 
-/**
- * Calculate ingredients reserved by upcoming meal plans.
- * Returns object mapping "name|unit" keys to reserved quantities.
- */
-function calculateReservedIngredients() {
-  const reserved = {};
-
-  if (!window.planner || !window.recipes) {
-    return reserved;
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  // Iterate through planner (object with date keys)
-  Object.keys(window.planner).forEach(dateKey => {
-    // Parse date at noon to avoid timezone issues
-    const mealDate = new Date(dateKey + 'T12:00:00');
-    mealDate.setHours(0, 0, 0, 0);
-
-    // Skip past dates
-    if (mealDate < today) return;
-
-    const meals = window.planner[dateKey];
-    if (!Array.isArray(meals)) return;
-
-    meals.forEach(meal => {
-      // Skip cooked meals
-      if (meal.cooked) return;
-
-      // Find the recipe
-      const recipe = window.recipes.find(r =>
-        r.id === meal.recipeId || r.id === meal.recipe_id
-      );
-      if (!recipe || !recipe.ingredients) return;
-
-      // Add each ingredient to reserved
-      const multiplier = meal.servingMultiplier || meal.serving_multiplier || 1;
-      recipe.ingredients.forEach(ing => {
-        const key = `${(ing.name || '').toLowerCase()}|${(ing.unit || '').toLowerCase()}`;
-        const qty = (ing.qty || ing.quantity || 0) * multiplier;
-        reserved[key] = (reserved[key] || 0) + qty;
-      });
-    });
-  });
-
-  return reserved;
-}
-
-// Expose globally for pantry ledger script
-window.calculateReservedIngredients = calculateReservedIngredients;
+// Reserved ingredients are now sourced from the backend API response
+// (stored in window.reservedIngredients during loadMealPlans)
 
 /* ============================================================================
    MEAL PLAN FUNCTIONS
@@ -365,6 +316,10 @@ async function loadMealPlans() {
 
     // Store globally for meal planning script
     window.planner = plannerByDate;
+
+    // Store reserved ingredients from backend (authoritative calculation)
+    window.reservedIngredients = response.reserved_ingredients || {};
+
     renderMealCalendar(meals);
 
     // Reload calendar if available
