@@ -908,55 +908,25 @@ function openCheckoutModal() {
   const savedLocations = getSavedLocations();
   const savedCategories = getSavedCategories();
 
+  // Create option sets once as DocumentFragments, then clone per item
+  const locationOptionsFragment = document.createDocumentFragment();
+  savedLocations.forEach(loc => {
+    const opt = document.createElement('option');
+    opt.value = loc;
+    opt.textContent = loc;
+    locationOptionsFragment.appendChild(opt);
+  });
+
+  const categoryOptionsFragment = document.createDocumentFragment();
+  savedCategories.forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    opt.textContent = cat;
+    categoryOptionsFragment.appendChild(opt);
+  });
+
   const tpl = document.getElementById('tpl-checkout-modal');
   const tplItem = document.getElementById('tpl-checkout-item');
-
-  if (!tpl || !tplItem) {
-    // Fallback: inline HTML for pages without the template
-    const locationOptions = savedLocations.map(loc => `<option value="${loc}">${loc}</option>`).join('');
-    const categoryOptions = savedCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-    const itemsHTML = checkedItems.map((item, idx) => `
-      <div class="checkout-item" data-idx="${idx}">
-        <div class="checkout-item-header">
-          <strong>${item.name}</strong>
-          <span>${item.quantity} ${item.unit}</span>
-        </div>
-        <div class="checkout-item-fields">
-          <div class="checkout-field">
-            <label>Location</label>
-            <select class="checkout-location">${locationOptions}</select>
-          </div>
-          <div class="checkout-field">
-            <label>Category</label>
-            <select class="checkout-category">${categoryOptions.replace(`value="${item.category}"`, `value="${item.category}" selected`)}</select>
-          </div>
-          <div class="checkout-field">
-            <label>Quantity</label>
-            <input type="number" class="checkout-qty" value="${item.quantity}" min="0.1" step="0.1">
-          </div>
-          <div class="checkout-field">
-            <label>Expiration</label>
-            <input type="date" class="checkout-expiry" value="">
-          </div>
-        </div>
-      </div>
-    `).join('');
-    modalRoot.innerHTML = `
-      <div class="modal-overlay" onclick="closeModal()">
-        <div class="modal-content checkout-modal" onclick="event.stopPropagation()">
-          <button class="modal-close" onclick="closeModal()">&times;</button>
-          <h2>🛒 Checkout - Add to Pantry</h2>
-          <p class="help-text">Confirm details for each item before adding to your pantry.</p>
-          <div class="checkout-items">${itemsHTML}</div>
-          <div class="form-actions">
-            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-            <button type="button" class="btn btn-primary" onclick="confirmCheckout()">Add All to Pantry</button>
-          </div>
-        </div>
-      </div>
-    `;
-    return;
-  }
 
   // Clone the modal shell from template
   const clone = tpl.content.cloneNode(true);
@@ -970,24 +940,15 @@ function openCheckoutModal() {
     row.querySelector('[data-field="qty-unit"]').textContent = `${item.quantity} ${item.unit}`;
     row.querySelector('.checkout-qty').value = item.quantity;
 
-    // Populate location options
+    // Clone pre-built location options
     const locSelect = row.querySelector('.checkout-location');
-    savedLocations.forEach(loc => {
-      const opt = document.createElement('option');
-      opt.value = loc;
-      opt.textContent = loc;
-      locSelect.appendChild(opt);
-    });
+    locSelect.appendChild(locationOptionsFragment.cloneNode(true));
 
-    // Populate category options, pre-select matching category
+    // Clone pre-built category options and pre-select matching category
     const catSelect = row.querySelector('.checkout-category');
-    savedCategories.forEach(cat => {
-      const opt = document.createElement('option');
-      opt.value = cat;
-      opt.textContent = cat;
-      if (cat === item.category) opt.selected = true;
-      catSelect.appendChild(opt);
-    });
+    catSelect.appendChild(categoryOptionsFragment.cloneNode(true));
+    const match = catSelect.querySelector(`option[value="${CSS.escape(item.category)}"]`);
+    if (match) match.selected = true;
 
     itemsContainer.appendChild(row);
   });
