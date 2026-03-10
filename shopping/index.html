@@ -114,5 +114,48 @@
   </div>
 
   <div id="modal-root"></div>
+
+  <!-- Modal Templates -->
+  <template id="tpl-checkout-modal">
+    <div class="modal-overlay" onclick="closeModal()">
+      <div class="modal-content checkout-modal" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <h2>🛒 Checkout - Add to Pantry</h2>
+        <p class="help-text">Confirm details for each item before adding to your pantry.</p>
+        <div class="checkout-items" data-field="items"></div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="confirmCheckout()">Add All to Pantry</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-checkout-item">
+    <div class="checkout-item">
+      <div class="checkout-item-header">
+        <strong data-field="name"></strong>
+        <span data-field="qty-unit"></span>
+      </div>
+      <div class="checkout-item-fields">
+        <div class="checkout-field">
+          <label>Location</label>
+          <select class="checkout-location"></select>
+        </div>
+        <div class="checkout-field">
+          <label>Category</label>
+          <select class="checkout-category"></select>
+        </div>
+        <div class="checkout-field">
+          <label>Quantity</label>
+          <input type="number" class="checkout-qty" min="0.1" step="0.1">
+        </div>
+        <div class="checkout-field">
+          <label>Expiration</label>
+          <input type="date" class="checkout-expiry" value="">
+        </div>
+      </div>
+    </div>
+  </template>
 </body>
 </html>
