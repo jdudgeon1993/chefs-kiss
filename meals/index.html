@@ -93,5 +93,22 @@
   </div>
 
   <div id="modal-root"></div>
+
+  <!-- Modal Templates -->
+  <template id="tpl-cook-now-modal">
+    <div class="modal-overlay" onclick="closeModal()">
+      <div class="modal-content cook-modal" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <h2>Cook: <span data-field="recipeName"></span></h2>
+        <h3>Ingredients needed:</h3>
+        <ul data-field="ingredientsList"></ul>
+        <p>This will deduct ingredients from your pantry.</p>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button type="button" class="btn btn-primary" data-action="cook">Mark as Cooked</button>
+        </div>
+      </div>
+    </div>
+  </template>
 </body>
 </html>

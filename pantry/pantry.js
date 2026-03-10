@@ -108,8 +108,8 @@
             <th class="ledger-col-category">CATEGORY</th>
             <th class="ledger-col-item">ITEM</th>
             <th class="ledger-col-qty">OH</th>
-            <th class="ledger-col-qty">RS</th>
-            <th class="ledger-col-qty">AVAIL</th>
+            <th class="ledger-col-qty ledger-col-reserved">RS</th>
+            <th class="ledger-col-qty ledger-col-available">AVAIL</th>
             <th class="ledger-col-qty">MIN</th>
             <th class="ledger-col-locations">LOCATIONS</th>
             <th class="ledger-col-expiry">EXPIRY</th>
@@ -184,8 +184,8 @@
             <td class="ledger-col-category">${categoryEmoji}</td>
             <td class="ledger-col-item"><strong>${item.name}</strong> <span class="item-unit">(${item.unit})</span></td>
             <td class="ledger-col-qty">${item.totalQty.toFixed(1)}</td>
-            <td class="ledger-col-qty">${reservedQty.toFixed(1)}</td>
-            <td class="ledger-col-qty ${isLowStock ? 'low-stock-value' : ''}">${available.toFixed(1)}</td>
+            <td class="ledger-col-qty ledger-col-reserved">${reservedQty.toFixed(1)}</td>
+            <td class="ledger-col-qty ledger-col-available ${isLowStock ? 'low-stock-value' : ''}">${available.toFixed(1)}</td>
             <td class="ledger-col-qty">${item.min}</td>
             <td class="ledger-col-locations">${locationsList}</td>
             <td class="ledger-col-expiry">${expiryHTML}</td>

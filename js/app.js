@@ -1484,27 +1484,39 @@ async function saveIngredient(itemId) {
  */
 function openQuickDepleteModal(item) {
   const modalRoot = document.getElementById('modal-root');
+  const tpl = document.getElementById('tpl-quick-use-modal');
   if (!modalRoot) return;
 
-  modalRoot.innerHTML = `
-    <div class="modal-overlay" onclick="closeModal()">
-      <div class="modal-content quick-use-modal" onclick="event.stopPropagation()">
-        <button class="modal-close" onclick="closeModal()">×</button>
-        <h2>Use ${item.name}</h2>
-        <p>Available: ${item.totalQty} ${item.unit}</p>
-        <form id="quick-use-form">
-          <div class="form-group">
-            <label>Amount to use</label>
-            <input type="number" id="use-amount" value="1" step="0.1" min="0.1" max="${item.totalQty}" required>
-          </div>
-          <div class="form-actions">
-            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-            <button type="submit" class="btn btn-primary">Use</button>
-          </div>
-        </form>
+  // Fall back to inline HTML if template not available (different page)
+  if (!tpl) {
+    modalRoot.innerHTML = `
+      <div class="modal-overlay" onclick="closeModal()">
+        <div class="modal-content quick-use-modal" onclick="event.stopPropagation()">
+          <button class="modal-close" onclick="closeModal()">&times;</button>
+          <h2>Use ${item.name}</h2>
+          <p>Available: ${item.totalQty} ${item.unit}</p>
+          <form id="quick-use-form">
+            <div class="form-group">
+              <label>Amount to use</label>
+              <input type="number" id="use-amount" value="1" step="0.1" min="0.1" max="${item.totalQty}" required>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary">Use</button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
-  `;
+    `;
+  } else {
+    const clone = tpl.content.cloneNode(true);
+    clone.querySelector('[data-field="name"]').textContent = item.name;
+    clone.querySelector('[data-field="totalQty"]').textContent = item.totalQty;
+    clone.querySelector('[data-field="unit"]').textContent = item.unit;
+    clone.querySelector('[data-attr-max="totalQty"]').max = item.totalQty;
+    modalRoot.innerHTML = '';
+    modalRoot.appendChild(clone);
+  }
 
   const form = document.getElementById('quick-use-form');
   form.onsubmit = async (e) => {
@@ -1862,27 +1874,45 @@ async function removeMealFromDay(dateKey, mealId) {
  */
 function openCookNowModal(recipe, dateKey, mealId) {
   const modalRoot = document.getElementById('modal-root');
+  const tpl = document.getElementById('tpl-cook-now-modal');
   if (!modalRoot) return;
 
-  const ingredientsHTML = (recipe.ingredients || []).map(ing => `
-    <li>${ing.qty || ing.quantity} ${ing.unit} ${ing.name}</li>
-  `).join('');
-
-  modalRoot.innerHTML = `
-    <div class="modal-overlay" onclick="closeModal()">
-      <div class="modal-content cook-modal" onclick="event.stopPropagation()">
-        <button class="modal-close" onclick="closeModal()">×</button>
-        <h2>Cook: ${recipe.name}</h2>
-        <h3>Ingredients needed:</h3>
-        <ul>${ingredientsHTML}</ul>
-        <p>This will deduct ingredients from your pantry.</p>
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-          <button type="button" class="btn btn-primary" onclick="markMealCooked('${dateKey}', '${mealId}')">Mark as Cooked</button>
+  if (!tpl) {
+    // Fallback for pages without the template
+    const ingredientsHTML = (recipe.ingredients || []).map(ing => `
+      <li>${ing.qty || ing.quantity} ${ing.unit} ${ing.name}</li>
+    `).join('');
+    modalRoot.innerHTML = `
+      <div class="modal-overlay" onclick="closeModal()">
+        <div class="modal-content cook-modal" onclick="event.stopPropagation()">
+          <button class="modal-close" onclick="closeModal()">&times;</button>
+          <h2>Cook: ${recipe.name}</h2>
+          <h3>Ingredients needed:</h3>
+          <ul>${ingredientsHTML}</ul>
+          <p>This will deduct ingredients from your pantry.</p>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="markMealCooked('${dateKey}', '${mealId}')">Mark as Cooked</button>
+          </div>
         </div>
       </div>
-    </div>
-  `;
+    `;
+  } else {
+    const clone = tpl.content.cloneNode(true);
+    clone.querySelector('[data-field="recipeName"]').textContent = recipe.name;
+
+    const list = clone.querySelector('[data-field="ingredientsList"]');
+    (recipe.ingredients || []).forEach(ing => {
+      const li = document.createElement('li');
+      li.textContent = `${ing.qty || ing.quantity} ${ing.unit} ${ing.name}`;
+      list.appendChild(li);
+    });
+
+    clone.querySelector('[data-action="cook"]').onclick = () => markMealCooked(dateKey, mealId);
+
+    modalRoot.innerHTML = '';
+    modalRoot.appendChild(clone);
+  }
 }
 
 /**
@@ -2045,11 +2075,8 @@ async function loadApp() {
         updateLoaderProgress(90);
         break;
       case 'shopping':
-        // Load pantry data too — needed for checkout to match existing items
-        await Promise.all([
-          loadShoppingList().then(() => updateLoaderProgress(70)),
-          loadPantry().then(() => updateLoaderProgress(85))
-        ]);
+        // Pantry is fetched on-demand by confirmCheckout() — no need to load upfront
+        await loadShoppingList();
         updateLoaderProgress(90);
         break;
     }
