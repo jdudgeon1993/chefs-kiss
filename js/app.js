@@ -905,63 +905,95 @@ function openCheckoutModal() {
   const modalRoot = document.getElementById('modal-root');
   if (!modalRoot) return;
 
-  // Get saved locations and categories
   const savedLocations = getSavedLocations();
   const savedCategories = getSavedCategories();
 
-  const locationOptions = savedLocations.map(loc => `<option value="${loc}">${loc}</option>`).join('');
-  const categoryOptions = savedCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+  const tpl = document.getElementById('tpl-checkout-modal');
+  const tplItem = document.getElementById('tpl-checkout-item');
 
-  // Build item rows
-  const itemsHTML = checkedItems.map((item, idx) => `
-    <div class="checkout-item" data-idx="${idx}">
-      <div class="checkout-item-header">
-        <strong>${item.name}</strong>
-        <span>${item.quantity} ${item.unit}</span>
-      </div>
-      <div class="checkout-item-fields">
-        <div class="checkout-field">
-          <label>Location</label>
-          <select class="checkout-location">
-            ${locationOptions}
-          </select>
+  if (!tpl || !tplItem) {
+    // Fallback: inline HTML for pages without the template
+    const locationOptions = savedLocations.map(loc => `<option value="${loc}">${loc}</option>`).join('');
+    const categoryOptions = savedCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+    const itemsHTML = checkedItems.map((item, idx) => `
+      <div class="checkout-item" data-idx="${idx}">
+        <div class="checkout-item-header">
+          <strong>${item.name}</strong>
+          <span>${item.quantity} ${item.unit}</span>
         </div>
-        <div class="checkout-field">
-          <label>Category</label>
-          <select class="checkout-category">
-            ${categoryOptions.replace(`value="${item.category}"`, `value="${item.category}" selected`)}
-          </select>
-        </div>
-        <div class="checkout-field">
-          <label>Quantity</label>
-          <input type="number" class="checkout-qty" value="${item.quantity}" min="0.1" step="0.1">
-        </div>
-        <div class="checkout-field">
-          <label>Expiration</label>
-          <input type="date" class="checkout-expiry" value="">
-        </div>
-      </div>
-    </div>
-  `).join('');
-
-  modalRoot.innerHTML = `
-    <div class="modal-overlay" onclick="closeModal()">
-      <div class="modal-content checkout-modal" onclick="event.stopPropagation()">
-        <button class="modal-close" onclick="closeModal()">×</button>
-        <h2>🛒 Checkout - Add to Pantry</h2>
-        <p class="help-text">Confirm details for each item before adding to your pantry.</p>
-
-        <div class="checkout-items">
-          ${itemsHTML}
-        </div>
-
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-          <button type="button" class="btn btn-primary" onclick="confirmCheckout()">Add All to Pantry</button>
+        <div class="checkout-item-fields">
+          <div class="checkout-field">
+            <label>Location</label>
+            <select class="checkout-location">${locationOptions}</select>
+          </div>
+          <div class="checkout-field">
+            <label>Category</label>
+            <select class="checkout-category">${categoryOptions.replace(`value="${item.category}"`, `value="${item.category}" selected`)}</select>
+          </div>
+          <div class="checkout-field">
+            <label>Quantity</label>
+            <input type="number" class="checkout-qty" value="${item.quantity}" min="0.1" step="0.1">
+          </div>
+          <div class="checkout-field">
+            <label>Expiration</label>
+            <input type="date" class="checkout-expiry" value="">
+          </div>
         </div>
       </div>
-    </div>
-  `;
+    `).join('');
+    modalRoot.innerHTML = `
+      <div class="modal-overlay" onclick="closeModal()">
+        <div class="modal-content checkout-modal" onclick="event.stopPropagation()">
+          <button class="modal-close" onclick="closeModal()">&times;</button>
+          <h2>🛒 Checkout - Add to Pantry</h2>
+          <p class="help-text">Confirm details for each item before adding to your pantry.</p>
+          <div class="checkout-items">${itemsHTML}</div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="confirmCheckout()">Add All to Pantry</button>
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  // Clone the modal shell from template
+  const clone = tpl.content.cloneNode(true);
+  const itemsContainer = clone.querySelector('[data-field="items"]');
+
+  // Populate each checkout item from the item template
+  checkedItems.forEach((item, idx) => {
+    const row = tplItem.content.cloneNode(true);
+    row.querySelector('.checkout-item').dataset.idx = idx;
+    row.querySelector('[data-field="name"]').textContent = item.name;
+    row.querySelector('[data-field="qty-unit"]').textContent = `${item.quantity} ${item.unit}`;
+    row.querySelector('.checkout-qty').value = item.quantity;
+
+    // Populate location options
+    const locSelect = row.querySelector('.checkout-location');
+    savedLocations.forEach(loc => {
+      const opt = document.createElement('option');
+      opt.value = loc;
+      opt.textContent = loc;
+      locSelect.appendChild(opt);
+    });
+
+    // Populate category options, pre-select matching category
+    const catSelect = row.querySelector('.checkout-category');
+    savedCategories.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = cat;
+      if (cat === item.category) opt.selected = true;
+      catSelect.appendChild(opt);
+    });
+
+    itemsContainer.appendChild(row);
+  });
+
+  modalRoot.innerHTML = '';
+  modalRoot.appendChild(clone);
 }
 
 /**
