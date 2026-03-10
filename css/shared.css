@@ -2832,10 +2832,7 @@ body[data-section] .floating-action-menu {
   }
 
   .header-datetime {
-    font-size: 0.75rem;
-    width: 100%;
-    order: 3;
-    margin-top: 0.5rem;
+    display: none; /* Phone has a clock — reclaim header space */
   }
 
   .header-nav {
@@ -2876,7 +2873,7 @@ body[data-section] .floating-action-menu {
 /* Mobile */
 @media (max-width: 768px) {
   body {
-    padding-top: 120px; /* Increased for header wrapping and larger buttons */
+    padding-top: 70px; /* Compact single-row header */
     padding-bottom: 70px; /* Space for bottom nav */
   }
 
@@ -2902,7 +2899,7 @@ body[data-section] .floating-action-menu {
 
   .site-header {
     padding: 0.5rem 0.75rem;
-    flex-wrap: wrap; /* Allow wrapping if needed */
+    flex-wrap: nowrap; /* Single-row header now that datetime is hidden */
   }
 
   .header-brand {
@@ -3073,9 +3070,29 @@ body[data-section] .floating-action-menu {
   }
 
   .btn-ledger-action {
-    width: 36px; /* Increased for better touch target */
-    height: 36px;
+    width: 44px;
+    height: 44px;
     font-size: 1.1rem;
+  }
+
+  /* Touch targets: enforce Apple 44px minimum on mobile */
+  .shopping-check {
+    width: 22px;
+    height: 22px;
+    /* Expand tap area via padding without growing visually */
+    padding: 11px;
+    box-sizing: content-box;
+  }
+
+  .shopping-remove,
+  .shopping-edit {
+    width: 44px;
+    height: 44px;
+  }
+
+  .btn-header-icon {
+    width: 44px;
+    height: 44px;
   }
 
   .pantry-controls {
