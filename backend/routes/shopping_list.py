@@ -137,7 +137,20 @@ async def update_shopping_item(
 
     StateManager.update_and_invalidate(household_id, update_item)
 
-    # Return fresh state
+    # For check-only updates, skip the expensive full-state reload.
+    # The frontend already updates the checkbox client-side.
+    is_check_only = (
+        update.checked is not None and
+        update.quantity is None and
+        update.name is None and
+        update.unit is None and
+        update.category is None
+    )
+
+    if is_check_only:
+        return {"success": True}
+
+    # Full edit (name/qty/unit/category changed) — return fresh state
     state = StateManager.get_state(household_id)
 
     return {
