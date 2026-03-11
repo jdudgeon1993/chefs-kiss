@@ -268,7 +268,7 @@ class ShoppingFocusMode {
               <h2>To Buy (${unchecked.length})</h2>
               ${Object.entries(uncheckedByCategory).map(([groupKey, items]) => `
                 <div class="focus-category">
-                  <div class="focus-category-header">${this.groupMode === 'store' ? '🏪' : this.getCategoryEmoji(groupKey)} ${groupKey}</div>
+                  <div class="focus-category-header">${this.groupMode === 'store' ? '🏪' : this.getCategoryEmoji(groupKey)} ${escapeHTML(groupKey)}</div>
                   <div class="focus-items">
                     ${items.map(item => this.renderItem(item, false)).join('')}
                   </div>
@@ -282,7 +282,7 @@ class ShoppingFocusMode {
               <h2>In Cart (${checked.length})</h2>
               ${Object.entries(checkedByCategory).map(([groupKey, items]) => `
                 <div class="focus-category">
-                  <div class="focus-category-header">${this.groupMode === 'store' ? '🏪' : this.getCategoryEmoji(groupKey)} ${groupKey}</div>
+                  <div class="focus-category-header">${this.groupMode === 'store' ? '🏪' : this.getCategoryEmoji(groupKey)} ${escapeHTML(groupKey)}</div>
                   <div class="focus-items">
                     ${items.map(item => this.renderItem(item, true)).join('')}
                   </div>
@@ -357,11 +357,14 @@ class ShoppingFocusMode {
    */
   renderItem(item, isChecked) {
     const itemKey = item.id || `${item.name}|${item.unit}`;
-    const safeKey = itemKey.replace(/'/g, "\\'");
+    const safeKey = escapeHTML(itemKey.replace(/'/g, "\\'"));
     const breakdownText = this._getBreakdownText(item);
+    const safeName = escapeHTML(item.name);
+    const safeUnit = escapeHTML(item.unit);
+    const safeSource = item.source ? escapeHTML(item.source) : '';
 
     return `
-      <div class="focus-item ${isChecked ? 'checked' : ''}" data-item-key="${itemKey}">
+      <div class="focus-item ${isChecked ? 'checked' : ''}" data-item-key="${escapeHTML(itemKey)}">
         <label class="focus-item-checkbox">
           <input
             type="checkbox"
@@ -371,12 +374,12 @@ class ShoppingFocusMode {
           <span class="checkmark"></span>
         </label>
         <div class="focus-item-content" onclick="window.shoppingFocus.openEditModal('${safeKey}')">
-          <div class="focus-item-name">${item.name}</div>
+          <div class="focus-item-name">${safeName}</div>
           <div class="focus-item-details">
-            <span class="focus-item-qty">${item.quantity} ${item.unit}</span>
-            ${item.source ? `<span class="focus-item-source">${item.source}</span>` : ''}
+            <span class="focus-item-qty">${item.quantity} ${safeUnit}</span>
+            ${safeSource ? `<span class="focus-item-source">${safeSource}</span>` : ''}
           </div>
-          ${breakdownText ? `<div class="focus-item-breakdown">${breakdownText}</div>` : ''}
+          ${breakdownText ? `<div class="focus-item-breakdown">${escapeHTML(breakdownText)}</div>` : ''}
         </div>
       </div>
     `;
@@ -759,7 +762,6 @@ class ShoppingFocusMode {
     };
 
     window.addEventListener('shopping-list-updated', this._updateHandler);
-    console.log('Focus mode: Listening for shopping list updates');
   }
 
   /**

@@ -2,6 +2,20 @@
    UTILITY FUNCTIONS — Extracted from app.js (Phase 3.2)
    ============================================================================ */
 
+/**
+ * Escape HTML special characters to prevent XSS when interpolating
+ * user data into innerHTML template literals.
+ */
+function escapeHTML(str) {
+  if (typeof str !== 'string') return str;
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function safeSetInnerHTMLById(id, html) {
   let el = document.getElementById(id);
   if (!el) {
@@ -58,7 +72,6 @@ function showError(message) {
 }
 
 function showSuccess(message) {
-  console.log('Success:', message);
   showToast(message, 'success');
 }
 

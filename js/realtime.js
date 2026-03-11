@@ -66,9 +66,7 @@ async function initRealtime() {
         handleRealtimeEvent('shopping', payload);
       })
       .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Realtime connected — live sync active');
           // Only show toast on first connection per session (not on every page switch)
           if (!sessionStorage.getItem('ck-realtime-connected')) {
             sessionStorage.setItem('ck-realtime-connected', '1');
@@ -89,13 +87,8 @@ async function initRealtime() {
 const _realtimeReloadTimers = {};
 
 function handleRealtimeEvent(section, payload) {
-  console.log(`📡 Realtime event: ${section} - ${payload.eventType}`, payload);
-
   // Skip if this was our own write (within debounce window)
-  if (Date.now() - _lastLocalWrite < LOCAL_WRITE_DEBOUNCE) {
-    console.log('  ↳ Skipped (local write debounce)');
-    return;
-  }
+  if (Date.now() - _lastLocalWrite < LOCAL_WRITE_DEBOUNCE) return;
 
   // Debounce: if multiple events fire for the same section within 500ms, batch them
   if (_realtimeReloadTimers[section]) {
@@ -122,8 +115,9 @@ async function reloadSection(section, eventType) {
         showToast(`Recipes ${actionLabel} by another user`, 'sync', 3000);
         break;
       case 'meals':
-        // Meal changes affect shopping list (ingredient needs)
+        // Meal changes affect shopping list (ingredient needs) and pantry RS column
         await Promise.all([loadMealPlans(), loadShoppingList()]);
+        if (window.renderPantryLedger) window.renderPantryLedger();
         showToast(`Meal plan ${actionLabel} by another user`, 'sync', 3000);
         break;
       case 'shopping':
@@ -156,10 +150,9 @@ function setupVisibilityReload() {
 
     _lastVisibilityReload = Date.now();
     const section = document.body.dataset.section || 'pantry';
-    console.log(`Tab visible — refreshing ${section} data`);
     try {
       switch (section) {
-        case 'pantry':   await loadPantry(); break;
+        case 'pantry':   await Promise.all([loadPantry(), loadMealPlans()]); if (window.renderPantryLedger) window.renderPantryLedger(); break;
         case 'recipes':  await loadRecipes(); break;
         case 'meals':    await Promise.all([loadRecipes(), loadMealPlans()]); break;
         case 'shopping': await loadShoppingList(); break;
