@@ -127,7 +127,7 @@
       const categoryEmoji = getCategoryEmoji(category);
       const totalOH = items.reduce((sum, item) => sum + item.totalQty, 0);
       const lowStockCount = items.filter(item => {
-        const key = `${item.name.toLowerCase()}|${item.unit.toLowerCase()}`;
+        const key = normalizeKey(item.name, item.unit);
         const reservedQty = reserved[key] || 0;
         const available = item.totalQty - reservedQty;
         return available < item.min;
@@ -157,7 +157,7 @@
         const itemGlobalIndex = allItems.length;
         allItems.push(item);
 
-        const key = `${item.name.toLowerCase()}|${item.unit.toLowerCase()}`;
+        const key = normalizeKey(item.name, item.unit);
         const reservedQty = reserved[key] || 0;
         const available = item.totalQty - reservedQty;
         const isLowStock = available < item.min;
