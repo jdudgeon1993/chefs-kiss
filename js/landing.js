@@ -298,8 +298,6 @@ function loadDemoAccount() {
     localStorage.setItem('recipes', JSON.stringify(DEMO_DATA.recipes));
     localStorage.setItem('planner', JSON.stringify(DEMO_DATA.planner));
 
-    console.log('✅ Demo mode activated — redirecting to app');
-
     // Navigate to the app (auth-guard allows demo mode through)
     window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/pantry/';
   } catch (err) {
@@ -320,8 +318,6 @@ function exitDemoMode() {
     localStorage.removeItem('pantry');
     localStorage.removeItem('recipes');
     localStorage.removeItem('planner');
-
-    console.log('✅ Demo mode exited — redirecting to landing');
 
     // Navigate back to landing page
     window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/index.html';
@@ -609,7 +605,6 @@ function initLandingPage() {
   // Show landing page for unauthenticated visitors
   updateLandingPageVisibility(false);
 
-  console.log('✅ Landing page initialized');
 }
 
 /* ===================================================================

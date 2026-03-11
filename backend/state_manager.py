@@ -12,7 +12,7 @@ This is where all the magic happens:
 One source of truth. Everything flows from here.
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from datetime import datetime, date, timedelta
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
@@ -23,7 +23,7 @@ from utils.normalize import normalize_name, normalize_unit, normalize_key
 import logging
 import os
 
-from models.pantry import PantryItem, PantryLocation
+from models.pantry import PantryItem
 from models.recipe import Recipe
 from models.meal_plan import MealPlan
 from models.shopping import ShoppingItem

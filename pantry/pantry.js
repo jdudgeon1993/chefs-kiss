@@ -346,6 +346,9 @@
     });
   }
 
+  // Expose render function so app.js can re-render after reserved ingredients load
+  window.renderPantryLedger = renderPantryLedger;
+
   // Expose function to reload category emojis (called when categories are added/removed)
   window.reloadCategoryEmojis = async function() {
     await loadCategoryEmojis();

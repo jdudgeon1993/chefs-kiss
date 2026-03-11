@@ -80,7 +80,7 @@ async function checkAuth() {
     }
     return true;
   } catch (error) {
-    console.log('Authentication check failed, clearing token:', error.message);
+    console.warn('Authentication check failed, clearing token:', error.message);
     API.clearToken();
     return false;
   }
@@ -632,28 +632,28 @@ function renderShoppingList(items) {
     const groupItems = groups[groupKey];
     html += `
       <div class="shopping-category">
-        <h3 class="category-title">${groupBy === 'store' ? '🏪 ' : ''}${groupKey}</h3>
+        <h3 class="category-title">${groupBy === 'store' ? '🏪 ' : ''}${escapeHTML(groupKey)}</h3>
         <div class="shopping-items">
           ${groupItems.map((item, idx) => {
-            const safeItemKey = item.itemKey.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const safeItemKey = escapeHTML(item.itemKey.replace(/'/g, "\\'").replace(/"/g, '&quot;'));
             return `
-            <div class="shopping-item ${item.isChecked ? 'checked' : ''}" data-key="${safeItemKey}" data-idx="${idx}">
+            <div class="shopping-item ${item.isChecked ? 'checked' : ''}" data-key="${escapeHTML(item.itemKey)}" data-idx="${idx}">
               <label class="shopping-checkbox">
                 <input
                   type="checkbox"
                   ${item.isChecked ? 'checked' : ''}
-                  onchange="toggleShoppingItem('${safeItemKey}', ${item.id ? `'${item.id}'` : 'null'}, this.checked)"
+                  onchange="toggleShoppingItem('${safeItemKey}', ${item.id ? `'${escapeHTML(item.id)}'` : 'null'}, this.checked)"
                 >
-                <span class="item-name">${item.name}</span>
-                <span class="item-qty">${item.quantity} ${item.unit}</span>
+                <span class="item-name">${escapeHTML(item.name)}</span>
+                <span class="item-qty">${item.quantity} ${escapeHTML(item.unit)}</span>
               </label>
-              ${item.source ? `<span class="item-source">${item.source}</span>` : ''}
-              ${groupBy !== 'store' && item.preferred_store ? `<span class="item-store-tag">${item.preferred_store}</span>` : ''}
-              ${groupBy === 'store' && item.category ? `<span class="item-source">${item.category}</span>` : ''}
+              ${item.source ? `<span class="item-source">${escapeHTML(item.source)}</span>` : ''}
+              ${groupBy !== 'store' && item.preferred_store ? `<span class="item-store-tag">${escapeHTML(item.preferred_store)}</span>` : ''}
+              ${groupBy === 'store' && item.category ? `<span class="item-source">${escapeHTML(item.category)}</span>` : ''}
               ${item.breakdown ? `<span class="item-breakdown">${[item.breakdown.meals ? item.breakdown.meals + ' for meals' : '', item.breakdown.threshold ? item.breakdown.threshold + ' to restock' : ''].filter(Boolean).join(', ')}</span>` : ''}
               <div class="item-actions">
-                <button onclick="editShoppingItem('${safeItemKey}', '${(item.name || '').replace(/'/g, "\\'")}', ${item.quantity}, '${(item.unit || '').replace(/'/g, "\\'")}', '${(item.category || 'Other').replace(/'/g, "\\'")}' )" class="btn-icon" title="Edit">✏️</button>
-                ${item.id ? `<button onclick="deleteShoppingItem('${item.id}')" class="btn-icon" title="Delete">🗑️</button>` : ''}
+                <button onclick="editShoppingItem('${safeItemKey}', '${escapeHTML((item.name || '').replace(/'/g, "\\'"))}', ${item.quantity}, '${escapeHTML((item.unit || '').replace(/'/g, "\\'"))}', '${escapeHTML((item.category || 'Other').replace(/'/g, "\\'"))}' )" class="btn-icon" title="Edit">✏️</button>
+                ${item.id ? `<button onclick="deleteShoppingItem('${escapeHTML(item.id)}')" class="btn-icon" title="Delete">🗑️</button>` : ''}
               </div>
             </div>
           `}).join('')}
@@ -2005,7 +2005,10 @@ async function loadApp() {
   try {
     switch (section) {
       case 'pantry':
-        await loadPantry();
+        await Promise.all([
+          loadPantry().then(() => updateLoaderProgress(70)),
+          loadMealPlans().then(() => updateLoaderProgress(85))
+        ]);
         updateLoaderProgress(90);
         break;
       case 'recipes':
@@ -2032,6 +2035,11 @@ async function loadApp() {
   // Phase 3: Finalize (90-100%)
   if (section === 'meals' && window.reloadCalendar) {
     window.reloadCalendar();
+  }
+
+  // Re-render pantry ledger after meal plans load so RS column reflects reserved ingredients
+  if (section === 'pantry' && window.renderPantryLedger) {
+    window.renderPantryLedger();
   }
 
   createUnitDatalist();
@@ -2191,9 +2199,6 @@ window.deleteRecipe = deleteRecipe;
 window.updateRecipe = updateRecipe;
 
 async function initApp() {
-  console.log('🍳 Chef\'s Kiss - Python Age 5.0');
-  console.log('Backend:', window.CONFIG?.API_BASE || 'http://localhost:8000/api');
-
   // Apply compact mode if enabled
   applyDisplayMode();
 
@@ -2210,8 +2215,6 @@ async function initApp() {
 
   // Check if user is authenticated
   const isAuthenticated = await checkAuth();
-
-  console.log('Authentication status:', isAuthenticated, section ? `(section: ${section})` : '(landing)');
 
   if (isAuthenticated) {
     await loadApp();
@@ -2234,7 +2237,6 @@ async function initApp() {
  */
 async function loadDemoApp() {
   const section = document.body.dataset.section || 'pantry';
-  console.log('🎮 Loading demo mode from localStorage');
   showApp(section);
 
   try {

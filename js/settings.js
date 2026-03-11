@@ -20,7 +20,6 @@ async function loadSettings() {
   if (cached) {
     try {
       window.householdSettings = JSON.parse(cached);
-      console.log('Settings loaded from cache');
       return;
     } catch (e) { /* fall through to API */ }
   }
@@ -33,7 +32,6 @@ async function loadSettings() {
       category_emojis: response.category_emojis || {}
     };
     sessionStorage.setItem('ck-settings', JSON.stringify(window.householdSettings));
-    console.log('Settings loaded from API:', window.householdSettings);
   } catch (error) {
     console.warn('Failed to load settings from API, using defaults:', error);
   }
@@ -84,7 +82,6 @@ async function loadUnits() {
     try {
       window.cachedUnits = JSON.parse(cachedUnits);
       window.cachedIngredientNames = JSON.parse(cachedNames);
-      console.log('Units loaded from cache:', window.cachedUnits.length, '| Ingredients:', window.cachedIngredientNames.length);
       return;
     } catch (e) { /* fall through to API */ }
   }
@@ -95,7 +92,6 @@ async function loadUnits() {
     window.cachedIngredientNames = response.ingredient_names || [];
     sessionStorage.setItem('ck-units', JSON.stringify(window.cachedUnits));
     sessionStorage.setItem('ck-ingredient-names', JSON.stringify(window.cachedIngredientNames));
-    console.log('Units loaded:', window.cachedUnits.length, '| Ingredients:', window.cachedIngredientNames.length);
   } catch (error) {
     console.warn('Failed to load units, using defaults:', error);
     window.cachedUnits = ['each', 'lb', 'oz', 'cup', 'tbsp', 'tsp', 'gallon', 'g', 'kg', 'ml', 'bunch', 'can', 'bottle', 'bag', 'box'];
@@ -490,8 +486,15 @@ async function generateInviteCode() {
       </div>
     `;
   } catch (e) {
-    container.innerHTML = `<p style="color:var(--danger-color,red);">Failed to generate code: ${e.message}</p>
-      <button class="btn btn-secondary" onclick="generateInviteCode()">Try Again</button>`;
+    const errP = document.createElement('p');
+    errP.style.color = 'var(--danger-color,red)';
+    errP.textContent = 'Failed to generate code: ' + e.message;
+    const retryBtn = document.createElement('button');
+    retryBtn.className = 'btn btn-secondary';
+    retryBtn.textContent = 'Try Again';
+    retryBtn.onclick = () => generateInviteCode();
+    container.innerHTML = '';
+    container.append(errP, retryBtn);
   }
 }
 
@@ -518,7 +521,11 @@ async function acceptInviteCode() {
 
   try {
     const data = await API.acceptInvite(code);
-    statusEl.innerHTML = `<p style="color:var(--success-color,#4ade80);">${data.message}</p>`;
+    const successP = document.createElement('p');
+    successP.style.color = 'var(--success-color,#4ade80)';
+    successP.textContent = data.message;
+    statusEl.innerHTML = '';
+    statusEl.appendChild(successP);
     input.value = '';
 
     API.setActiveHouseholdId(data.household_id);
@@ -526,7 +533,11 @@ async function acceptInviteCode() {
     setTimeout(() => openAccountModal(), 1500);
     setTimeout(() => window.location.reload(), 2000);
   } catch (e) {
-    statusEl.innerHTML = `<p style="color:var(--danger-color,red);">${e.message}</p>`;
+    const errP = document.createElement('p');
+    errP.style.color = 'var(--danger-color,red)';
+    errP.textContent = e.message;
+    statusEl.innerHTML = '';
+    statusEl.appendChild(errP);
   }
 }
 
