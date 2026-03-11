@@ -113,6 +113,63 @@ if (document.readyState === 'loading') {
   startHeaderClock();
 }
 
+// ── Ingredient Normalization (mirrors backend/utils/normalize.py) ──
+// Must stay in sync with the Python version so frontend key lookups
+// match backend-generated reserved_ingredients keys.
+
+const UNIT_ALIASES = {
+  // Weight
+  oz: 'ounce', ounces: 'ounce',
+  lb: 'pound', lbs: 'pound', pounds: 'pound',
+  g: 'gram', grams: 'gram',
+  kg: 'kilogram', kilograms: 'kilogram',
+  // Volume
+  tsp: 'teaspoon', teaspoons: 'teaspoon',
+  tbsp: 'tablespoon', tbs: 'tablespoon', tablespoons: 'tablespoon',
+  c: 'cup', cups: 'cup',
+  pt: 'pint', pints: 'pint',
+  qt: 'quart', quarts: 'quart',
+  gal: 'gallon', gallons: 'gallon',
+  ml: 'milliliter', milliliters: 'milliliter',
+  l: 'liter', liters: 'liter',
+  // Count
+  ea: 'each',
+  pc: 'piece', pcs: 'piece', pieces: 'piece',
+  doz: 'dozen', dozens: 'dozen',
+  // Other
+  pkg: 'package', packages: 'package',
+  cans: 'can', bottles: 'bottle', bunches: 'bunch',
+  cloves: 'clove', slices: 'slice', stalks: 'stalk',
+  sprigs: 'sprig', heads: 'head', bags: 'bag',
+  boxes: 'box', jars: 'jar'
+};
+
+function normalizeUnit(unit) {
+  const lower = unit.trim().toLowerCase();
+  return UNIT_ALIASES[lower] || lower;
+}
+
+function normalizeName(name) {
+  let lower = name.trim().toLowerCase();
+  if (lower.length > 3 && lower.endsWith('s') && !lower.endsWith('ss')) {
+    if (lower.endsWith('ies')) {
+      lower = lower.slice(0, -3) + 'y';
+    } else if (lower.endsWith('oes')) {
+      lower = lower.slice(0, -2);
+    } else if (lower.endsWith('ves')) {
+      lower = lower.slice(0, -3) + 'f';
+    } else {
+      lower = lower.slice(0, -1);
+    }
+  }
+  return lower;
+}
+
+function normalizeKey(name, unit) {
+  return `${normalizeName(name)}|${normalizeUnit(unit)}`;
+}
+
 // Expose globally
 window.showToast = showToast;
 window.closeModal = closeModal;
+window.normalizeKey = normalizeKey;
