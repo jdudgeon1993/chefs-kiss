@@ -169,7 +169,10 @@ class HouseholdState:
 
     def _calculate_reserved(self) -> Dict[str, float]:
         """
-        Calculate what ingredients are reserved by upcoming meals.
+        Calculate what ingredients are reserved by uncooked meals.
+
+        Includes past-due meals that were never cooked — those ingredients
+        are still earmarked until the user explicitly cooks or cancels them.
 
         Returns:
             Dict mapping "name|unit" to quantity reserved
@@ -179,10 +182,6 @@ class HouseholdState:
         for meal in self.meal_plans:
             # Skip cooked meals
             if meal.cooked:
-                continue
-
-            # Skip past meals
-            if meal.date < date.today():
                 continue
 
             recipe = self._get_recipe(meal.recipe_id)
