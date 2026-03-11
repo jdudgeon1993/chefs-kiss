@@ -145,11 +145,13 @@ const UNIT_ALIASES = {
 };
 
 function normalizeUnit(unit) {
+  if (!unit) return '';
   const lower = unit.trim().toLowerCase();
   return UNIT_ALIASES[lower] || lower;
 }
 
 function normalizeName(name) {
+  if (!name) return '';
   let lower = name.trim().toLowerCase();
   if (lower.length > 3 && lower.endsWith('s') && !lower.endsWith('ss')) {
     if (lower.endsWith('ies')) {

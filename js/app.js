@@ -2005,10 +2005,14 @@ async function loadApp() {
   try {
     switch (section) {
       case 'pantry':
-        await Promise.all([
-          loadPantry().then(() => updateLoaderProgress(70)),
-          loadMealPlans().then(() => updateLoaderProgress(85))
-        ]);
+        await loadPantry();
+        updateLoaderProgress(70);
+        // Load meal plans for reserved-ingredients (RS column) — non-blocking
+        try {
+          await loadMealPlans();
+        } catch (e) {
+          console.warn('Meal plans failed to load on pantry page:', e);
+        }
         updateLoaderProgress(90);
         break;
       case 'recipes':
