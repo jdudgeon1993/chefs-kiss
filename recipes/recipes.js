@@ -178,14 +178,16 @@
       const time = recipe.cookTime || recipe.time || '30min';
 
       // Use photo if available, otherwise show emoji
+      const esc = typeof escapeHTML === 'function' ? escapeHTML : (s) => s;
+      const safePhotoUrl = recipe.photo ? encodeURI(recipe.photo) : '';
       const thumbnailHTML = recipe.photo
-        ? `<div class="recipe-card-thumbnail" style="background-image: url('${recipe.photo}'); background-size: cover; background-position: center;"></div>`
+        ? `<div class="recipe-card-thumbnail" style="background-image: url('${safePhotoUrl}'); background-size: cover; background-position: center;"></div>`
         : `<div class="recipe-card-thumbnail">${emoji}</div>`;
 
       // Tags HTML
       const tagsHTML = recipe.tags && recipe.tags.length > 0
         ? `<div class="recipe-card-tags">
-            ${recipe.tags.slice(0, 3).map(tag => `<span class="recipe-tag-pill">${tag}</span>`).join('')}
+            ${recipe.tags.slice(0, 3).map(tag => `<span class="recipe-tag-pill">${esc(tag)}</span>`).join('')}
             ${recipe.tags.length > 3 ? '<span class="recipe-tag-pill" style="opacity: 0.6;">+' + (recipe.tags.length - 3) + '</span>' : ''}
           </div>`
         : '';
@@ -197,11 +199,11 @@
         ${favoriteHTML}
         ${thumbnailHTML}
         <div class="recipe-card-content">
-          ${recipe.category ? `<div class="recipe-card-category">${recipe.category}</div>` : ''}
-          <div class="recipe-card-name">${recipe.name || 'Untitled Recipe'}</div>
+          ${recipe.category ? `<div class="recipe-card-category">${esc(recipe.category)}</div>` : ''}
+          <div class="recipe-card-name">${esc(recipe.name || 'Untitled Recipe')}</div>
           <div class="recipe-card-meta">
-            <span>${servings} servings</span>
-            <span>${time}</span>
+            <span>${esc(String(servings))} servings</span>
+            <span>${esc(String(time))}</span>
           </div>
           ${tagsHTML}
         </div>
@@ -253,20 +255,27 @@
     recipeDetailModal = document.createElement('div');
     recipeDetailModal.className = 'recipe-detail-modal';
 
+    const esc = typeof escapeHTML === 'function' ? escapeHTML : (s) => String(s);
+    const safeId = esc(String(recipe.id));
+
     const ingredientsHTML = recipe.ingredients && recipe.ingredients.length > 0
-      ? recipe.ingredients.map(ing => `<li>${ing.qty || ''} ${ing.unit || ''} ${ing.name || ''}</li>`).join('')
+      ? recipe.ingredients.map(ing => `<li>${esc(String(ing.qty || ''))} ${esc(ing.unit || '')} ${esc(ing.name || '')}</li>`).join('')
       : '<li style="opacity: 0.6;">No ingredients listed</li>';
 
-    const instructionsHTML = recipe.instructions || recipe.method || 'No instructions provided';
+    const instructionsHTML = esc(recipe.instructions || recipe.method || 'No instructions provided');
     const servings = recipe.servings || recipe.yield || '4';
     const time = recipe.cookTime || recipe.time || '30min';
+    const safePhotoUrl = recipe.photo ? encodeURI(recipe.photo) : '';
 
-    const tagsHTML = recipe.tags.map(tag => `
-      <span class="recipe-tag-pill" data-tag="${tag}">
-        ${tag}
-        <button class="recipe-tag-remove" onclick="event.stopPropagation(); removeTag('${tag.replace(/'/g, "\\'")}', '${recipe.id}')">×</button>
+    const tagsHTML = recipe.tags.map(tag => {
+      const safeTag = esc(tag);
+      return `
+      <span class="recipe-tag-pill" data-tag="${safeTag}">
+        ${safeTag}
+        <button class="recipe-tag-remove" data-tag-name="${safeTag}" data-recipe-id="${safeId}">×</button>
       </span>
-    `).join('');
+    `;
+    }).join('');
 
     recipeDetailModal.innerHTML = `
       <button class="recipe-modal-close" onclick="this.closest('.recipe-detail-modal').remove()">✕</button>
@@ -274,15 +283,15 @@
         <div class="recipe-vintage-card">
           <div class="recipe-vintage-card-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
             <div class="recipe-vintage-card-id" style="flex: 1; border: none; padding: 0; margin: 0;">FROM THE ARCHIVE OF THE HEARTH</div>
-            <button class="btn-favorite-toggle" style="background: none; border: none; font-size: 2rem; cursor: pointer; padding: 0.25rem;" onclick="toggleFavorite('${recipe.id}')" title="${recipe.isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+            <button class="btn-favorite-toggle" data-recipe-id="${safeId}" style="background: none; border: none; font-size: 2rem; cursor: pointer; padding: 0.25rem;" title="${recipe.isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
               ${recipe.isFavorite ? '⭐' : '☆'}
             </button>
           </div>
-          ${recipe.photo ? `<div class="recipe-vintage-card-photo" style="width:100%;max-height:240px;overflow:hidden;border-radius:8px;margin-bottom:1rem;"><img src="${recipe.photo}" alt="${recipe.name}" style="width:100%;height:100%;object-fit:cover;"></div>` : ''}
-          <h1 class="recipe-vintage-card-title">${recipe.name || 'Untitled Recipe'}</h1>
+          ${safePhotoUrl ? `<div class="recipe-vintage-card-photo" style="width:100%;max-height:240px;overflow:hidden;border-radius:8px;margin-bottom:1rem;"><img src="${safePhotoUrl}" alt="${esc(recipe.name)}" style="width:100%;height:100%;object-fit:cover;"></div>` : ''}
+          <h1 class="recipe-vintage-card-title">${esc(recipe.name || 'Untitled Recipe')}</h1>
           <div class="recipe-vintage-card-meta">
-            <span><strong>YIELD:</strong> ${servings}</span>
-            <span><strong>TIME:</strong> ${time}</span>
+            <span><strong>YIELD:</strong> ${esc(String(servings))}</span>
+            <span><strong>TIME:</strong> ${esc(String(time))}</span>
           </div>
 
           <!-- Tags Section -->
@@ -294,8 +303,8 @@
               </div>
             </div>
             <div style="display: flex; gap: 0.5rem;">
-              <input type="text" class="recipe-tag-input" placeholder="Add tag (e.g., #quick, #italian)" style="flex: 1; padding: 0.5rem; border: 1px solid var(--color-recipe-border); border-radius: 4px; font-size: 0.85rem;" onkeypress="if(event.key === 'Enter') { addTag(this.value, '${recipe.id}'); this.value = ''; }">
-              <button class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.75rem;" onclick="const input = this.previousElementSibling; addTag(input.value, '${recipe.id}'); input.value = '';">Add</button>
+              <input type="text" class="recipe-tag-input" data-recipe-id="${safeId}" placeholder="Add tag (e.g., #quick, #italian)" style="flex: 1; padding: 0.5rem; border: 1px solid var(--color-recipe-border); border-radius: 4px; font-size: 0.85rem;">
+              <button class="btn btn-secondary btn-add-tag" data-recipe-id="${safeId}" style="padding: 0.5rem 1rem; font-size: 0.75rem;">Add</button>
             </div>
           </div>
 
@@ -310,12 +319,41 @@
             </div>
           </div>
           <div class="recipe-vintage-card-actions">
-            <button class="btn btn-edit-recipe" onclick="window.openRecipeModal('${recipe.id}'); document.querySelector('.recipe-detail-modal')?.remove();">EDIT LEDGER</button>
-            <button class="btn btn-delete-recipe" onclick="if(window.deleteRecipe) { window.deleteRecipe('${recipe.id}'); document.querySelector('.recipe-detail-modal')?.remove(); }">[ BURN CARD ]</button>
+            <button class="btn btn-edit-recipe" data-recipe-id="${safeId}">EDIT LEDGER</button>
+            <button class="btn btn-delete-recipe" data-recipe-id="${safeId}">[ BURN CARD ]</button>
           </div>
         </div>
       </div>
     `;
+
+    // Wire up event listeners safely (no inline onclick with user data)
+    recipeDetailModal.querySelector('.btn-favorite-toggle').addEventListener('click', () => toggleFavorite(recipe.id));
+    recipeDetailModal.querySelector('.btn-edit-recipe').addEventListener('click', () => {
+      window.openRecipeModal(recipe.id);
+      document.querySelector('.recipe-detail-modal')?.remove();
+    });
+    recipeDetailModal.querySelector('.btn-delete-recipe').addEventListener('click', () => {
+      if (window.deleteRecipe) {
+        window.deleteRecipe(recipe.id);
+        document.querySelector('.recipe-detail-modal')?.remove();
+      }
+    });
+    const tagInput = recipeDetailModal.querySelector('.recipe-tag-input');
+    if (tagInput) {
+      tagInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') { addTag(tagInput.value, recipe.id); tagInput.value = ''; }
+      });
+    }
+    const addTagBtn = recipeDetailModal.querySelector('.btn-add-tag');
+    if (addTagBtn) {
+      addTagBtn.addEventListener('click', () => { addTag(tagInput.value, recipe.id); tagInput.value = ''; });
+    }
+    recipeDetailModal.querySelectorAll('.recipe-tag-remove').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeTag(btn.dataset.tagName, recipe.id);
+      });
+    });
 
     // Close on background click
     recipeDetailModal.onclick = (e) => {

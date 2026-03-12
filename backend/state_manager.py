@@ -222,7 +222,7 @@ class HouseholdState:
 
         # Part 1: What meals need
         for key, needed_qty in self.reserved_ingredients.items():
-            name, unit = key.split("|")
+            name, unit = key.split("|", 1)
 
             # Skip if user has a manual override for this item
             if key in manual_keys:
@@ -547,16 +547,24 @@ class StateManager:
         db = get_db()
 
         def load_pantry():
-            rows = db.pantry.get_items_with_locations(household_id)
-            items = []
-            for item_data in rows:
-                locations = item_data.pop('pantry_locations', [])
-                items.append(PantryItem.from_supabase(item_data, locations))
-            return items
+            try:
+                rows = db.pantry.get_items_with_locations(household_id)
+                items = []
+                for item_data in rows:
+                    locations = item_data.pop('pantry_locations', [])
+                    items.append(PantryItem.from_supabase(item_data, locations))
+                return items
+            except Exception as e:
+                logger.warning(f"Could not load pantry items: {e}")
+                return []
 
         def load_recipes():
-            rows = db.recipes.get_all(household_id)
-            return [Recipe.from_supabase(r) for r in rows]
+            try:
+                rows = db.recipes.get_all(household_id)
+                return [Recipe.from_supabase(r) for r in rows]
+            except Exception as e:
+                logger.warning(f"Could not load recipes: {e}")
+                return []
 
         def load_meals():
             try:

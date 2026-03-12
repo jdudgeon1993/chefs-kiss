@@ -431,8 +431,8 @@ function renderMealCalendar(meals) {
           ${dateMeals.map(meal => `
             <div class="meal-item ${meal.cooked ? 'cooked' : ''}" data-id="${meal.id}">
               <div class="meal-info">
-                <span class="meal-type">${meal.meal_type || 'Dinner'}</span>
-                <span class="meal-recipe">${meal.recipe_name || 'Recipe'}</span>
+                <span class="meal-type">${escapeHTML(meal.meal_type || 'Dinner')}</span>
+                <span class="meal-recipe">${escapeHTML(meal.recipe_name || 'Recipe')}</span>
               </div>
               <div class="meal-actions">
                 ${!meal.cooked ? `<button onclick="cookMeal(${meal.id})" class="btn-cook">Cook</button>` : '<span class="cooked-badge">✓ Cooked</span>'}
@@ -1174,7 +1174,7 @@ function renderDashboard(data) {
         <h3>⚠️ Items Expiring Soon</h3>
         <ul>
           ${data.expiring_soon.map(item => `
-            <li>${item.item_name} - expires in ${item.expires_in_days} days</li>
+            <li>${escapeHTML(item.item_name)} - expires in ${parseInt(item.expires_in_days) || 0} days</li>
           `).join('')}
         </ul>
       </div>
@@ -1193,9 +1193,9 @@ function renderExpiringItems(items) {
 
   container.innerHTML = items.map(item => `
     <div class="expiring-item ${item.is_expired ? 'expired' : ''}">
-      <span class="item-name">${item.item_name}</span>
-      <span class="item-expires">Expires: ${item.expires_on}</span>
-      <span class="item-days">${item.expires_in_days} days</span>
+      <span class="item-name">${escapeHTML(item.item_name)}</span>
+      <span class="item-expires">Expires: ${escapeHTML(item.expires_on)}</span>
+      <span class="item-days">${parseInt(item.expires_in_days) || 0} days</span>
     </div>
   `).join('');
 }
