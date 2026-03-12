@@ -102,9 +102,7 @@
 
     let allItems = [];
 
-    // Determine column count: mobile = 5, desktop = 9
-    const desktopCols = 9;
-    const mobileCols = 5;
+    const totalCols = 9; // Always span all columns (hidden ones collapse via CSS)
 
     let tableHTML = `
       <table class="unified-ledger-table">
@@ -139,7 +137,7 @@
 
       tableHTML += `
         <tr class="ledger-category-divider">
-          <td colspan="${mobileCols}" class="ledger-category-header-cell">
+          <td colspan="${totalCols}" class="ledger-category-header-cell">
             <strong>${categoryEmoji} ${esc(category)}</strong>
             <span class="ledger-category-meta">${items.length} items &bull; OH ${totalOH.toFixed(1)} &bull; AV ${totalAV.toFixed(1)}</span>
           </td>
@@ -192,7 +190,7 @@
         const isExpanded = expandedRowIndex === idx;
         tableHTML += `
           <tr class="ledger-detail-row" data-detail-for="${idx}" ${isExpanded ? '' : 'style="display:none"'}>
-            <td colspan="${mobileCols}">
+            <td colspan="${totalCols}">
               <div class="ledger-detail-panel">
                 <div class="detail-chip">
                   <span class="detail-chip-label">Min</span>
