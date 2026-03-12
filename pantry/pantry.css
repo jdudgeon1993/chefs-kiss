@@ -1,44 +1,66 @@
-/* Pantry-specific styles — Extracted from style.css (Phase 4.1) */
+/* Pantry — Mobile-first responsive design */
 
+/* ===================================================================
+   SECTION CONTAINER
+   =================================================================== */
 .pantry-section {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: var(--layout-padding);
+  padding: 1rem;
   max-width: var(--layout-max-width);
   margin: 0 auto;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-radius: 0;
   overflow: hidden;
 }
 
 .pantry-header h2 {
-  font-size: 1.75rem;
+  font-size: 1.25rem;
   color: var(--color-text-primary);
   font-family: "Libre Baskerville", Georgia, serif;
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 1rem 0;
 }
 
-/* Pantry Controls (Search, Filter, Sort) */
+/* ===================================================================
+   CONTROLS — Search, Filter, Sort
+   =================================================================== */
 .pantry-controls {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin-bottom: 1rem;
 }
 
-.pantry-search-input,
+.pantry-search-input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgba(197,184,165,0.3);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  -webkit-appearance: none;
+}
+
 .pantry-filter-select,
 .pantry-sort-select {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.6rem;
   border: 1px solid rgba(197,184,165,0.3);
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 0.85rem;
   background: white;
   color: var(--color-text-primary);
   font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b6b6b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  padding-right: 1.8rem;
 }
 
 .pantry-search-input:focus,
@@ -46,195 +68,37 @@
 .pantry-sort-select:focus {
   outline: none;
   border-color: var(--color-accent-olive);
+  box-shadow: 0 0 0 2px rgba(139, 147, 118, 0.15);
 }
 
-/* Pantry Ledger Display */
+/* ===================================================================
+   LEDGER DISPLAY — Main container
+   =================================================================== */
 .pantry-ledger-display {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
+  flex: 1;
 }
 
 .pantry-display {
-  display: none; /* Hidden - used by app.js for data */
+  display: none; /* Hidden — used by app.js for data */
 }
 
-/* Category Section */
-.pantry-ledger-category {
-  margin-bottom: 1.5rem;
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-/* Category Header */
-.ledger-category-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1.5rem;
-  background: rgba(248, 244, 235, 0.5);
-  cursor: pointer;
-  user-select: none;
-  transition: all 0.2s;
-}
-
-.ledger-category-header:hover {
-  background: rgba(248, 244, 235, 0.8);
-}
-
-.ledger-category-left {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.ledger-category-icon {
-  font-size: 0.85rem;
-  color: var(--color-pantry-header);
-  width: 20px;
-}
-
-.ledger-category-name {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--color-pantry-header);
-  font-family: "Libre Baskerville", Georgia, serif;
-}
-
-.ledger-category-count {
-  font-size: 0.85rem;
-  color: rgba(90, 74, 58, 0.6);
-  font-weight: 400;
-}
-
-.ledger-category-right {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.ledger-category-total {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-accent-olive);
-  background: rgba(139, 147, 118, 0.1);
-  padding: 0.35rem 0.85rem;
-  border-radius: 20px;
-}
-
-.ledger-category-alert {
-  font-size: 0.85rem;
-  color: #B36A5E;
-  background: rgba(179, 106, 94, 0.1);
-  padding: 0.35rem 0.85rem;
-  border-radius: 20px;
-  font-weight: 500;
-}
-
-/* Table Container */
+/* ===================================================================
+   LEDGER TABLE — Mobile-first compact table
+   =================================================================== */
 .ledger-table-container {
   overflow-x: auto;
-  max-height: 600px;
   overflow-y: auto;
+  max-height: calc(100dvh - 240px);
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
+  border: 1px solid rgba(197, 184, 165, 0.2);
 }
 
-/* Ledger Table */
-.ledger-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.ledger-table thead {
-  position: sticky;
-  top: 0;
-  background: var(--color-card-bg);
-  z-index: 10;
-}
-
-.ledger-table th {
-  text-align: left;
-  font-weight: 600;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 0.6rem 0.75rem;
-  border-bottom: 2px solid var(--color-accent-olive);
-  color: var(--color-pantry-header);
-  background: var(--color-card-bg);
-}
-
-.ledger-col-item {
-  width: 20%;
-  min-width: 150px;
-}
-
-.ledger-col-qty {
-  width: 10%;
-  min-width: 80px;
-  text-align: center;
-}
-
-.ledger-col-locations {
-  width: 25%;
-  min-width: 180px;
-}
-
-.ledger-col-expiry {
-  width: 12%;
-  min-width: 100px;
-}
-
-.ledger-col-actions {
-  width: 8%;
-  min-width: 70px;
-  text-align: center;
-}
-
-/* Table Rows */
-.ledger-row {
-  border-bottom: 1px solid rgba(197, 184, 165, 0.2);
-  transition: background 0.2s;
-  cursor: pointer;
-}
-
-.ledger-row:hover {
-  background: rgba(248, 244, 235, 0.3);
-}
-
-.ledger-table td {
-  padding: 0.85rem 1rem;
-  color: var(--color-text-primary);
-}
-
-.ledger-item-name {
-  font-weight: 500;
-  color: var(--color-pantry-header);
-}
-
-.ledger-qty {
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-.qty-low {
-  color: #B36A5E;
-  font-weight: 600;
-}
-
-/* -------------------------------------------------------------------
-   UNIFIED LEDGER TABLE STYLES
-   ------------------------------------------------------------------- */
-
-/* Unified Ledger Container */
 .unified-ledger {
   background: white;
-  border-radius: 8px;
-  overflow: auto;
-  max-height: calc(100vh - 250px);
 }
 
-/* Unified Table Styling */
 .unified-ledger-table {
   width: 100%;
   border-collapse: collapse;
@@ -242,11 +106,14 @@
   table-layout: fixed;
 }
 
+/* ===================================================================
+   TABLE HEADER — Sticky
+   =================================================================== */
 .unified-ledger-table thead th {
-  padding: 0.5rem 0.5rem;
-  font-size: 0.7rem;
+  padding: 0.5rem 0.4rem;
+  font-size: 0.65rem;
   text-align: left;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 2px solid var(--color-accent-olive);
@@ -257,206 +124,217 @@
   z-index: 10;
 }
 
-/* Compact Column Widths to fit 850px */
-.unified-ledger-table .ledger-col-category {
-  width: 7%;
-}
+/* Mobile column widths — 5 core columns */
+.unified-ledger-table .ledger-col-emoji   { width: 2rem; text-align: center; }
+.unified-ledger-table .ledger-col-item    { width: auto; }
+.unified-ledger-table .ledger-col-oh      { width: 3rem; text-align: right; }
+.unified-ledger-table .ledger-col-re      { width: 3rem; text-align: right; }
+.unified-ledger-table .ledger-col-av      { width: 3rem; text-align: right; }
 
-.unified-ledger-table .ledger-col-item {
-  width: 20%;
-}
-
-.unified-ledger-table .ledger-col-qty {
-  width: 8%;
-  text-align: center;
-}
-
-.unified-ledger-table .ledger-col-locations {
-  width: 20%;
-}
-
-.unified-ledger-table .ledger-col-expiry {
-  width: 10%;
-}
-
+/* Desktop-only columns — hidden on mobile */
+.unified-ledger-table .ledger-col-min,
+.unified-ledger-table .ledger-col-locations,
+.unified-ledger-table .ledger-col-expiry,
 .unified-ledger-table .ledger-col-actions {
-  width: 8%;
-  text-align: center;
-  white-space: nowrap;
+  display: none;
 }
 
-/* Action Buttons in Ledger */
-.ledger-col-actions .btn-ledger-action {
-  margin: 0 0.15rem;
-}
-
-/* Category Divider Rows */
+/* ===================================================================
+   CATEGORY GROUP HEADER
+   =================================================================== */
 .ledger-category-divider {
-  background: linear-gradient(135deg, #f8f4eb 0%, #f0ebe3 100%);
-  border-top: 2px solid rgba(139, 147, 118, 0.3);
-  border-bottom: 1px solid rgba(139, 147, 118, 0.2);
+  background: linear-gradient(135deg, #f0ebe3 0%, #e8e2d6 100%);
+  border-top: 1px solid rgba(139, 147, 118, 0.25);
 }
 
 .ledger-category-header-cell {
-  padding: 0.5rem 0.5rem !important;
-  font-size: 0.85rem;
+  padding: 0.5rem 0.4rem !important;
+  font-size: 0.8rem;
   color: var(--color-pantry-header);
   font-family: "Libre Baskerville", Georgia, serif;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
+  user-select: none;
 }
 
 .ledger-category-meta {
-  margin-left: 0.75rem;
-  font-size: 0.75rem;
+  margin-left: 0.5rem;
+  font-size: 0.7rem;
   font-family: "Lato", sans-serif;
-  opacity: 0.7;
+  opacity: 0.65;
   font-weight: normal;
 }
 
-/* Data Rows - Alternating colors for ledger feel */
+/* ===================================================================
+   DATA ROWS
+   =================================================================== */
 .ledger-data-row {
-  border-bottom: 1px solid rgba(197, 184, 165, 0.15);
+  border-bottom: 1px solid rgba(197, 184, 165, 0.12);
   transition: background 0.15s;
   cursor: pointer;
 }
 
-.ledger-row-even {
-  background: #FFFEF9;
-}
+.ledger-row-even { background: #FFFEF9; }
+.ledger-row-odd  { background: #FAF8F5; }
 
-.ledger-row-odd {
-  background: #FAF8F5;
-}
-
-.ledger-data-row:hover {
-  background: rgba(139, 147, 118, 0.08) !important;
+.ledger-data-row:active {
+  background: rgba(139, 147, 118, 0.12) !important;
 }
 
 .ledger-data-row td {
-  padding: 0.5rem 0.5rem;
+  padding: 0.6rem 0.4rem;
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Emoji column */
+.ledger-data-row .ledger-col-emoji {
+  font-size: 1.1rem;
+  text-align: center;
+  padding-left: 0.25rem;
+  padding-right: 0;
+}
+
+/* Item name — name (unit) */
+.ledger-data-row .ledger-col-item {
+  font-weight: 500;
+  color: var(--color-pantry-header);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Low stock highlighting */
+.item-unit {
+  font-weight: 400;
+  opacity: 0.55;
+  font-size: 0.8em;
+}
+
+/* Numeric columns */
+.ledger-data-row .ledger-col-oh,
+.ledger-data-row .ledger-col-re,
+.ledger-data-row .ledger-col-av {
+  text-align: right;
+  font-size: 0.85rem;
+  padding-right: 0.5rem;
+}
+
+/* ===================================================================
+   LOW STOCK & EXPIRY HIGHLIGHTS
+   =================================================================== */
 .ledger-row-low-stock {
-  background: rgba(200, 107, 107, 0.05) !important;
+  background: rgba(200, 107, 107, 0.06) !important;
 }
 
 .low-stock-value {
   color: #B36A5E;
-  font-weight: 600;
+  font-weight: 700;
 }
 
-/* Item name styling */
-.ledger-col-item strong {
-  font-weight: 500;
-  color: var(--color-pantry-header);
-}
-
-.item-unit {
-  font-size: 0.8em;
-  opacity: 0.6;
-  font-weight: normal;
-}
-
-/* Expiry warning */
 .expiry-warning {
   color: #B36A5E;
   font-weight: 600;
 }
 
-/* Category column */
-.ledger-col-category {
-  width: 8%;
-  min-width: 60px;
-  text-align: center;
-  font-size: 1.2rem;
+/* ===================================================================
+   EXPANDABLE DETAIL PANEL (mobile tap-to-expand)
+   =================================================================== */
+.ledger-detail-row td {
+  padding: 0 !important;
 }
 
-.ledger-locations {
-  font-size: 0.85rem;
+.ledger-detail-panel {
+  padding: 0.6rem 0.75rem;
+  background: rgba(139, 147, 118, 0.04);
+  border-bottom: 2px solid rgba(139, 147, 118, 0.15);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  align-items: center;
+  font-size: 0.8rem;
   color: var(--color-text-secondary);
 }
 
-.ledger-expiry {
-  font-size: 0.85rem;
-  font-weight: 500;
+.detail-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
-.expiry-expired,
-.expiry-today {
-  color: #B36A5E;
+.detail-chip-label {
   font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  opacity: 0.6;
 }
 
-.expiry-urgent {
-  color: #C2918C;
+.detail-chip-value {
+  color: var(--color-text-primary);
 }
 
-.expiry-soon {
-  color: #8A9A5B;
+.detail-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.5rem;
 }
 
-.expiry-ok {
-  color: var(--color-text-secondary);
-  opacity: 0.7;
-}
-
-.ledger-actions {
-  text-align: center;
-}
-
+/* ===================================================================
+   ACTION BUTTONS
+   =================================================================== */
 .btn-ledger-action {
   background: rgba(139, 147, 118, 0.1);
   border: 1px solid rgba(139, 147, 118, 0.3);
   color: var(--color-accent-olive);
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   font-size: 1rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.btn-ledger-action:hover {
+.btn-ledger-action:active {
   background: var(--color-accent-olive);
   color: white;
-  border-color: var(--color-accent-olive);
-  transform: scale(1.05);
+  transform: scale(0.95);
 }
 
-/* New Entry Button */
+/* ===================================================================
+   ADD ITEMS BUTTON
+   =================================================================== */
 .btn-new-entry {
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.85rem;
   background: var(--btn-primary);
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 0.85rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
   font-weight: 600;
   letter-spacing: 0.5px;
   cursor: pointer;
   transition: all 0.2s;
   text-transform: uppercase;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.btn-new-entry:hover {
-  background: var(--btn-primary-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(139,147,118,0.3);
+.btn-new-entry:active {
+  transform: scale(0.98);
+  opacity: 0.9;
 }
 
-/* Bulk Entry — Duplicate Warnings */
+/* ===================================================================
+   BULK ENTRY — Duplicate Warnings (unchanged)
+   =================================================================== */
 .bulk-name-duplicate {
   border-color: #D4A017 !important;
   background: rgba(212, 160, 23, 0.06) !important;
@@ -472,3 +350,135 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ===================================================================
+   TABLET (>=600px)
+   =================================================================== */
+@media (min-width: 600px) {
+  .pantry-section {
+    padding: 1.25rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .pantry-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .unified-ledger-table .ledger-col-emoji   { width: 2.5rem; }
+  .unified-ledger-table .ledger-col-oh      { width: 3.5rem; }
+  .unified-ledger-table .ledger-col-re      { width: 3.5rem; }
+  .unified-ledger-table .ledger-col-av      { width: 3.5rem; }
+
+  .unified-ledger-table thead th {
+    font-size: 0.7rem;
+    padding: 0.55rem 0.5rem;
+  }
+
+  .ledger-data-row td {
+    padding: 0.65rem 0.5rem;
+  }
+
+  .ledger-detail-panel {
+    padding: 0.75rem 1rem;
+    font-size: 0.82rem;
+  }
+}
+
+/* ===================================================================
+   DESKTOP (>=900px) — Show all columns, hide expand panel
+   =================================================================== */
+@media (min-width: 900px) {
+  .pantry-section {
+    padding: var(--layout-padding);
+  }
+
+  .pantry-header h2 {
+    font-size: 1.75rem;
+    margin: 0 0 1.5rem 0;
+  }
+
+  .pantry-controls {
+    flex-wrap: nowrap;
+  }
+
+  .pantry-search-input {
+    flex: 2;
+    width: auto;
+  }
+
+  .pantry-filter-select,
+  .pantry-sort-select {
+    flex: 1;
+  }
+
+  .ledger-table-container {
+    max-height: calc(100vh - 260px);
+  }
+
+  /* Show desktop-only columns */
+  .unified-ledger-table .ledger-col-min,
+  .unified-ledger-table .ledger-col-locations,
+  .unified-ledger-table .ledger-col-expiry,
+  .unified-ledger-table .ledger-col-actions {
+    display: table-cell;
+  }
+
+  /* Desktop column widths */
+  .unified-ledger-table .ledger-col-emoji     { width: 3rem; }
+  .unified-ledger-table .ledger-col-item      { width: auto; }
+  .unified-ledger-table .ledger-col-oh        { width: 4rem; }
+  .unified-ledger-table .ledger-col-re        { width: 4rem; }
+  .unified-ledger-table .ledger-col-av        { width: 4rem; }
+  .unified-ledger-table .ledger-col-min       { width: 3.5rem; text-align: right; }
+  .unified-ledger-table .ledger-col-locations  { width: 15%; }
+  .unified-ledger-table .ledger-col-expiry    { width: 5.5rem; }
+  .unified-ledger-table .ledger-col-actions   { width: 5rem; text-align: center; }
+
+  .ledger-data-row td {
+    padding: 0.6rem 0.6rem;
+  }
+
+  /* Hide expand panel on desktop — detail is in columns */
+  .ledger-detail-row {
+    display: none !important;
+  }
+
+  /* Hover instead of tap */
+  .ledger-data-row:hover {
+    background: rgba(139, 147, 118, 0.08) !important;
+  }
+
+  .btn-ledger-action:hover {
+    background: var(--color-accent-olive);
+    color: white;
+    border-color: var(--color-accent-olive);
+    transform: scale(1.05);
+  }
+
+  .btn-new-entry:hover {
+    background: var(--btn-primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139,147,118,0.3);
+  }
+}
+
+/* ===================================================================
+   WIDE DESKTOP (>=1100px) — Extra breathing room
+   =================================================================== */
+@media (min-width: 1100px) {
+  .unified-ledger-table .ledger-col-locations { width: 18%; }
+  .unified-ledger-table .ledger-col-oh  { width: 4.5rem; }
+  .unified-ledger-table .ledger-col-re  { width: 4.5rem; }
+  .unified-ledger-table .ledger-col-av  { width: 4.5rem; }
+}
+
+/* ===================================================================
+   LEGACY CLASS COMPAT — kept for any shared.css references
+   =================================================================== */
+.pantry-ledger-category { margin-bottom: 1.5rem; }
+.ledger-category-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem; cursor: pointer; }
+.ledger-category-left { display: flex; align-items: center; gap: 0.75rem; }
+.ledger-category-right { display: flex; align-items: center; gap: 1rem; }
+.ledger-category-total { font-size: 0.9rem; font-weight: 600; color: var(--color-accent-olive); }
+.ledger-category-alert { font-size: 0.85rem; color: #B36A5E; }

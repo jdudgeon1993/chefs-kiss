@@ -1,34 +1,34 @@
-// Pantry Ledger Table - Extracted from index.html
+// Pantry Ledger Table — Mobile-first with expandable detail rows
 (function() {
   let collapsedCategories = new Set();
-  let categoryEmojiMap = {}; // Cache for category emojis
+  let expandedRowIndex = null; // Track which row's detail panel is open
+  let categoryEmojiMap = {};
 
   // Local reference to normalizeKey (defined in utils.js).
-  // Fallback to simple lowercase if utils.js hasn't loaded yet (browser cache).
   function _normalizeKey(name, unit) {
     if (typeof window.normalizeKey === 'function') return window.normalizeKey(name, unit);
     return `${(name || '').trim().toLowerCase()}|${(unit || '').trim().toLowerCase()}`;
   }
 
-  // Load category emojis from household settings
   function loadCategoryEmojis() {
     const emojis = (window.householdSettings && window.householdSettings.category_emojis) || {};
     categoryEmojiMap = { ...emojis };
   }
 
   async function initPantryLedger() {
-    // Wait for window.pantry to be available
     if (!window.pantry) {
       setTimeout(initPantryLedger, 500);
       return;
     }
-
-    // Load category emojis
     await loadCategoryEmojis();
-
     renderPantryLedger();
     setupPantrySearch();
     setupPantryFilters();
+  }
+
+  // Detect desktop (columns visible) vs mobile (detail panel needed)
+  function isDesktop() {
+    return window.matchMedia('(min-width: 900px)').matches;
   }
 
   function renderPantryLedger() {
@@ -43,13 +43,12 @@
     const selectedCategory = filterSelect ? filterSelect.value : '';
     const sortBy = sortSelect ? sortSelect.value : 'alpha';
 
-    // Apply filters
+    // Filter
     let filtered = window.pantry || [];
 
     if (selectedCategory) {
       filtered = filtered.filter(item => item.category === selectedCategory);
     }
-
     if (searchTerm) {
       filtered = filtered.filter(item =>
         item.name.toLowerCase().includes(searchTerm) ||
@@ -68,109 +67,97 @@
       });
     } else if (sortBy === 'expiring') {
       filtered.sort((a, b) => {
-        const aExpiry = getEarliestExpiry(a);
-        const bExpiry = getEarliestExpiry(b);
-        if (aExpiry === null && bExpiry === null) return 0;
-        if (aExpiry === null) return 1;
-        if (bExpiry === null) return -1;
-        return aExpiry - bExpiry;
+        const aExp = getEarliestExpiry(a);
+        const bExp = getEarliestExpiry(b);
+        if (aExp === null && bExp === null) return 0;
+        if (aExp === null) return 1;
+        if (bExp === null) return -1;
+        return aExp - bExp;
       });
     } else if (sortBy === 'recent') {
       filtered = [...filtered].reverse();
     }
 
     if (filtered.length === 0) {
-      ledgerDisplay.innerHTML = '<p style="text-align: center; opacity: 0.6; padding: 2rem;">No items to display</p>';
+      ledgerDisplay.innerHTML = '<p style="text-align:center;opacity:0.5;padding:2rem;">No items to display</p>';
       return;
     }
 
-    // Group by category - dynamically get unique categories from filtered items
+    // Group by category
     const categoriesInUse = [...new Set(filtered.map(item => item.category))];
     const grouped = {};
     categoriesInUse.forEach(cat => grouped[cat] = []);
     filtered.forEach(item => {
-      if (!grouped[item.category]) {
-        grouped[item.category] = [];
-      }
+      if (!grouped[item.category]) grouped[item.category] = [];
       grouped[item.category].push(item);
     });
 
-    // Reserved quantities from backend API (set during loadMealPlans)
     const reserved = window.reservedIngredients || {};
+    const esc = typeof escapeHTML === 'function' ? escapeHTML : (s) => String(s);
 
-    // Build single unified ledger table
     ledgerDisplay.innerHTML = '';
 
-    // Create table container
     const tableContainer = document.createElement('div');
     tableContainer.className = 'ledger-table-container unified-ledger';
 
-    // Store items for event listeners
     let allItems = [];
 
+    // Determine column count: mobile = 5, desktop = 9
+    const desktopCols = 9;
+    const mobileCols = 5;
+
     let tableHTML = `
-      <table class="ledger-table unified-ledger-table">
+      <table class="unified-ledger-table">
         <thead>
           <tr>
-            <th class="ledger-col-category">CATEGORY</th>
-            <th class="ledger-col-item">ITEM</th>
-            <th class="ledger-col-qty">OH</th>
-            <th class="ledger-col-qty ledger-col-reserved">RS</th>
-            <th class="ledger-col-qty ledger-col-available">AVAIL</th>
-            <th class="ledger-col-qty">MIN</th>
-            <th class="ledger-col-locations">LOCATIONS</th>
-            <th class="ledger-col-expiry">EXPIRY</th>
-            <th class="ledger-col-actions">ACTIONS</th>
+            <th class="ledger-col-emoji"></th>
+            <th class="ledger-col-item">Item</th>
+            <th class="ledger-col-oh">OH</th>
+            <th class="ledger-col-re">RE</th>
+            <th class="ledger-col-av">AV</th>
+            <th class="ledger-col-min">Min</th>
+            <th class="ledger-col-locations">Locations</th>
+            <th class="ledger-col-expiry">Expiry</th>
+            <th class="ledger-col-actions"></th>
           </tr>
         </thead>
         <tbody>
     `;
 
-    // Render each category with header row and items
-    categoriesInUse.forEach((category, catIndex) => {
+    categoriesInUse.forEach(category => {
       const items = grouped[category];
       if (items.length === 0) return;
 
       const categoryEmoji = getCategoryEmoji(category);
+
+      // Category summary stats
       const totalOH = items.reduce((sum, item) => sum + item.totalQty, 0);
-      const lowStockCount = items.filter(item => {
+      const totalAV = items.reduce((sum, item) => {
         const key = _normalizeKey(item.name, item.unit);
-        const reservedQty = reserved[key] || 0;
-        const available = item.totalQty - reservedQty;
-        return available < item.min;
-      }).length;
-      const expiringCount = items.filter(item => {
-        const days = getEarliestExpiry(item);
-        return days !== null && days <= 7;
-      }).length;
+        return sum + Math.max(0, item.totalQty - (reserved[key] || 0));
+      }, 0);
 
-      let alerts = [];
-      if (expiringCount > 0) alerts.push(`${expiringCount} expiring`);
-      if (lowStockCount > 0) alerts.push(`${lowStockCount} low stock`);
-      const alertsText = alerts.length > 0 ? ` • ${alerts.join(', ')}` : '';
-
-      // Category header row
       tableHTML += `
         <tr class="ledger-category-divider">
-          <td colspan="9" class="ledger-category-header-cell">
-            <strong>${categoryEmoji} ${category}</strong>
-            <span class="ledger-category-meta">(${items.length} items • Total OH: ${totalOH.toFixed(1)}${alertsText})</span>
+          <td colspan="${mobileCols}" class="ledger-category-header-cell">
+            <strong>${categoryEmoji} ${esc(category)}</strong>
+            <span class="ledger-category-meta">${items.length} items &bull; OH ${totalOH.toFixed(1)} &bull; AV ${totalAV.toFixed(1)}</span>
           </td>
         </tr>
       `;
 
-      // Render items for this category
       items.forEach((item, itemIndex) => {
-        const itemGlobalIndex = allItems.length;
+        const idx = allItems.length;
         allItems.push(item);
 
         const key = _normalizeKey(item.name, item.unit);
         const reservedQty = reserved[key] || 0;
         const available = item.totalQty - reservedQty;
         const isLowStock = available < item.min;
+        const rowClass = itemIndex % 2 === 0 ? 'ledger-row-even' : 'ledger-row-odd';
+        const lowStockClass = isLowStock ? 'ledger-row-low-stock' : '';
 
-        // Location display
-        const esc = typeof escapeHTML === 'function' ? escapeHTML : (s) => String(s);
+        // Location display (for desktop column)
         const locationsList = item.locations.map(loc =>
           `${esc(loc.location)}: ${loc.qty}`
         ).join(', ');
@@ -179,91 +166,128 @@
         const expiryDays = getEarliestExpiry(item);
         let expiryHTML = '-';
         if (expiryDays !== null) {
-          const isExpiringSoon = expiryDays <= 7;
-          const expiryClass = isExpiringSoon ? 'expiry-warning' : '';
-          expiryHTML = `<span class="${expiryClass}">${expiryDays} days</span>`;
+          const cls = expiryDays <= 3 ? 'expiry-warning' : expiryDays <= 7 ? 'expiry-warning' : '';
+          expiryHTML = `<span class="${cls}">${expiryDays}d</span>`;
         }
 
-        const rowClass = itemIndex % 2 === 0 ? 'ledger-row-even' : 'ledger-row-odd';
-        const lowStockClass = isLowStock ? 'ledger-row-low-stock' : '';
-
+        // Data row — 5 mobile columns + 4 desktop-only columns
         tableHTML += `
-          <tr class="ledger-data-row ${rowClass} ${lowStockClass}" data-item-index="${itemGlobalIndex}">
-            <td class="ledger-col-category">${categoryEmoji}</td>
-            <td class="ledger-col-item"><strong>${esc(item.name)}</strong> <span class="item-unit">(${esc(item.unit)})</span></td>
-            <td class="ledger-col-qty">${item.totalQty.toFixed(1)}</td>
-            <td class="ledger-col-qty ledger-col-reserved">${reservedQty.toFixed(1)}</td>
-            <td class="ledger-col-qty ledger-col-available ${isLowStock ? 'low-stock-value' : ''}">${available.toFixed(1)}</td>
-            <td class="ledger-col-qty">${item.min}</td>
-            <td class="ledger-col-locations">${locationsList}</td>
+          <tr class="ledger-data-row ${rowClass} ${lowStockClass}" data-item-index="${idx}">
+            <td class="ledger-col-emoji">${categoryEmoji}</td>
+            <td class="ledger-col-item">${esc(item.name)} <span class="item-unit">(${esc(item.unit)})</span></td>
+            <td class="ledger-col-oh">${item.totalQty.toFixed(1)}</td>
+            <td class="ledger-col-re">${reservedQty.toFixed(1)}</td>
+            <td class="ledger-col-av ${isLowStock ? 'low-stock-value' : ''}">${available.toFixed(1)}</td>
+            <td class="ledger-col-min">${item.min}</td>
+            <td class="ledger-col-locations">${locationsList || '-'}</td>
             <td class="ledger-col-expiry">${expiryHTML}</td>
             <td class="ledger-col-actions">
-              <button class="btn-ledger-action btn-quick-use" data-item-index="${itemGlobalIndex}" title="Quick Use">🔻</button>
-              <button class="btn-ledger-action btn-edit-item" data-item-index="${itemGlobalIndex}" title="Edit">✏️</button>
+              <button class="btn-ledger-action btn-quick-use" data-item-index="${idx}" title="Quick Use">🔻</button>
+              <button class="btn-ledger-action btn-edit-item" data-item-index="${idx}" title="Edit">✏️</button>
+            </td>
+          </tr>
+        `;
+
+        // Expandable detail row (mobile only — hidden via CSS on desktop)
+        const isExpanded = expandedRowIndex === idx;
+        tableHTML += `
+          <tr class="ledger-detail-row" data-detail-for="${idx}" ${isExpanded ? '' : 'style="display:none"'}>
+            <td colspan="${mobileCols}">
+              <div class="ledger-detail-panel">
+                <div class="detail-chip">
+                  <span class="detail-chip-label">Min</span>
+                  <span class="detail-chip-value">${item.min}</span>
+                </div>
+                <div class="detail-chip">
+                  <span class="detail-chip-label">Locations</span>
+                  <span class="detail-chip-value">${locationsList || 'None'}</span>
+                </div>
+                <div class="detail-chip">
+                  <span class="detail-chip-label">Expiry</span>
+                  <span class="detail-chip-value">${expiryDays !== null ? expiryDays + ' days' : 'N/A'}</span>
+                </div>
+                <div class="detail-actions">
+                  <button class="btn-ledger-action btn-quick-use" data-item-index="${idx}" title="Quick Use">🔻</button>
+                  <button class="btn-ledger-action btn-edit-item" data-item-index="${idx}" title="Edit">✏️</button>
+                </div>
+              </div>
             </td>
           </tr>
         `;
       });
     });
 
-    tableHTML += `
-        </tbody>
-      </table>
-    `;
-
+    tableHTML += '</tbody></table>';
     tableContainer.innerHTML = tableHTML;
     ledgerDisplay.appendChild(tableContainer);
 
-    // Add event listeners to rows and buttons
-    const rows = ledgerDisplay.querySelectorAll('.ledger-data-row');
-    rows.forEach(row => {
-      const itemIndex = parseInt(row.getAttribute('data-item-index'));
-      const item = allItems[itemIndex];
+    // --- Event listeners ---
+    wireEventListeners(ledgerDisplay, allItems);
+  }
 
-      // Click row to edit (unless clicking a button)
+  function wireEventListeners(container, allItems) {
+    // Row tap: on mobile toggle detail panel, on desktop open modal
+    container.querySelectorAll('.ledger-data-row').forEach(row => {
+      const idx = parseInt(row.getAttribute('data-item-index'));
+      const item = allItems[idx];
+
       row.addEventListener('click', (e) => {
-        if (!e.target.closest('button')) {
-          if (window.openIngredientModal) {
-            window.openIngredientModal(item);
-          }
+        if (e.target.closest('button')) return;
+
+        if (isDesktop()) {
+          if (window.openIngredientModal) window.openIngredientModal(item);
+        } else {
+          toggleDetailPanel(container, idx);
         }
       });
     });
 
-    // Add button event listeners
-    const editButtons = ledgerDisplay.querySelectorAll('.btn-edit-item');
-    editButtons.forEach(btn => {
+    // Edit buttons
+    container.querySelectorAll('.btn-edit-item').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const itemIndex = parseInt(btn.getAttribute('data-item-index'));
-        const item = allItems[itemIndex];
-        if (window.openIngredientModal) {
-          window.openIngredientModal(item);
-        }
+        const idx = parseInt(btn.getAttribute('data-item-index'));
+        if (window.openIngredientModal) window.openIngredientModal(allItems[idx]);
       });
     });
 
-    const quickUseButtons = ledgerDisplay.querySelectorAll('.btn-quick-use');
-    quickUseButtons.forEach(btn => {
+    // Quick-use buttons
+    container.querySelectorAll('.btn-quick-use').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const itemIndex = parseInt(btn.getAttribute('data-item-index'));
-        const item = allItems[itemIndex];
-        if (window.openQuickDepleteModal) {
-          window.openQuickDepleteModal(item);
-        }
+        const idx = parseInt(btn.getAttribute('data-item-index'));
+        if (window.openQuickDepleteModal) window.openQuickDepleteModal(allItems[idx]);
       });
     });
   }
+
+  function toggleDetailPanel(container, idx) {
+    const detailRow = container.querySelector(`.ledger-detail-row[data-detail-for="${idx}"]`);
+    if (!detailRow) return;
+
+    // Close previously expanded row
+    if (expandedRowIndex !== null && expandedRowIndex !== idx) {
+      const prev = container.querySelector(`.ledger-detail-row[data-detail-for="${expandedRowIndex}"]`);
+      if (prev) prev.style.display = 'none';
+    }
+
+    if (detailRow.style.display === 'none') {
+      detailRow.style.display = '';
+      expandedRowIndex = idx;
+    } else {
+      detailRow.style.display = 'none';
+      expandedRowIndex = null;
+    }
+  }
+
+  // --- Utility helpers ---
 
   function getEarliestExpiry(item) {
     let soonest = null;
     item.locations.forEach(loc => {
       if (loc.expiry) {
         const days = getDaysUntilExpiry(loc.expiry);
-        if (days !== null && (soonest === null || days < soonest)) {
-          soonest = days;
-        }
+        if (days !== null && (soonest === null || days < soonest)) soonest = days;
       }
     });
     return soonest;
@@ -275,100 +299,62 @@
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     expiry.setHours(0, 0, 0, 0);
-    const diffTime = expiry - today;
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
   }
 
   function getCategoryEmoji(category) {
-    // Try to get emoji from cached map (includes custom categories)
-    if (categoryEmojiMap[category]) {
-      return categoryEmojiMap[category];
-    }
-
-    // Fallback to default emojis for standard categories
+    if (categoryEmojiMap[category]) return categoryEmojiMap[category];
     const emojis = {
-      'Meat': '🥩',
-      'Dairy': '🧈',
-      'Produce': '🥬',
-      'Pantry': '🫙',
-      'Frozen': '🧊',
-      'Spices': '🌶️',
-      'Beverages': '🥤',
-      'Snacks': '🍿',
-      'Grains': '🌾',
-      'Baking': '🧁',
-      'Canned Goods': '🥫',
-      'Condiments': '🫗',
-      'Seafood': '🐟',
-      'Deli': '🥪',
-      'Other': '📦'
+      'Meat': '🥩', 'Dairy': '🧈', 'Produce': '🥬', 'Pantry': '🫙',
+      'Frozen': '🧊', 'Spices': '🌶️', 'Beverages': '🥤', 'Snacks': '🍿',
+      'Grains': '🌾', 'Baking': '🧁', 'Canned Goods': '🥫', 'Condiments': '🫗',
+      'Seafood': '🐟', 'Deli': '🥪', 'Other': '📦'
     };
     return emojis[category] || '📦';
   }
 
+  // --- Search & filter setup ---
+
   function setupPantrySearch() {
-    const searchInput = document.getElementById('pantry-search-ledger');
-    if (searchInput) {
-      searchInput.addEventListener('input', renderPantryLedger);
-    }
+    const input = document.getElementById('pantry-search-ledger');
+    if (input) input.addEventListener('input', renderPantryLedger);
   }
 
   function setupPantryFilters() {
-    const filterSelect = document.getElementById('filter-category-ledger');
-    const sortSelect = document.getElementById('sort-pantry-ledger');
-
-    if (filterSelect) {
-      filterSelect.addEventListener('change', renderPantryLedger);
-    }
-
-    if (sortSelect) {
-      sortSelect.addEventListener('change', renderPantryLedger);
-    }
+    const filter = document.getElementById('filter-category-ledger');
+    const sort = document.getElementById('sort-pantry-ledger');
+    if (filter) filter.addEventListener('change', renderPantryLedger);
+    if (sort) sort.addEventListener('change', renderPantryLedger);
   }
 
-  // Watch for pantry changes using MutationObserver
+  // --- MutationObserver for pantry data changes ---
   let _pantryRenderInProgress = false;
 
   function setupPantryObserver() {
     const pantryDisplay = document.getElementById('pantry-display');
-    if (!pantryDisplay) {
-      setTimeout(setupPantryObserver, 500);
-      return;
-    }
+    if (!pantryDisplay) { setTimeout(setupPantryObserver, 500); return; }
 
     const observer = new MutationObserver(() => {
       if (_pantryRenderInProgress) return;
       _pantryRenderInProgress = true;
-      try {
-        renderPantryLedger();
-      } finally {
-        Promise.resolve().then(() => { _pantryRenderInProgress = false; });
-      }
+      try { renderPantryLedger(); }
+      finally { Promise.resolve().then(() => { _pantryRenderInProgress = false; }); }
     });
 
-    observer.observe(pantryDisplay, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-      attributes: true
-    });
+    observer.observe(pantryDisplay, { childList: true, subtree: true, characterData: true, attributes: true });
   }
 
-  // Expose render function so app.js can re-render after reserved ingredients load
+  // Expose for app.js
   window.renderPantryLedger = renderPantryLedger;
 
-  // Expose function to reload category emojis (called when categories are added/removed)
   window.reloadCategoryEmojis = async function() {
     await loadCategoryEmojis();
     renderPantryLedger();
   };
 
-  // Initialize when DOM is ready
+  // Init
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      initPantryLedger();
-      setupPantryObserver();
-    });
+    document.addEventListener('DOMContentLoaded', () => { initPantryLedger(); setupPantryObserver(); });
   } else {
     initPantryLedger();
     setupPantryObserver();
