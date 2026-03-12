@@ -128,12 +128,12 @@
   z-index: 10;
 }
 
-/* Mobile column widths — 5 core columns, no horizontal scroll */
-.unified-ledger-table .ledger-col-emoji   { width: 2rem; text-align: center; }
-.unified-ledger-table .ledger-col-item    { width: auto; overflow: hidden; text-overflow: ellipsis; }
-.unified-ledger-table .ledger-col-oh      { width: 2.8rem; text-align: right; }
-.unified-ledger-table .ledger-col-re      { width: 2.8rem; text-align: right; }
-.unified-ledger-table .ledger-col-av      { width: 2.8rem; text-align: right; }
+/* Mobile column widths — percentages so they always total 100% */
+.unified-ledger-table .ledger-col-emoji   { width: 8%; text-align: center; }
+.unified-ledger-table .ledger-col-item    { width: 52%; }
+.unified-ledger-table .ledger-col-oh      { width: 13%; text-align: right; }
+.unified-ledger-table .ledger-col-re      { width: 13%; text-align: right; }
+.unified-ledger-table .ledger-col-av      { width: 14%; text-align: right; }
 
 /* Desktop-only columns — hidden on mobile */
 .unified-ledger-table .ledger-col-min,
@@ -202,14 +202,13 @@
   padding-right: 0;
 }
 
-/* Item name — name (unit), truncates to prevent horizontal overflow */
+/* Item name — name (unit) */
 .ledger-data-row .ledger-col-item {
   font-weight: 500;
   color: var(--color-pantry-header);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 0; /* Forces truncation within table-layout: fixed */
 }
 
 .item-unit {
@@ -371,10 +370,11 @@
     font-size: 1.5rem;
   }
 
-  .unified-ledger-table .ledger-col-emoji   { width: 2.5rem; }
-  .unified-ledger-table .ledger-col-oh      { width: 3.5rem; }
-  .unified-ledger-table .ledger-col-re      { width: 3.5rem; }
-  .unified-ledger-table .ledger-col-av      { width: 3.5rem; }
+  .unified-ledger-table .ledger-col-emoji   { width: 7%; }
+  .unified-ledger-table .ledger-col-item    { width: 55%; }
+  .unified-ledger-table .ledger-col-oh      { width: 12%; }
+  .unified-ledger-table .ledger-col-re      { width: 12%; }
+  .unified-ledger-table .ledger-col-av      { width: 14%; }
 
   .unified-ledger-table thead th {
     font-size: 0.7rem;
@@ -430,16 +430,16 @@
     display: table-cell;
   }
 
-  /* Desktop column widths */
-  .unified-ledger-table .ledger-col-emoji     { width: 3rem; }
-  .unified-ledger-table .ledger-col-item      { width: auto; }
-  .unified-ledger-table .ledger-col-oh        { width: 4rem; }
-  .unified-ledger-table .ledger-col-re        { width: 4rem; }
-  .unified-ledger-table .ledger-col-av        { width: 4rem; }
-  .unified-ledger-table .ledger-col-min       { width: 3.5rem; text-align: right; }
-  .unified-ledger-table .ledger-col-locations  { width: 15%; }
-  .unified-ledger-table .ledger-col-expiry    { width: 5.5rem; }
-  .unified-ledger-table .ledger-col-actions   { width: 5rem; text-align: center; }
+  /* Desktop column widths — all percentages, total 100% */
+  .unified-ledger-table .ledger-col-emoji     { width: 4%; }
+  .unified-ledger-table .ledger-col-item      { width: 25%; }
+  .unified-ledger-table .ledger-col-oh        { width: 7%; }
+  .unified-ledger-table .ledger-col-re        { width: 7%; }
+  .unified-ledger-table .ledger-col-av        { width: 7%; }
+  .unified-ledger-table .ledger-col-min       { width: 6%; text-align: right; }
+  .unified-ledger-table .ledger-col-locations  { width: 22%; }
+  .unified-ledger-table .ledger-col-expiry    { width: 10%; }
+  .unified-ledger-table .ledger-col-actions   { width: 12%; text-align: center; }
 
   .ledger-data-row td {
     padding: 0.6rem 0.6rem;
@@ -473,10 +473,8 @@
    WIDE DESKTOP (>=1100px) — Extra breathing room
    =================================================================== */
 @media (min-width: 1100px) {
-  .unified-ledger-table .ledger-col-locations { width: 18%; }
-  .unified-ledger-table .ledger-col-oh  { width: 4.5rem; }
-  .unified-ledger-table .ledger-col-re  { width: 4.5rem; }
-  .unified-ledger-table .ledger-col-av  { width: 4.5rem; }
+  .unified-ledger-table .ledger-col-item      { width: 22%; }
+  .unified-ledger-table .ledger-col-locations  { width: 25%; }
 }
 
 /* ===================================================================
