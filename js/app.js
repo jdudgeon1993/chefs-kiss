@@ -431,8 +431,8 @@ function renderMealCalendar(meals) {
           ${dateMeals.map(meal => `
             <div class="meal-item ${meal.cooked ? 'cooked' : ''}" data-id="${meal.id}">
               <div class="meal-info">
-                <span class="meal-type">${meal.meal_type || 'Dinner'}</span>
-                <span class="meal-recipe">${meal.recipe_name || 'Recipe'}</span>
+                <span class="meal-type">${escapeHTML(meal.meal_type || 'Dinner')}</span>
+                <span class="meal-recipe">${escapeHTML(meal.recipe_name || 'Recipe')}</span>
               </div>
               <div class="meal-actions">
                 ${!meal.cooked ? `<button onclick="cookMeal(${meal.id})" class="btn-cook">Cook</button>` : '<span class="cooked-badge">✓ Cooked</span>'}

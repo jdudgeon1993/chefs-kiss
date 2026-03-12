@@ -96,9 +96,18 @@ async def upload_recipe_photo(
     if file.content_type not in ALLOWED_PHOTO_TYPES:
         raise HTTPException(status_code=400, detail="File must be JPEG, PNG, WebP, or GIF")
 
-    contents = await file.read()
-    if len(contents) > MAX_PHOTO_SIZE:
-        raise HTTPException(status_code=400, detail="File must be under 5 MB")
+    # Read in chunks to avoid loading arbitrarily large files into memory
+    chunks = []
+    total_size = 0
+    while True:
+        chunk = await file.read(64 * 1024)  # 64 KB chunks
+        if not chunk:
+            break
+        total_size += len(chunk)
+        if total_size > MAX_PHOTO_SIZE:
+            raise HTTPException(status_code=400, detail="File must be under 5 MB")
+        chunks.append(chunk)
+    contents = b"".join(chunks)
 
     # Generate unique filename
     ext = file.filename.rsplit('.', 1)[-1] if '.' in file.filename else 'jpg'

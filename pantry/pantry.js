@@ -170,8 +170,9 @@
         const isLowStock = available < item.min;
 
         // Location display
+        const esc = typeof escapeHTML === 'function' ? escapeHTML : (s) => String(s);
         const locationsList = item.locations.map(loc =>
-          `${loc.location}: ${loc.qty}`
+          `${esc(loc.location)}: ${loc.qty}`
         ).join(', ');
 
         // Expiry display
@@ -189,7 +190,7 @@
         tableHTML += `
           <tr class="ledger-data-row ${rowClass} ${lowStockClass}" data-item-index="${itemGlobalIndex}">
             <td class="ledger-col-category">${categoryEmoji}</td>
-            <td class="ledger-col-item"><strong>${item.name}</strong> <span class="item-unit">(${item.unit})</span></td>
+            <td class="ledger-col-item"><strong>${esc(item.name)}</strong> <span class="item-unit">(${esc(item.unit)})</span></td>
             <td class="ledger-col-qty">${item.totalQty.toFixed(1)}</td>
             <td class="ledger-col-qty ledger-col-reserved">${reservedQty.toFixed(1)}</td>
             <td class="ledger-col-qty ledger-col-available ${isLowStock ? 'low-stock-value' : ''}">${available.toFixed(1)}</td>
