@@ -87,7 +87,7 @@
    LEDGER TABLE — Mobile-first compact table
    =================================================================== */
 .ledger-table-container {
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: auto;
   max-height: calc(100dvh - 240px);
   -webkit-overflow-scrolling: touch;
@@ -101,6 +101,7 @@
 
 .unified-ledger-table {
   width: 100%;
+  max-width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
   table-layout: fixed;
@@ -124,12 +125,12 @@
   z-index: 10;
 }
 
-/* Mobile column widths — 5 core columns */
+/* Mobile column widths — 5 core columns, no horizontal scroll */
 .unified-ledger-table .ledger-col-emoji   { width: 2rem; text-align: center; }
-.unified-ledger-table .ledger-col-item    { width: auto; }
-.unified-ledger-table .ledger-col-oh      { width: 3rem; text-align: right; }
-.unified-ledger-table .ledger-col-re      { width: 3rem; text-align: right; }
-.unified-ledger-table .ledger-col-av      { width: 3rem; text-align: right; }
+.unified-ledger-table .ledger-col-item    { width: auto; overflow: hidden; text-overflow: ellipsis; }
+.unified-ledger-table .ledger-col-oh      { width: 2.8rem; text-align: right; }
+.unified-ledger-table .ledger-col-re      { width: 2.8rem; text-align: right; }
+.unified-ledger-table .ledger-col-av      { width: 2.8rem; text-align: right; }
 
 /* Desktop-only columns — hidden on mobile */
 .unified-ledger-table .ledger-col-min,
@@ -152,9 +153,8 @@
   font-size: 0.8rem;
   color: var(--color-pantry-header);
   font-family: "Libre Baskerville", Georgia, serif;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
   cursor: pointer;
   user-select: none;
 }
@@ -199,13 +199,14 @@
   padding-right: 0;
 }
 
-/* Item name — name (unit) */
+/* Item name — name (unit), truncates to prevent horizontal overflow */
 .ledger-data-row .ledger-col-item {
   font-weight: 500;
   color: var(--color-pantry-header);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 0; /* Forces truncation within table-layout: fixed */
 }
 
 .item-unit {
