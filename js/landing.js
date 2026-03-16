@@ -368,8 +368,14 @@ async function handleLandingSignIn() {
     });
 
     if (response.session && response.session.access_token) {
-      // Save token and navigate to the app
+      // Save full session details and navigate to the app
       API.setToken(response.session.access_token);
+      if (response.session.refresh_token) {
+        API.setRefreshToken(response.session.refresh_token);
+      }
+      if (response.household_id) {
+        API.setActiveHouseholdId(response.household_id);
+      }
       window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/pantry/';
     } else {
       errorDiv.textContent = 'Sign in failed';
@@ -435,11 +441,19 @@ async function handleLandingSignUp() {
     });
 
     if (response.session && response.session.access_token) {
-      // Save token and navigate to the app
+      // Save full session details and navigate to the app
       API.setToken(response.session.access_token);
+      if (response.session.refresh_token) {
+        API.setRefreshToken(response.session.refresh_token);
+      }
+      if (response.household_id) {
+        API.setActiveHouseholdId(response.household_id);
+      }
       window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/pantry/';
     } else {
-      errorDiv.textContent = 'Sign up failed';
+      // Account created but no session (email confirmation may be required)
+      errorDiv.style.color = 'var(--color-accent-olive, #6b7a3d)';
+      errorDiv.textContent = 'Account created! Please check your email to confirm, then sign in.';
       signUpBtn.disabled = false;
       signUpBtn.textContent = originalText;
     }
