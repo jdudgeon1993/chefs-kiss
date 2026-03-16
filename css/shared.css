@@ -321,6 +321,7 @@ body.compact {
   position: relative;
   z-index: 1;
   padding: 0;
+  overflow-x: hidden; /* Prevent horizontal bleed from wide grids */
 }
 
 /* Section visibility — multi-page architecture */
