@@ -115,9 +115,12 @@ class API {
     const householdId = this.getActiveHouseholdId();
 
     const headers = {
-      'Authorization': token ? `Bearer ${token}` : '',
       ...options.headers
     };
+    // Only send Authorization when we have a token (empty header can cause 400s)
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
     // Don't set Content-Type for FormData (browser sets it with boundary)
     if (!options.rawBody) {
       headers['Content-Type'] = 'application/json';

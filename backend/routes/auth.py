@@ -10,6 +10,7 @@ from typing import Optional
 import logging
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from gotrue.errors import AuthApiError
 from db import get_db
 
 limiter = Limiter(key_func=get_remote_address)
@@ -74,6 +75,13 @@ async def signup(credentials: SignUpRequest, request: Request):
 
     except HTTPException:
         raise
+    except AuthApiError as e:
+        # Surface Supabase auth errors directly (e.g. "User already registered")
+        logger.warning(f"Signup auth error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     except Exception as e:
         logger.error(f"Signup failed: {e}")
         raise HTTPException(
@@ -114,7 +122,14 @@ async def signin(credentials: SignInRequest, request: Request):
             "session": auth_result.get('session')
         }
 
+    except AuthApiError as e:
+        logger.warning(f"Signin auth error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e)
+        )
     except Exception as e:
+        logger.error(f"Signin failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
