@@ -7,6 +7,7 @@ Proxy to Supabase auth (keeping what works!)
 from fastapi import APIRouter, HTTPException, status, Header, Request
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+import os
 import logging
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -48,6 +49,13 @@ async def signup(credentials: SignUpRequest, request: Request):
             )
 
         user = auth_result['user']
+
+        # IMPORTANT: sign_up changes the Supabase client's auth context to the
+        # new user's JWT. Restore service-role auth so subsequent table operations
+        # (household creation, member addition) have full permissions via RLS bypass.
+        from utils.supabase_client import get_supabase
+        service_key = os.getenv("SUPABASE_SERVICE_KEY")
+        get_supabase().postgrest.auth(service_key)
 
         # Create household for user
         household_data = db.households.create({
@@ -108,6 +116,11 @@ async def signin(credentials: SignInRequest, request: Request):
             )
 
         user = auth_result['user']
+
+        # Restore service-role auth for table queries (sign_in changes client context)
+        from utils.supabase_client import get_supabase
+        service_key = os.getenv("SUPABASE_SERVICE_KEY")
+        get_supabase().postgrest.auth(service_key)
 
         # Get user's household
         memberships = db.households.get_memberships(user['id'])
