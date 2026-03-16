@@ -107,7 +107,7 @@ async function reloadSection(section, eventType) {
     switch (section) {
       case 'pantry':
         // Pantry changes affect shopping list (threshold items)
-        await Promise.all([loadPantry(), loadShoppingList()]);
+        await Promise.all([loadPantry(), loadShoppingList({ fromRealtime: true })]);
         showToast(`Pantry ${actionLabel} by another user`, 'sync', 3000);
         break;
       case 'recipes':
@@ -116,12 +116,12 @@ async function reloadSection(section, eventType) {
         break;
       case 'meals':
         // Meal changes affect shopping list (ingredient needs) and pantry RS column
-        await Promise.all([loadMealPlans(), loadShoppingList()]);
+        await Promise.all([loadMealPlans(), loadShoppingList({ fromRealtime: true })]);
         if (window.renderPantryLedger) window.renderPantryLedger();
         showToast(`Meal plan ${actionLabel} by another user`, 'sync', 3000);
         break;
       case 'shopping':
-        await loadShoppingList();
+        await loadShoppingList({ fromRealtime: true });
         showToast(`Shopping list ${actionLabel} by another user`, 'sync', 3000);
         break;
     }
