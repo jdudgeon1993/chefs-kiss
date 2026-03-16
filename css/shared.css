@@ -1562,64 +1562,7 @@ body[data-section] .floating-action-menu {
     font-size: 1.25rem;
   }
 
-  /* Calendar - Mobile Week View */
-  .calendar-container {
-    grid-template-columns: 1fr; /* Single column for mobile */
-    gap: 0.5rem;
-  }
-
-  .calendar-day {
-    min-height: auto;
-    padding: 1rem;
-  }
-
-  .calendar-day-header {
-    flex-direction: row;
-    justify-content: space-between;
-  }
-
-  .calendar-day-name {
-    font-size: 0.8rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .calendar-day-number {
-    font-size: 1.2rem;
-  }
-
-  .calendar-period-label {
-    font-size: 1.1rem;
-  }
-
-  .btn-calendar-nav {
-    padding: 0.5rem 0.85rem;
-    font-size: 0.8rem;
-  }
-
-  /* Scheduled Recipes Mobile */
-  .scheduled-recipe-card {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .scheduled-recipe-info {
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
-  }
-
-  .scheduled-recipe-emoji {
-    width: 50px;
-    height: 50px;
-    font-size: 2rem;
-  }
-
-  .btn-cook-now {
-    width: 100%;
-    padding: 0.75rem;
-  }
+  /* Calendar/meal mobile styles now in meals/meals.css (mobile-first) */
 }
 
 /* Onboarding/bulk-entry styles moved to pantry/pantry.css */

@@ -1,8 +1,17 @@
-// Meal Planning Calendar - Extracted from index.html
+// Meal Planning Calendar — Mobile-first, desktop-enhanced
 (function() {
   let currentDate = new Date();
-  let viewMode = 'month'; // 'month' for desktop, 'week' for mobile
-  let scheduledMeals = {}; // Format: { 'YYYY-MM-DD': [recipeIds] }
+  let viewMode = 'week'; // default mobile
+  let scheduledMeals = {}; // { 'YYYY-MM-DD': [meal objects] }
+
+  // Debounce utility
+  function debounce(fn, ms) {
+    let timer;
+    return function() {
+      clearTimeout(timer);
+      timer = setTimeout(fn, ms);
+    };
+  }
 
   function initCalendar() {
     updateViewMode();
@@ -10,53 +19,45 @@
     renderCalendar();
     renderScheduledRecipesList();
     setupEventListeners();
-
-    // Re-check view mode on window resize
-    window.addEventListener('resize', () => {
-      updateViewMode();
-      renderCalendar();
-    });
+    setupSwipeNavigation();
+    updateTodayButton();
   }
 
   function updateViewMode() {
-    viewMode = window.innerWidth <= 768 ? 'week' : 'month';
+    viewMode = window.innerWidth >= 769 ? 'month' : 'week';
   }
 
-  async function loadScheduledMeals() {
-    // Load from app.js planner object (date keys -> meal arrays)
+  function loadScheduledMeals() {
     scheduledMeals = {};
 
-    if (window.planner && typeof window.planner === 'object') {
-      Object.keys(window.planner).forEach(dateKey => {
-        const meals = window.planner[dateKey];
-        if (Array.isArray(meals) && meals.length > 0) {
-          scheduledMeals[dateKey] = meals.map(meal => {
-            // Get recipe name from window.recipes
-            let recipeName = 'Unknown Recipe';
-            if (window.recipes) {
-              const recipe = window.recipes.find(r => r.id === meal.recipeId);
-              if (recipe) {
-                recipeName = recipe.name;
-              }
-            }
+    if (!window.planner || typeof window.planner !== 'object') return;
 
-            return {
-              id: meal.id,
-              recipeId: meal.recipeId,
-              recipeName: recipeName,
-              mealType: meal.mealType || 'Dinner',
-              cooked: meal.cooked || false
-            };
-          });
+    Object.keys(window.planner).forEach(function(dateKey) {
+      var meals = window.planner[dateKey];
+      if (!Array.isArray(meals) || meals.length === 0) return;
+
+      scheduledMeals[dateKey] = meals.map(function(meal) {
+        var recipeName = 'Unknown Recipe';
+        if (window.recipes) {
+          var recipe = window.recipes.find(function(r) { return r.id === meal.recipeId; });
+          if (recipe) recipeName = recipe.name;
         }
+        return {
+          id: meal.id,
+          recipeId: meal.recipeId,
+          recipeName: recipeName,
+          mealType: meal.mealType || 'Dinner',
+          cooked: meal.cooked || false
+        };
       });
-    }
+    });
   }
 
-  function renderCalendar() {
-    const container = document.getElementById('calendar-container');
-    const periodLabel = document.getElementById('calendar-period-label');
+  // ── Calendar Rendering ──────────────────────────────────────────
 
+  function renderCalendar() {
+    var container = document.getElementById('calendar-container');
+    var periodLabel = document.getElementById('calendar-period-label');
     if (!container || !periodLabel) return;
 
     container.innerHTML = '';
@@ -66,144 +67,140 @@
     } else {
       renderWeekView(container, periodLabel);
     }
+
+    updateTodayButton();
   }
 
   function renderMonthView(container, periodLabel) {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
+    var year = currentDate.getFullYear();
+    var month = currentDate.getMonth();
+    var monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+    periodLabel.textContent = monthNames[month] + ' ' + year;
 
-    // Update period label
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                        'July', 'August', 'September', 'October', 'November', 'December'];
-    periodLabel.textContent = `${monthNames[month]} ${year}`;
+    var firstDay = new Date(year, month, 1);
+    var lastDay = new Date(year, month + 1, 0);
+    var daysInMonth = lastDay.getDate();
+    var firstDayOfWeek = firstDay.getDay();
 
-    // Get first and last day of month
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-
-    // Get day of week for first day (0 = Sunday)
-    const firstDayOfWeek = firstDay.getDay();
-
-    // Render empty cells for days before month starts
-    for (let i = 0; i < firstDayOfWeek; i++) {
-      const emptyCell = document.createElement('div');
+    // Empty cells before month starts
+    for (var i = 0; i < firstDayOfWeek; i++) {
+      var emptyCell = document.createElement('div');
       emptyCell.className = 'calendar-day disabled';
+      emptyCell.setAttribute('aria-hidden', 'true');
       container.appendChild(emptyCell);
     }
 
-    // Render each day of the month
-    const today = new Date();
+    var today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day);
+    for (var day = 1; day <= daysInMonth; day++) {
+      var date = new Date(year, month, day);
       date.setHours(0, 0, 0, 0);
-      const dateKey = formatDateKey(date);
-
-      const dayCell = createDayCell(date, dateKey, today);
-      container.appendChild(dayCell);
+      var dateKey = formatDateKey(date);
+      container.appendChild(createDayCell(date, dateKey, today));
     }
   }
 
   function renderWeekView(container, periodLabel) {
-    const today = new Date();
+    var today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Get start of current week (Sunday)
-    const startOfWeek = new Date(currentDate);
+    var startOfWeek = new Date(currentDate);
     startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
 
-    // Get end of week (Saturday)
-    const endOfWeek = new Date(startOfWeek);
+    var endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
 
-    // Update period label
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const startMonth = monthNames[startOfWeek.getMonth()];
-    const endMonth = monthNames[endOfWeek.getMonth()];
-    const startDay = startOfWeek.getDate();
-    const endDay = endOfWeek.getDate();
+    var monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var startMonth = monthNames[startOfWeek.getMonth()];
+    var endMonth = monthNames[endOfWeek.getMonth()];
 
     if (startMonth === endMonth) {
-      periodLabel.textContent = `Week of ${startMonth} ${startDay}-${endDay}`;
+      periodLabel.textContent = startMonth + ' ' + startOfWeek.getDate() + '\u2013' + endOfWeek.getDate();
     } else {
-      periodLabel.textContent = `Week of ${startMonth} ${startDay} - ${endMonth} ${endDay}`;
+      periodLabel.textContent = startMonth + ' ' + startOfWeek.getDate() + ' \u2013 ' + endMonth + ' ' + endOfWeek.getDate();
     }
 
-    // Render 7 days
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(startOfWeek);
+    for (var i = 0; i < 7; i++) {
+      var date = new Date(startOfWeek);
       date.setDate(startOfWeek.getDate() + i);
-      const dateKey = formatDateKey(date);
-
-      const dayCell = createDayCell(date, dateKey, today);
-      container.appendChild(dayCell);
+      var dateKey = formatDateKey(date);
+      container.appendChild(createDayCell(date, dateKey, today));
     }
   }
 
   function createDayCell(date, dateKey, today) {
-    const dayCell = document.createElement('div');
+    var dayCell = document.createElement('div');
     dayCell.className = 'calendar-day';
+    dayCell.setAttribute('role', 'gridcell');
+    dayCell.setAttribute('aria-label', date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }));
 
-    const isPast = date < today;
-    const isToday = date.getTime() === today.getTime();
-    const meals = scheduledMeals[dateKey] || [];
-    const hasMeals = meals.length > 0;
+    var isPast = date < today;
+    var isToday = date.getTime() === today.getTime();
+    var meals = scheduledMeals[dateKey] || [];
+    var hasMeals = meals.length > 0;
 
     if (isPast) dayCell.classList.add('past');
     if (isToday) dayCell.classList.add('today');
     if (hasMeals) dayCell.classList.add('has-meal');
 
     // Day header
-    const dayHeader = document.createElement('div');
+    var dayHeader = document.createElement('div');
     dayHeader.className = 'calendar-day-header';
 
-    const dayNumber = document.createElement('div');
+    var dayNumber = document.createElement('div');
     dayNumber.className = 'calendar-day-number';
     dayNumber.textContent = date.getDate();
 
-    const dayName = document.createElement('div');
+    var dayName = document.createElement('div');
     dayName.className = 'calendar-day-name';
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    var dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     dayName.textContent = dayNames[date.getDay()];
 
     dayHeader.appendChild(dayNumber);
-    if (viewMode === 'week') {
-      dayHeader.appendChild(dayName);
-    }
-
+    dayHeader.appendChild(dayName);
     dayCell.appendChild(dayHeader);
 
     // Meals list
-    const mealsContainer = document.createElement('div');
+    var mealsContainer = document.createElement('div');
     mealsContainer.className = 'calendar-day-meals';
 
     if (meals.length > 0) {
-      meals.forEach(meal => {
-        const mealItem = document.createElement('div');
+      meals.forEach(function(meal) {
+        var mealItem = document.createElement('div');
         mealItem.className = 'calendar-meal-item';
-        mealItem.textContent = meal.recipeName;
-        if (isPast && !meal.cooked) {
-          mealItem.style.color = '#B36A5E';
-          mealItem.style.fontWeight = '600';
-        }
+
+        // Add state classes instead of inline styles
+        if (isPast && !meal.cooked) mealItem.classList.add('missed');
+        if (meal.cooked) mealItem.classList.add('cooked');
+
+        // Meal type badge
+        var badge = document.createElement('span');
+        badge.className = 'meal-type-badge';
+        badge.textContent = getMealTypeAbbrev(meal.mealType);
+        mealItem.appendChild(badge);
+
+        var nameSpan = document.createElement('span');
+        nameSpan.textContent = meal.recipeName;
+        mealItem.appendChild(nameSpan);
+
         mealsContainer.appendChild(mealItem);
       });
     } else {
-      const emptyMsg = document.createElement('div');
+      var emptyMsg = document.createElement('div');
       emptyMsg.className = 'calendar-day-empty';
-      emptyMsg.textContent = 'No meals';
+      emptyMsg.textContent = isToday ? 'Plan something!' : 'No meals';
       mealsContainer.appendChild(emptyMsg);
     }
 
     dayCell.appendChild(mealsContainer);
 
-    // Click handler to schedule meal
+    // Click handler
     if (!isPast || hasMeals) {
-      dayCell.addEventListener('click', () => {
+      dayCell.addEventListener('click', function() {
         openMealScheduleModal(date, dateKey);
       });
     }
@@ -211,188 +208,288 @@
     return dayCell;
   }
 
+  function getMealTypeAbbrev(type) {
+    var abbrevs = { Breakfast: 'B', Lunch: 'L', Dinner: 'D', Snack: 'S' };
+    return abbrevs[type] || '';
+  }
+
   function openMealScheduleModal(date, dateKey) {
-    // Use the existing openDayModal function from app.js
     if (window.openDayModal) {
       window.openDayModal(dateKey);
-    } else {
-      console.error('openDayModal function not found');
     }
   }
 
+  // ── Scheduled Recipes List ──────────────────────────────────────
+
   function renderScheduledRecipesList() {
-    const listContainer = document.getElementById('scheduled-recipes-list');
+    var listContainer = document.getElementById('scheduled-recipes-list');
     if (!listContainer) return;
 
     listContainer.innerHTML = '';
 
-    // Get all scheduled meals sorted by date
-    const allMeals = [];
-    const today = new Date();
+    var today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    Object.keys(scheduledMeals).forEach(dateKey => {
-      // Parse date at noon to avoid timezone issues
-      const date = new Date(dateKey + 'T12:00:00');
-      scheduledMeals[dateKey].forEach(meal => {
+    // Collect all meals
+    var allMeals = [];
+    Object.keys(scheduledMeals).forEach(function(dateKey) {
+      var date = new Date(dateKey + 'T12:00:00');
+      scheduledMeals[dateKey].forEach(function(meal) {
         allMeals.push({
           date: date,
           dateKey: dateKey,
-          ...meal
+          id: meal.id,
+          recipeId: meal.recipeId,
+          recipeName: meal.recipeName,
+          mealType: meal.mealType,
+          cooked: meal.cooked
         });
       });
     });
 
-    // Sort by date
-    allMeals.sort((a, b) => a.date - b.date);
+    allMeals.sort(function(a, b) { return a.date - b.date; });
 
     if (allMeals.length === 0) {
-      listContainer.innerHTML = '<div class="scheduled-recipes-empty">No scheduled meals yet. Click a date on the calendar to schedule a meal!</div>';
+      listContainer.innerHTML =
+        '<div class="scheduled-recipes-empty">' +
+          '<div class="empty-icon">📅</div>' +
+          '<div class="empty-text">No meals planned yet.<br>Tap a date on the calendar to get started!</div>' +
+        '</div>';
       return;
     }
 
-    allMeals.forEach(meal => {
-      const card = createScheduledRecipeCard(meal, today);
-      listContainer.appendChild(card);
+    // Group by date for visual clarity
+    var currentGroup = '';
+    allMeals.forEach(function(meal) {
+      var groupLabel = meal.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+      if (groupLabel !== currentGroup) {
+        currentGroup = groupLabel;
+        var header = document.createElement('div');
+        header.className = 'scheduled-date-group';
+        var isPast = meal.date < today;
+        var isToday = meal.date.toDateString() === today.toDateString();
+        header.textContent = isToday ? 'Today' : groupLabel;
+        if (isPast) header.style.opacity = '0.5';
+        listContainer.appendChild(header);
+      }
+
+      listContainer.appendChild(createScheduledRecipeCard(meal, today));
     });
   }
 
   function createScheduledRecipeCard(meal, today) {
-    const card = document.createElement('div');
+    var card = document.createElement('div');
     card.className = 'scheduled-recipe-card';
 
-    const info = document.createElement('div');
+    var info = document.createElement('div');
     info.className = 'scheduled-recipe-info';
 
-    // Emoji/photo
-    const emoji = document.createElement('div');
+    // Emoji
+    var emoji = document.createElement('div');
     emoji.className = 'scheduled-recipe-emoji';
-
-    // Try to find recipe in window.recipes to get emoji
-    let recipeEmoji = '🍽️';
+    var recipeEmoji = '🍽️';
     if (window.recipes) {
-      const recipe = window.recipes.find(r => r.id === meal.recipeId || r.name === meal.recipeName);
+      var recipe = window.recipes.find(function(r) { return r.id === meal.recipeId || r.name === meal.recipeName; });
       if (recipe) {
         recipeEmoji = getRecipeEmojiFromCategory(recipe.category) || '🍽️';
       }
     }
     emoji.textContent = recipeEmoji;
 
-    const details = document.createElement('div');
+    // Details
+    var details = document.createElement('div');
     details.className = 'scheduled-recipe-details';
 
-    const name = document.createElement('div');
+    var name = document.createElement('div');
     name.className = 'scheduled-recipe-name';
     name.textContent = meal.recipeName;
 
-    const dateDiv = document.createElement('div');
+    var meta = document.createElement('div');
+    meta.className = 'scheduled-recipe-meta';
+
+    var dateDiv = document.createElement('div');
     dateDiv.className = 'scheduled-recipe-date';
-    const isPast = meal.date < today;
+    var isPast = meal.date < today;
     if (isPast) {
       dateDiv.classList.add('past-date');
-      dateDiv.textContent = meal.cooked ?
-        `${meal.date.toLocaleDateString()} - Cooked ✓` :
-        `${meal.date.toLocaleDateString()} - Not cooked yet!`;
+      dateDiv.textContent = meal.cooked ? 'Cooked' : 'Not cooked';
     } else {
       dateDiv.textContent = meal.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     }
 
+    var typeBadge = document.createElement('span');
+    typeBadge.className = 'scheduled-recipe-type';
+    typeBadge.textContent = meal.mealType;
+
+    meta.appendChild(dateDiv);
+    meta.appendChild(typeBadge);
     details.appendChild(name);
-    details.appendChild(dateDiv);
+    details.appendChild(meta);
 
     info.appendChild(emoji);
     info.appendChild(details);
-
     card.appendChild(info);
 
     // Cook Now button
-    const cookBtn = document.createElement('button');
+    var cookBtn = document.createElement('button');
     cookBtn.className = 'btn-cook-now';
-    cookBtn.textContent = meal.cooked ? 'Cooked ✓' : 'Cook Now';
     cookBtn.disabled = meal.cooked;
 
-    cookBtn.addEventListener('click', () => {
-      cookNow(meal);
-    });
+    if (meal.cooked) {
+      cookBtn.textContent = 'Cooked \u2713';
+    } else {
+      cookBtn.textContent = 'Cook Now';
+      cookBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        cookNow(meal);
+      });
+    }
 
     card.appendChild(cookBtn);
-
     return card;
   }
 
   function cookNow(meal) {
-    // Find the recipe
-    if (!window.recipes) {
-      alert('Recipes not loaded yet');
-      return;
-    }
+    if (!window.recipes) return;
 
-    const recipe = window.recipes.find(r => r.id === meal.recipeId || r.name === meal.recipeName);
-    if (!recipe) {
-      alert('Recipe not found');
-      return;
-    }
+    var recipe = window.recipes.find(function(r) { return r.id === meal.recipeId || r.name === meal.recipeName; });
+    if (!recipe) return;
 
-    // Use existing Cook Now modal from app.js
     if (window.openCookNowModal) {
       window.openCookNowModal(recipe, meal.dateKey, meal.id);
-    } else {
-      alert('Cook Now functionality not available');
     }
   }
 
   function getRecipeEmojiFromCategory(category) {
-    const emojis = {
-      'Breakfast': '🍳',
-      'Lunch': '🥗',
-      'Dinner': '🍝',
-      'Dessert': '🍰',
-      'Snack': '🍿',
-      'Appetizer': '🥟',
-      'Soup': '🍲',
-      'Salad': '🥗',
-      'Main': '🍽️',
-      'Side': '🥘'
+    var emojis = {
+      'Breakfast': '🍳', 'Lunch': '🥗', 'Dinner': '🍝',
+      'Dessert': '🍰', 'Snack': '🍿', 'Appetizer': '🥟',
+      'Soup': '🍲', 'Salad': '🥗', 'Main': '🍽️', 'Side': '🥘'
     };
     return emojis[category] || '🍽️';
   }
 
   function formatDateKey(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    var year = date.getFullYear();
+    var month = String(date.getMonth() + 1).padStart(2, '0');
+    var day = String(date.getDate()).padStart(2, '0');
+    return year + '-' + month + '-' + day;
+  }
+
+  // ── Navigation ──────────────────────────────────────────────────
+
+  function navigatePrev() {
+    if (viewMode === 'month') {
+      currentDate.setMonth(currentDate.getMonth() - 1);
+    } else {
+      currentDate.setDate(currentDate.getDate() - 7);
+    }
+    renderCalendar();
+    renderScheduledRecipesList();
+  }
+
+  function navigateNext() {
+    if (viewMode === 'month') {
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    } else {
+      currentDate.setDate(currentDate.getDate() + 7);
+    }
+    renderCalendar();
+    renderScheduledRecipesList();
+  }
+
+  function navigateToday() {
+    currentDate = new Date();
+    renderCalendar();
+    renderScheduledRecipesList();
+  }
+
+  function updateTodayButton() {
+    var btn = document.getElementById('btn-today');
+    if (!btn) return;
+
+    var today = new Date();
+    var isCurrent = false;
+
+    if (viewMode === 'month') {
+      isCurrent = currentDate.getFullYear() === today.getFullYear() &&
+                  currentDate.getMonth() === today.getMonth();
+    } else {
+      var startOfWeek = new Date(currentDate);
+      startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
+      var endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      endOfWeek.setHours(23, 59, 59, 999);
+      isCurrent = today >= startOfWeek && today <= endOfWeek;
+    }
+
+    btn.classList.toggle('is-current', isCurrent);
   }
 
   function setupEventListeners() {
-    const prevBtn = document.getElementById('btn-prev-period');
-    const nextBtn = document.getElementById('btn-next-period');
+    var prevBtn = document.getElementById('btn-prev-period');
+    var nextBtn = document.getElementById('btn-next-period');
+    var todayBtn = document.getElementById('btn-today');
 
-    if (prevBtn) {
-      prevBtn.addEventListener('click', () => {
-        if (viewMode === 'month') {
-          currentDate.setMonth(currentDate.getMonth() - 1);
-        } else {
-          currentDate.setDate(currentDate.getDate() - 7);
-        }
-        renderCalendar();
-      });
-    }
+    if (prevBtn) prevBtn.addEventListener('click', navigatePrev);
+    if (nextBtn) nextBtn.addEventListener('click', navigateNext);
+    if (todayBtn) todayBtn.addEventListener('click', navigateToday);
 
-    if (nextBtn) {
-      nextBtn.addEventListener('click', () => {
-        if (viewMode === 'month') {
-          currentDate.setMonth(currentDate.getMonth() + 1);
-        } else {
-          currentDate.setDate(currentDate.getDate() + 7);
-        }
-        renderCalendar();
-      });
-    }
+    // Debounced resize handler
+    window.addEventListener('resize', debounce(function() {
+      var prev = viewMode;
+      updateViewMode();
+      if (prev !== viewMode) renderCalendar();
+    }, 200));
+
+    // Delegate modal close to data-action attributes
+    document.addEventListener('click', function(e) {
+      if (e.target.matches('[data-action="close-modal"]')) {
+        if (typeof window.closeModal === 'function') window.closeModal();
+      }
+    });
   }
 
-  // Initialize when data is ready (loadMealPlans calls window.reloadCalendar,
-  // but we also need an initial render for the calendar shell)
+  // ── Swipe Navigation (mobile) ──────────────────────────────────
+
+  function setupSwipeNavigation() {
+    var container = document.getElementById('calendar-container');
+    if (!container) return;
+
+    var startX = 0;
+    var startY = 0;
+    var tracking = false;
+
+    container.addEventListener('touchstart', function(e) {
+      if (e.touches.length !== 1) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      tracking = true;
+    }, { passive: true });
+
+    container.addEventListener('touchend', function(e) {
+      if (!tracking) return;
+      tracking = false;
+
+      var endX = e.changedTouches[0].clientX;
+      var endY = e.changedTouches[0].clientY;
+      var dx = endX - startX;
+      var dy = endY - startY;
+
+      // Require horizontal swipe > 60px and more horizontal than vertical
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx < 0) {
+          navigateNext();
+        } else {
+          navigatePrev();
+        }
+      }
+    }, { passive: true });
+  }
+
+  // ── Initialization ──────────────────────────────────────────────
+
   function waitForDataAndInit() {
     if (window.recipes && window.planner) {
       initCalendar();
@@ -407,7 +504,7 @@
     waitForDataAndInit();
   }
 
-  // Expose reload function for external use
+  // Expose reload for external callers (app.js)
   window.reloadCalendar = function() {
     loadScheduledMeals();
     renderCalendar();

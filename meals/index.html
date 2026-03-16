@@ -7,21 +7,21 @@
   <meta name="description" content="Chef's Kiss Meal Planner — Plan your week, track what's ready to cook, and let the shopping list build itself.">
   <meta name="theme-color" content="#2A241E">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="stylesheet" href="../css/shared.css?v=7">
-  <link rel="stylesheet" href="meals.css?v=7">
+  <link rel="stylesheet" href="../css/shared.css?v=8">
+  <link rel="stylesheet" href="meals.css?v=8">
   <link rel="icon" type="image/png" href="../assets/favicon.png" />
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=6"></script>
-  <script src="../js/api.js?v=6"></script>
-  <script src="../js/validation.js?v=6"></script>
-  <script src="../js/utils.js?v=6"></script>
-  <script src="../js/auth-guard.js?v=6"></script>
-  <script src="../js/settings.js?v=6"></script>
-  <script src="../js/realtime.js?v=6"></script>
-  <script src="../js/emoji-maps.js?v=6"></script>
-  <script defer src="../js/app.js?v=6"></script>
-  <script defer src="meals.js?v=6"></script>
+  <script src="../js/config.js?v=7"></script>
+  <script src="../js/api.js?v=7"></script>
+  <script src="../js/validation.js?v=7"></script>
+  <script src="../js/utils.js?v=7"></script>
+  <script src="../js/auth-guard.js?v=7"></script>
+  <script src="../js/settings.js?v=7"></script>
+  <script src="../js/realtime.js?v=7"></script>
+  <script src="../js/emoji-maps.js?v=7"></script>
+  <script defer src="../js/app.js?v=7"></script>
+  <script defer src="meals.js?v=8"></script>
 
 </head>
 <body data-section="meals">
@@ -79,12 +79,21 @@
       </div>
 
       <div class="calendar-nav">
-        <button class="btn-calendar-nav" id="btn-prev-period">← Prev</button>
-        <h3 class="calendar-period-label" id="calendar-period-label">Loading...</h3>
-        <button class="btn-calendar-nav" id="btn-next-period">Next →</button>
+        <button class="btn-calendar-nav" id="btn-prev-period" aria-label="Previous period">
+          <span class="nav-arrow">&larr;</span>
+          <span class="nav-label">Prev</span>
+        </button>
+        <div class="calendar-nav-center">
+          <h3 class="calendar-period-label" id="calendar-period-label">Loading...</h3>
+          <button class="btn-today" id="btn-today" aria-label="Go to today">Today</button>
+        </div>
+        <button class="btn-calendar-nav" id="btn-next-period" aria-label="Next period">
+          <span class="nav-label">Next</span>
+          <span class="nav-arrow">&rarr;</span>
+        </button>
       </div>
 
-      <div class="calendar-container" id="calendar-container"></div>
+      <div class="calendar-container" id="calendar-container" role="grid" aria-label="Meal calendar"></div>
 
       <div class="scheduled-recipes-section">
         <h3>Scheduled Meals</h3>
@@ -97,9 +106,9 @@
 
   <!-- Modal Templates -->
   <template id="tpl-day-modal">
-    <div class="modal-overlay" onclick="closeModal()">
-      <div class="modal-content day-modal" onclick="event.stopPropagation()">
-        <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div class="modal-overlay" data-action="close-modal">
+      <div class="modal-content day-modal" role="dialog" aria-modal="true">
+        <button class="modal-close" data-action="close-modal" aria-label="Close">&times;</button>
         <h2 data-field="heading"></h2>
         <div class="scheduled-meals" data-field="meals"></div>
         <hr>
@@ -107,13 +116,13 @@
         <form id="add-meal-form">
           <div class="form-row">
             <div class="form-group">
-              <label>Recipe</label>
+              <label for="meal-recipe">Recipe</label>
               <select id="meal-recipe" required>
                 <option value="">Select recipe...</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Meal Type</label>
+              <label for="meal-type">Meal Type</label>
               <select id="meal-type">
                 <option value="Breakfast">Breakfast</option>
                 <option value="Lunch">Lunch</option>
@@ -136,15 +145,15 @@
   </template>
 
   <template id="tpl-cook-now-modal">
-    <div class="modal-overlay" onclick="closeModal()">
-      <div class="modal-content cook-modal" onclick="event.stopPropagation()">
-        <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div class="modal-overlay" data-action="close-modal">
+      <div class="modal-content cook-modal" role="dialog" aria-modal="true">
+        <button class="modal-close" data-action="close-modal" aria-label="Close">&times;</button>
         <h2>Cook: <span data-field="recipeName"></span></h2>
         <h3>Ingredients needed:</h3>
         <ul data-field="ingredientsList"></ul>
         <p>This will deduct ingredients from your pantry.</p>
         <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button type="button" class="btn btn-secondary" data-action="close-modal">Cancel</button>
           <button type="button" class="btn btn-primary" data-action="cook">Mark as Cooked</button>
         </div>
       </div>
