@@ -39,11 +39,13 @@ body.landing-active .main-content {
 
 .landing-hero {
   min-height: 100vh;
+  min-height: 100dvh; /* Accounts for mobile address bar */
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 2rem;
+  padding: env(safe-area-inset-top, 2rem) max(env(safe-area-inset-right), 1rem) 2rem max(env(safe-area-inset-left), 1rem);
   text-align: center;
   position: relative;
 }
@@ -93,6 +95,12 @@ body.landing-active .main-content {
 /* Auth Form */
 .landing-auth-form {
   width: 100%;
+  animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .landing-auth-title {
@@ -135,6 +143,31 @@ body.landing-active .main-content {
   box-shadow: 0 0 0 3px rgba(139, 168, 142, 0.1);
 }
 
+/* Password show/hide toggle */
+.landing-password-wrap {
+  position: relative;
+}
+
+.landing-password-wrap input {
+  padding-right: 3.5rem;
+}
+
+.landing-pw-toggle {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--color-accent-olive);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .landing-auth-error {
   color: #d32f2f;
   font-size: 0.9rem;
@@ -168,51 +201,6 @@ body.landing-active .main-content {
   text-decoration: underline;
 }
 
-/* Divider */
-.landing-divider {
-  display: flex;
-  align-items: center;
-  text-align: center;
-  margin: 1.5rem 0;
-  color: var(--color-text-secondary);
-  font-size: 0.9rem;
-}
-
-.landing-divider::before,
-.landing-divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 2px solid #D4E2D4;
-}
-
-.landing-divider span {
-  padding: 0 1rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* Demo button special styling */
-.landing-auth-card .landing-btn-demo {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-bottom: 0;
-}
-
-.landing-demo-icon {
-  font-size: 1.2rem;
-}
-
-.landing-cta-group {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  justify-content: center;
-  margin-bottom: 3rem;
-}
 
 .landing-btn {
   padding: 1rem 2.5rem;
@@ -252,30 +240,11 @@ body.landing-active .main-content {
   box-shadow: 0 8px 20px rgba(125, 102, 122, 0.3);
 }
 
-.landing-btn-demo {
-  background: var(--color-accent-olive);
-  color: white;
-  border-color: var(--color-accent-olive);
-  font-size: 0.95rem;
-  padding: 0.8rem 2rem;
-}
-
-.landing-btn-demo:hover {
-  background: #7a8367;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(139, 147, 118, 0.3);
-}
-
-.landing-scroll-hint {
-  font-size: 0.9rem;
-  color: var(--color-text-secondary);
+/* Disabled button state */
+.landing-btn:disabled {
   opacity: 0.7;
-  animation: bounce 2s ease-in-out infinite;
-}
-
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(10px); }
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* ===================================================================
@@ -313,15 +282,17 @@ body.landing-active .main-content {
   border: 2px solid transparent;
   opacity: 0;
   transform: translateY(30px);
+}
+
+/* Triggered by IntersectionObserver adding .visible */
+.landing-feature-card.visible {
   animation: fadeInUp 0.6s ease forwards;
 }
 
-.landing-feature-card:nth-child(1) { animation-delay: 0.1s; }
-.landing-feature-card:nth-child(2) { animation-delay: 0.2s; }
-.landing-feature-card:nth-child(3) { animation-delay: 0.3s; }
-.landing-feature-card:nth-child(4) { animation-delay: 0.4s; }
-.landing-feature-card:nth-child(5) { animation-delay: 0.5s; }
-.landing-feature-card:nth-child(6) { animation-delay: 0.6s; }
+.landing-feature-card.visible:nth-child(1) { animation-delay: 0.1s; }
+.landing-feature-card.visible:nth-child(2) { animation-delay: 0.2s; }
+.landing-feature-card.visible:nth-child(3) { animation-delay: 0.3s; }
+.landing-feature-card.visible:nth-child(4) { animation-delay: 0.4s; }
 
 @keyframes fadeInUp {
   to {
@@ -349,7 +320,7 @@ body.landing-active .main-content {
 }
 
 .landing-feature-card:hover .landing-feature-icon {
-  animation: bounce 0.6s ease;
+  animation: pulse 0.4s ease;
 }
 
 .landing-feature-title {
@@ -370,13 +341,13 @@ body.landing-active .main-content {
    HOW IT WORKS SECTION
    =================================================================== */
 
-.landing-how-it-works {
-  background: rgba(255, 255, 255, 0.6);
+.landing-steps {
   padding: 4rem 2rem;
+  background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(10px);
 }
 
-.landing-steps {
+.landing-steps-container {
   max-width: 1000px;
   margin: 0 auto;
   display: grid;
@@ -465,51 +436,38 @@ body.landing-active .main-content {
   box-shadow: 0 4px 12px rgba(139, 168, 142, 0.3);
 }
 
-.landing-footer-links {
-  display: flex;
-  gap: 2rem;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-top: 2rem;
-  padding-top: 2rem;
-  border-top: 1px solid rgba(125, 102, 122, 0.2);
-}
-
-.landing-footer-link {
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  font-size: 0.9rem;
-  transition: color 0.3s ease;
-}
-
-.landing-footer-link:hover {
-  color: var(--color-header-purple);
-}
 
 /* ===================================================================
    MOBILE RESPONSIVE
    =================================================================== */
 
+/* Demo section below auth card */
+.landing-demo-section {
+  text-align: center;
+}
+
+.landing-demo-text {
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+}
+
 @media (max-width: 768px) {
+  .landing-hero {
+    padding: 1.5rem 1rem;
+  }
+
   .landing-title {
     font-size: 2rem;
   }
 
   .landing-tagline {
     font-size: 1.3rem;
+    margin-bottom: 1.5rem;
   }
 
   .landing-logo {
     font-size: 3rem;
-  }
-
-  .landing-cta-group {
-    flex-direction: column;
-    width: 100%;
-  }
-
-  .landing-btn {
-    width: 100%;
   }
 
   .landing-section-title {
@@ -518,15 +476,17 @@ body.landing-active .main-content {
 
   .landing-features-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
-  .landing-steps {
+  .landing-steps-container {
     grid-template-columns: 1fr;
   }
 
   .landing-auth-card {
     padding: 1.5rem 1.25rem;
     max-width: 100%;
+    border-width: 2px;
   }
 
   .landing-auth-title {
@@ -536,40 +496,37 @@ body.landing-active .main-content {
   .landing-form-group input {
     font-size: 16px; /* Prevents zoom on iOS */
   }
+
+  .landing-btn {
+    padding: 0.85rem 2rem;
+  }
+
+  .landing-feature-card {
+    padding: 1.5rem;
+  }
+
+  .landing-step {
+    padding: 1.5rem 1rem;
+  }
+
+  .landing-footer-title {
+    font-size: 1.5rem;
+  }
 }
 
 /* ===================================================================
    SPECIAL EFFECTS
    =================================================================== */
 
-/* Shimmer effect for special elements */
-.shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.3) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 3s ease-in-out infinite;
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-/* Badge/pill for "Free" indicators */
-.landing-badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  background: var(--color-accent-olive);
-  color: white;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  margin-left: 0.5rem;
-  vertical-align: middle;
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .landing-logo,
+  .landing-feature-icon,
+  .landing-feature-card.visible {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* ===================================================================
@@ -592,18 +549,29 @@ body.landing-active .main-content {
   animation: slideDown 0.3s ease; /* slideDown keyframes defined in style.css */
 }
 
-.demo-banner-text {
+.demo-banner-content {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.demo-banner-text {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
 }
 
-.demo-banner a {
+.demo-banner-link {
+  color: white;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
   transition: opacity 0.2s ease;
 }
 
-.demo-banner a:hover {
+.demo-banner-link:hover {
   opacity: 0.8;
 }
 

@@ -4,257 +4,228 @@
    =================================================================== */
 
 /**
- * Demo account data - Sample data for "Try Demo" feature
- * Saved to localStorage only, NOT synced to Supabase
+ * Helper: returns 'YYYY-MM-DD' for a date offset from today
  */
-const DEMO_DATA = {
-  pantry: [
-    {
-      id: 'demo-pantry-1',
-      name: 'Flour',
-      unit: 'lb',
-      category: 'Baking',
-      min: 2,
-      totalQty: 5,
-      locations: [
-        { id: 'demo-loc-1', location: 'Pantry', qty: 3, expiry: '' },
-        { id: 'demo-loc-2', location: 'Storage', qty: 2, expiry: '' }
-      ],
-      notes: ''
-    },
-    {
-      id: 'demo-pantry-2',
-      name: 'Sugar',
-      unit: 'lb',
-      category: 'Baking',
-      min: 1,
-      totalQty: 3,
-      locations: [
-        { id: 'demo-loc-3', location: 'Pantry', qty: 3, expiry: '' }
-      ],
-      notes: ''
-    },
-    {
-      id: 'demo-pantry-3',
-      name: 'Eggs',
-      unit: 'unit',
-      category: 'Dairy',
-      min: 12,
-      totalQty: 4,
-      locations: [
-        { id: 'demo-loc-4', location: 'Fridge', qty: 4, expiry: '2026-02-01' }
-      ],
-      notes: ''
-    },
-    {
-      id: 'demo-pantry-4',
-      name: 'Milk',
-      unit: 'gal',
-      category: 'Dairy',
-      min: 1,
-      totalQty: 0.25,
-      locations: [
-        { id: 'demo-loc-5', location: 'Fridge', qty: 0.25, expiry: '2026-01-25' }
-      ],
-      notes: ''
-    },
-    {
-      id: 'demo-pantry-5',
-      name: 'Butter',
-      unit: 'lb',
-      category: 'Dairy',
-      min: 1,
-      totalQty: 0.25,
-      locations: [
-        { id: 'demo-loc-6', location: 'Fridge', qty: 0.25, expiry: '' }
-      ],
-      notes: ''
-    },
-    {
-      id: 'demo-pantry-6',
-      name: 'Chicken Breast',
-      unit: 'lb',
-      category: 'Meat',
-      min: 2,
-      totalQty: 4,
-      locations: [
-        { id: 'demo-loc-7', location: 'Freezer', qty: 4, expiry: '2026-03-01' }
-      ],
-      notes: ''
-    },
-    {
-      id: 'demo-pantry-7',
-      name: 'Tomatoes',
-      unit: 'unit',
-      category: 'Produce',
-      min: 6,
-      totalQty: 2,
-      locations: [
-        { id: 'demo-loc-8', location: 'Counter', qty: 2, expiry: '' }
-      ],
-      notes: ''
-    },
-    {
-      id: 'demo-pantry-8',
-      name: 'Pasta',
-      unit: 'lb',
-      category: 'Grains',
-      min: 1,
-      totalQty: 2,
-      locations: [
-        { id: 'demo-loc-9', location: 'Pantry', qty: 2, expiry: '' }
-      ],
-      notes: ''
-    },
-    {
-      id: 'demo-pantry-9',
-      name: 'Olive Oil',
-      unit: 'bottle',
-      category: 'Oils',
-      min: 2,
-      totalQty: 0.5,
-      locations: [
-        { id: 'demo-loc-10', location: 'Pantry', qty: 0.5, expiry: '' }
-      ],
-      notes: ''
-    },
-    {
-      id: 'demo-pantry-10',
-      name: 'Garlic',
-      unit: 'bulb',
-      category: 'Produce',
-      min: 3,
-      totalQty: 1,
-      locations: [
-        { id: 'demo-loc-11', location: 'Counter', qty: 1, expiry: '' }
-      ],
-      notes: ''
-    },
-    {
-      id: 'demo-pantry-11',
-      name: 'Chocolate Chips',
-      unit: 'bag',
-      category: 'Baking',
-      min: 1,
-      totalQty: 0,
-      locations: [],
-      notes: ''
-    }
-  ],
-  recipes: [
-    {
-      id: 'demo-recipe-1',
-      name: 'Chocolate Chip Cookies',
-      servings: 24,
-      ingredients: [
-        { name: 'Flour', qty: 2.5, unit: 'cup' },
-        { name: 'Sugar', qty: 1, unit: 'cup' },
-        { name: 'Butter', qty: 0.5, unit: 'lb' },
-        { name: 'Eggs', qty: 2, unit: 'unit' },
-        { name: 'Chocolate Chips', qty: 2, unit: 'cup' }
-      ],
-      instructions: '1. Preheat oven to 375°F\n2. Mix butter and sugar until fluffy\n3. Add eggs and mix well\n4. Gradually add flour\n5. Fold in chocolate chips\n6. Drop spoonfuls onto baking sheet\n7. Bake 10-12 minutes until golden',
-      photo: '',
-      tags: ['Dessert', 'Baking'],
-      isFavorite: true
-    },
-    {
-      id: 'demo-recipe-2',
-      name: 'Grilled Chicken',
-      servings: 4,
-      ingredients: [
-        { name: 'Chicken Breast', qty: 2, unit: 'lb' },
-        { name: 'Olive Oil', qty: 2, unit: 'tbsp' },
-        { name: 'Garlic Powder', qty: 1, unit: 'tsp' },
-        { name: 'Paprika', qty: 1, unit: 'tsp' }
-      ],
-      instructions: '1. Season chicken with oil and spices\n2. Let marinate 30 minutes\n3. Preheat grill to medium-high\n4. Grill 6-7 minutes per side\n5. Let rest 5 minutes before serving',
-      photo: '',
-      tags: ['Main Dish', 'Healthy', 'Quick'],
-      isFavorite: true
-    },
-    {
-      id: 'demo-recipe-3',
-      name: 'Pasta with Tomato Sauce',
-      servings: 4,
-      ingredients: [
-        { name: 'Pasta', qty: 1, unit: 'lb' },
-        { name: 'Tomatoes', qty: 6, unit: 'unit' },
-        { name: 'Olive Oil', qty: 3, unit: 'tbsp' },
-        { name: 'Garlic', qty: 4, unit: 'clove' },
-        { name: 'Basil', qty: 0.25, unit: 'cup' }
-      ],
-      instructions: '1. Boil water for pasta\n2. Dice tomatoes and sauté with garlic and oil\n3. Cook pasta until al dente\n4. Combine pasta with sauce\n5. Top with fresh basil',
-      photo: '',
-      tags: ['Main Dish', 'Italian', 'Vegetarian'],
-      isFavorite: false
-    }
-  ],
-  planner: {
-    '2026-01-19': [
+function demoDate(dayOffset) {
+  const d = new Date();
+  d.setDate(d.getDate() + dayOffset);
+  return d.toISOString().split('T')[0];
+}
+
+/**
+ * Build demo data fresh each time so dates are always relative to today.
+ * Saved to localStorage only, NOT synced to Supabase.
+ */
+function buildDemoData() {
+  return {
+    pantry: [
       {
-        id: 'demo-meal-1',
-        recipeId: 'demo-recipe-2',
-        mealType: 'dinner',
-        cooked: true
-      }
-    ],
-    '2026-01-20': [
-      {
-        id: 'demo-meal-2',
-        recipeId: 'demo-recipe-3',
-        mealType: 'dinner',
-        cooked: false
-      }
-    ],
-    '2026-01-21': [
-      {
-        id: 'demo-meal-3',
-        recipeId: 'demo-recipe-2',
-        mealType: 'dinner',
-        cooked: false
-      }
-    ],
-    '2026-01-22': [
-      {
-        id: 'demo-meal-4',
-        recipeId: 'demo-recipe-1',
-        mealType: 'snack',
-        cooked: false
-      }
-    ],
-    '2026-01-23': [
-      {
-        id: 'demo-meal-5',
-        recipeId: 'demo-recipe-3',
-        mealType: 'lunch',
-        cooked: false
+        id: 'demo-pantry-1',
+        name: 'Flour',
+        unit: 'lb',
+        category: 'Baking',
+        min: 2,
+        totalQty: 5,
+        locations: [
+          { id: 'demo-loc-1', location: 'Pantry', qty: 3, expiry: '' },
+          { id: 'demo-loc-2', location: 'Storage', qty: 2, expiry: '' }
+        ],
+        notes: ''
       },
       {
-        id: 'demo-meal-6',
-        recipeId: 'demo-recipe-2',
-        mealType: 'dinner',
-        cooked: false
+        id: 'demo-pantry-2',
+        name: 'Sugar',
+        unit: 'lb',
+        category: 'Baking',
+        min: 1,
+        totalQty: 3,
+        locations: [
+          { id: 'demo-loc-3', location: 'Pantry', qty: 3, expiry: '' }
+        ],
+        notes: ''
+      },
+      {
+        id: 'demo-pantry-3',
+        name: 'Eggs',
+        unit: 'unit',
+        category: 'Dairy',
+        min: 12,
+        totalQty: 4,
+        locations: [
+          { id: 'demo-loc-4', location: 'Fridge', qty: 4, expiry: demoDate(5) }
+        ],
+        notes: ''
+      },
+      {
+        id: 'demo-pantry-4',
+        name: 'Milk',
+        unit: 'gal',
+        category: 'Dairy',
+        min: 1,
+        totalQty: 0.25,
+        locations: [
+          { id: 'demo-loc-5', location: 'Fridge', qty: 0.25, expiry: demoDate(-2) }
+        ],
+        notes: ''
+      },
+      {
+        id: 'demo-pantry-5',
+        name: 'Butter',
+        unit: 'lb',
+        category: 'Dairy',
+        min: 1,
+        totalQty: 0.25,
+        locations: [
+          { id: 'demo-loc-6', location: 'Fridge', qty: 0.25, expiry: '' }
+        ],
+        notes: ''
+      },
+      {
+        id: 'demo-pantry-6',
+        name: 'Chicken Breast',
+        unit: 'lb',
+        category: 'Meat',
+        min: 2,
+        totalQty: 4,
+        locations: [
+          { id: 'demo-loc-7', location: 'Freezer', qty: 4, expiry: demoDate(30) }
+        ],
+        notes: ''
+      },
+      {
+        id: 'demo-pantry-7',
+        name: 'Tomatoes',
+        unit: 'unit',
+        category: 'Produce',
+        min: 6,
+        totalQty: 2,
+        locations: [
+          { id: 'demo-loc-8', location: 'Counter', qty: 2, expiry: '' }
+        ],
+        notes: ''
+      },
+      {
+        id: 'demo-pantry-8',
+        name: 'Pasta',
+        unit: 'lb',
+        category: 'Grains',
+        min: 1,
+        totalQty: 2,
+        locations: [
+          { id: 'demo-loc-9', location: 'Pantry', qty: 2, expiry: '' }
+        ],
+        notes: ''
+      },
+      {
+        id: 'demo-pantry-9',
+        name: 'Olive Oil',
+        unit: 'bottle',
+        category: 'Oils',
+        min: 2,
+        totalQty: 0.5,
+        locations: [
+          { id: 'demo-loc-10', location: 'Pantry', qty: 0.5, expiry: '' }
+        ],
+        notes: ''
+      },
+      {
+        id: 'demo-pantry-10',
+        name: 'Garlic',
+        unit: 'bulb',
+        category: 'Produce',
+        min: 3,
+        totalQty: 1,
+        locations: [
+          { id: 'demo-loc-11', location: 'Counter', qty: 1, expiry: '' }
+        ],
+        notes: ''
+      },
+      {
+        id: 'demo-pantry-11',
+        name: 'Chocolate Chips',
+        unit: 'bag',
+        category: 'Baking',
+        min: 1,
+        totalQty: 0,
+        locations: [],
+        notes: ''
       }
     ],
-    '2026-01-24': [
+    recipes: [
       {
-        id: 'demo-meal-7',
-        recipeId: 'demo-recipe-1',
-        mealType: 'dessert',
-        cooked: false
+        id: 'demo-recipe-1',
+        name: 'Chocolate Chip Cookies',
+        servings: 24,
+        ingredients: [
+          { name: 'Flour', qty: 2.5, unit: 'cup' },
+          { name: 'Sugar', qty: 1, unit: 'cup' },
+          { name: 'Butter', qty: 0.5, unit: 'lb' },
+          { name: 'Eggs', qty: 2, unit: 'unit' },
+          { name: 'Chocolate Chips', qty: 2, unit: 'cup' }
+        ],
+        instructions: '1. Preheat oven to 375\u00B0F\n2. Mix butter and sugar until fluffy\n3. Add eggs and mix well\n4. Gradually add flour\n5. Fold in chocolate chips\n6. Drop spoonfuls onto baking sheet\n7. Bake 10-12 minutes until golden',
+        photo: '',
+        tags: ['Dessert', 'Baking'],
+        isFavorite: true
+      },
+      {
+        id: 'demo-recipe-2',
+        name: 'Grilled Chicken',
+        servings: 4,
+        ingredients: [
+          { name: 'Chicken Breast', qty: 2, unit: 'lb' },
+          { name: 'Olive Oil', qty: 2, unit: 'tbsp' },
+          { name: 'Garlic Powder', qty: 1, unit: 'tsp' },
+          { name: 'Paprika', qty: 1, unit: 'tsp' }
+        ],
+        instructions: '1. Season chicken with oil and spices\n2. Let marinate 30 minutes\n3. Preheat grill to medium-high\n4. Grill 6-7 minutes per side\n5. Let rest 5 minutes before serving',
+        photo: '',
+        tags: ['Main Dish', 'Healthy', 'Quick'],
+        isFavorite: true
+      },
+      {
+        id: 'demo-recipe-3',
+        name: 'Pasta with Tomato Sauce',
+        servings: 4,
+        ingredients: [
+          { name: 'Pasta', qty: 1, unit: 'lb' },
+          { name: 'Tomatoes', qty: 6, unit: 'unit' },
+          { name: 'Olive Oil', qty: 3, unit: 'tbsp' },
+          { name: 'Garlic', qty: 4, unit: 'clove' },
+          { name: 'Basil', qty: 0.25, unit: 'cup' }
+        ],
+        instructions: '1. Boil water for pasta\n2. Dice tomatoes and saut\u00E9 with garlic and oil\n3. Cook pasta until al dente\n4. Combine pasta with sauce\n5. Top with fresh basil',
+        photo: '',
+        tags: ['Main Dish', 'Italian', 'Vegetarian'],
+        isFavorite: false
       }
     ],
-    '2026-01-25': [
-      {
-        id: 'demo-meal-8',
-        recipeId: 'demo-recipe-3',
-        mealType: 'dinner',
-        cooked: false
-      }
-    ]
-  }
-};
+    planner: {
+      [demoDate(-2)]: [
+        { id: 'demo-meal-1', recipeId: 'demo-recipe-2', mealType: 'dinner', cooked: true }
+      ],
+      [demoDate(-1)]: [
+        { id: 'demo-meal-2', recipeId: 'demo-recipe-3', mealType: 'dinner', cooked: true }
+      ],
+      [demoDate(0)]: [
+        { id: 'demo-meal-3', recipeId: 'demo-recipe-2', mealType: 'dinner', cooked: false }
+      ],
+      [demoDate(1)]: [
+        { id: 'demo-meal-4', recipeId: 'demo-recipe-1', mealType: 'snack', cooked: false }
+      ],
+      [demoDate(2)]: [
+        { id: 'demo-meal-5', recipeId: 'demo-recipe-3', mealType: 'lunch', cooked: false },
+        { id: 'demo-meal-6', recipeId: 'demo-recipe-2', mealType: 'dinner', cooked: false }
+      ],
+      [demoDate(3)]: [
+        { id: 'demo-meal-7', recipeId: 'demo-recipe-1', mealType: 'dessert', cooked: false }
+      ],
+      [demoDate(4)]: [
+        { id: 'demo-meal-8', recipeId: 'demo-recipe-3', mealType: 'dinner', cooked: false }
+      ]
+    }
+  };
+}
 
 /* ===================================================================
    LANDING PAGE VISIBILITY
@@ -294,9 +265,10 @@ function loadDemoAccount() {
   try {
     // Set demo mode flag and store demo data in localStorage
     localStorage.setItem('demo-mode', 'true');
-    localStorage.setItem('pantry', JSON.stringify(DEMO_DATA.pantry));
-    localStorage.setItem('recipes', JSON.stringify(DEMO_DATA.recipes));
-    localStorage.setItem('planner', JSON.stringify(DEMO_DATA.planner));
+    const data = buildDemoData();
+    localStorage.setItem('pantry', JSON.stringify(data.pantry));
+    localStorage.setItem('recipes', JSON.stringify(data.recipes));
+    localStorage.setItem('planner', JSON.stringify(data.planner));
 
     // Navigate to the app (auth-guard allows demo mode through)
     window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/pantry/';
@@ -580,6 +552,18 @@ function initLandingPage() {
     linkScrollTop.addEventListener('click', scrollToTop);
   }
 
+  // Password show/hide toggles
+  document.querySelectorAll('.landing-pw-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById(btn.dataset.target);
+      if (!input) return;
+      const showing = input.type === 'text';
+      input.type = showing ? 'password' : 'text';
+      btn.textContent = showing ? 'Show' : 'Hide';
+      btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+    });
+  });
+
   // Demo exit link
   const linkDemoExit = document.getElementById('demo-exit-link');
   if (linkDemoExit) {
@@ -587,6 +571,23 @@ function initLandingPage() {
       e.preventDefault();
       exitDemoMode();
     });
+  }
+
+  // Scroll-triggered animations for feature cards
+  const featureCards = document.querySelectorAll('.landing-feature-card');
+  if (featureCards.length && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    featureCards.forEach(card => observer.observe(card));
+  } else {
+    // Fallback: show immediately
+    featureCards.forEach(card => card.classList.add('visible'));
   }
 
   // If already authenticated, redirect to the app immediately
