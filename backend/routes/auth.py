@@ -60,7 +60,7 @@ async def signup(credentials: SignUpRequest, request: Request):
         # Create household for user
         household_data = db.households.create({
             'name': f"{credentials.email.split('@')[0]}'s Household",
-            'owner_id': user['id']
+            'created_by': user['id']
         })
 
         household_id = household_data[0]['id']
