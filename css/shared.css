@@ -2522,28 +2522,6 @@ body[data-section] .floating-action-menu {
     max-height: 150px;
   }
 
-  /* Pantry Ledger Responsive */
-  .ledger-category-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-    padding: 1rem;
-  }
-
-  .ledger-category-right {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .ledger-table {
-    font-size: 0.8rem;
-  }
-
-  .ledger-table th,
-  .ledger-table td {
-    padding: 0.5rem 0.4rem;
-  }
-
   /* Unified Ledger Mobile Adjustments */
   .unified-ledger {
     max-height: none;
@@ -2582,18 +2560,8 @@ body[data-section] .floating-action-menu {
     white-space: nowrap;
   }
 
-  .ledger-col-category {
-    font-size: 1rem;
-    min-width: 45px;
-  }
-
-  .ledger-col-item {
-    min-width: 120px;
-  }
-
   .ledger-col-locations {
     font-size: 0.75rem;
-    min-width: 140px;
   }
 
   .btn-ledger-action {
@@ -2625,12 +2593,6 @@ body[data-section] .floating-action-menu {
   .pantry-controls {
     gap: 0.5rem; /* Tightened gap */
     margin-bottom: 0.75rem;
-  }
-
-  /* Hide expert-level pantry columns on mobile — RS and AVAIL */
-  .ledger-col-reserved,
-  .ledger-col-available {
-    display: none;
   }
 
   /* Modal Responsive - Center on viewport */

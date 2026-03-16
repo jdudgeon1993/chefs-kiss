@@ -476,13 +476,3 @@
   .unified-ledger-table .ledger-col-item      { width: 22%; }
   .unified-ledger-table .ledger-col-locations  { width: 25%; }
 }
-
-/* ===================================================================
-   LEGACY CLASS COMPAT — kept for any shared.css references
-   =================================================================== */
-.pantry-ledger-category { margin-bottom: 1.5rem; }
-.ledger-category-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem; cursor: pointer; }
-.ledger-category-left { display: flex; align-items: center; gap: 0.75rem; }
-.ledger-category-right { display: flex; align-items: center; gap: 1rem; }
-.ledger-category-total { font-size: 0.9rem; font-weight: 600; color: var(--color-accent-olive); }
-.ledger-category-alert { font-size: 0.85rem; color: #B36A5E; }
