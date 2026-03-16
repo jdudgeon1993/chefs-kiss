@@ -567,6 +567,18 @@ function exportData() {
 }
 
 async function handleLogout() {
+  // In demo mode, just clear demo data and redirect
+  if (localStorage.getItem('demo-mode') === 'true') {
+    if (!confirm('Exit demo mode? All demo data will be cleared.')) return;
+    localStorage.removeItem('demo-mode');
+    localStorage.removeItem('pantry');
+    localStorage.removeItem('recipes');
+    localStorage.removeItem('planner');
+    sessionStorage.clear();
+    window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/index.html';
+    return;
+  }
+
   if (!confirm('Are you sure you want to sign out?')) return;
 
   try {
