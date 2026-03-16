@@ -88,9 +88,9 @@
         <h2>RECIPE BOX</h2>
       </div>
 
-      <div class="recipes-controls" style="display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; margin-bottom: 1rem;">
+      <div class="recipes-controls">
         <input type="text" id="recipe-search-ledger" placeholder="Search recipes..." class="recipe-search-input">
-        <select id="recipe-sort-select" class="recipe-sort-select" style="padding: 0.75rem 1rem; border: 1px solid rgba(197,184,165,0.3); border-radius: 8px; font-size: 0.9rem; background: white; color: var(--color-text-primary); font-family: inherit; cursor: pointer;">
+        <select id="recipe-sort-select" class="recipe-sort-select">
           <option value="a-z">Sort: A-Z</option>
           <option value="z-a">Sort: Z-A</option>
           <option value="favorites">Sort: Favorites First</option>
@@ -102,8 +102,8 @@
         <div class="recipe-filter-pills" id="recipe-filter-pills"></div>
       </div>
 
-      <div class="recipe-tag-filters-container" style="margin-bottom: 1rem;">
-        <div class="recipe-tag-filter-pills" id="recipe-tag-filter-pills" style="display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
+      <div class="recipe-tag-filters-container">
+        <div class="recipe-tag-filter-pills" id="recipe-tag-filter-pills"></div>
       </div>
 
       <div class="recipes-grid" id="recipes-grid"></div>
@@ -170,7 +170,7 @@
             <label>Photo</label>
             <div class="photo-upload-row" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
               <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0;" for="recipe-photo-file">Upload File</label>
-              <input type="file" id="recipe-photo-file" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none;">
+              <input type="file" id="recipe-photo-file" accept="image/jpeg,image/png,image/webp,image/gif" capture="environment" style="display:none;">
               <span style="opacity:0.5;font-size:0.85rem;">or</span>
               <input type="url" id="recipe-photo-url" placeholder="Paste URL" style="flex:1;min-width:150px;">
             </div>

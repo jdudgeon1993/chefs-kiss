@@ -281,30 +281,29 @@
       <button class="recipe-modal-close" onclick="this.closest('.recipe-detail-modal').remove()">✕</button>
       <div class="recipe-detail-modal-content">
         <div class="recipe-vintage-card">
-          <div class="recipe-vintage-card-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <div class="recipe-vintage-card-id" style="flex: 1; border: none; padding: 0; margin: 0;">FROM THE ARCHIVE OF THE HEARTH</div>
-            <button class="btn-favorite-toggle" data-recipe-id="${safeId}" style="background: none; border: none; font-size: 2rem; cursor: pointer; padding: 0.25rem;" title="${recipe.isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+          <div class="recipe-vintage-header-row">
+            <div class="recipe-vintage-card-id">FROM THE ARCHIVE OF THE HEARTH</div>
+            <button class="btn-favorite-toggle" data-recipe-id="${safeId}" title="${recipe.isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
               ${recipe.isFavorite ? '⭐' : '☆'}
             </button>
           </div>
-          ${safePhotoUrl ? `<div class="recipe-vintage-card-photo" style="width:100%;max-height:240px;overflow:hidden;border-radius:8px;margin-bottom:1rem;"><img src="${safePhotoUrl}" alt="${esc(recipe.name)}" style="width:100%;height:100%;object-fit:cover;"></div>` : ''}
+          ${safePhotoUrl ? `<div class="recipe-vintage-card-photo"><img src="${safePhotoUrl}" alt="${esc(recipe.name)}"></div>` : ''}
           <h1 class="recipe-vintage-card-title">${esc(recipe.name || 'Untitled Recipe')}</h1>
           <div class="recipe-vintage-card-meta">
             <span><strong>YIELD:</strong> ${esc(String(servings))}</span>
             <span><strong>TIME:</strong> ${esc(String(time))}</span>
           </div>
 
-          <!-- Tags Section -->
-          <div class="recipe-tags-section" style="margin: 1rem 0; padding: 1rem 0; border-top: 1px solid var(--color-recipe-border); border-bottom: 1px solid var(--color-recipe-border);">
-            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
-              <span style="font-family: 'Caveat', cursive; font-size: 1.2rem; color: var(--clay-warm); font-weight: 600;">Tags:</span>
-              <div class="recipe-tags-display" style="display: flex; gap: 0.5rem; flex-wrap: wrap; flex: 1;">
-                ${tagsHTML || '<span style="opacity: 0.5; font-size: 0.85rem;">No tags yet</span>'}
+          <div class="recipe-tags-section">
+            <div class="recipe-tags-header">
+              <span class="recipe-tags-label">Tags:</span>
+              <div class="recipe-tags-display">
+                ${tagsHTML || '<span class="empty-hint">No tags yet</span>'}
               </div>
             </div>
-            <div style="display: flex; gap: 0.5rem;">
-              <input type="text" class="recipe-tag-input" data-recipe-id="${safeId}" placeholder="Add tag (e.g., #quick, #italian)" style="flex: 1; padding: 0.5rem; border: 1px solid var(--color-recipe-border); border-radius: 4px; font-size: 0.85rem;">
-              <button class="btn btn-secondary btn-add-tag" data-recipe-id="${safeId}" style="padding: 0.5rem 1rem; font-size: 0.75rem;">Add</button>
+            <div class="recipe-tag-add-row">
+              <input type="text" class="recipe-tag-input" data-recipe-id="${safeId}" placeholder="Add tag (e.g., #quick, #italian)" enterkeyhint="done">
+              <button class="btn btn-secondary btn-sm btn-add-tag" data-recipe-id="${safeId}">Add</button>
             </div>
           </div>
 
@@ -361,6 +360,15 @@
         recipeDetailModal.remove();
       }
     };
+
+    // Close on ESC key
+    function handleEsc(e) {
+      if (e.key === 'Escape') {
+        recipeDetailModal.remove();
+        document.removeEventListener('keydown', handleEsc);
+      }
+    }
+    document.addEventListener('keydown', handleEsc);
 
     document.body.appendChild(recipeDetailModal);
   }
@@ -476,53 +484,40 @@
     const searchInput = document.getElementById('recipe-search-ledger');
     if (!searchInput) return;
 
-    searchInput.addEventListener('input', filterRecipes);
+    let debounceTimer;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(filterRecipes, 200);
+    });
   }
 
-  // Watch for recipe data changes
+  // Guard flag used by filterRecipes to prevent re-entry
   let _recipeRenderInProgress = false;
 
-  function safeRenderRecipesGrid() {
-    if (_recipeRenderInProgress) return;
-    _recipeRenderInProgress = true;
-    try {
-      filteredRecipes = [...window.recipes];
-      renderFilterPills();
-      renderTagFilterPills();
-      renderRecipesGrid();
-    } finally {
-      // Release flag after current microtask so observer callbacks from this render are ignored
-      Promise.resolve().then(() => { _recipeRenderInProgress = false; });
-    }
-  }
-
-  function setupRecipeObserver() {
-    const recipesGrid = document.getElementById('recipes-grid');
-    if (!recipesGrid) {
-      setTimeout(setupRecipeObserver, 500);
-      return;
-    }
-
-    const observer = new MutationObserver(() => {
-      safeRenderRecipesGrid();
-    });
-
-    observer.observe(recipesGrid, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-      attributes: true
-    });
+  // Re-render when recipe data changes externally (e.g. realtime sync, app.js reload)
+  function setupRecipeDataWatcher() {
+    let lastRecipeRef = window.recipes;
+    const interval = setInterval(() => {
+      if (window.recipes && window.recipes !== lastRecipeRef) {
+        lastRecipeRef = window.recipes;
+        filteredRecipes = [...window.recipes];
+        renderFilterPills();
+        renderTagFilterPills();
+        renderRecipesGrid();
+      }
+    }, 1000);
+    // Clean up if page unloads
+    window.addEventListener('unload', () => clearInterval(interval));
   }
 
   // Initialize when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       initRecipeGridView();
-      setupRecipeObserver();
+      setupRecipeDataWatcher();
     });
   } else {
     initRecipeGridView();
-    setupRecipeObserver();
+    setupRecipeDataWatcher();
   }
 })();
