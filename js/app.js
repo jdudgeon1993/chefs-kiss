@@ -452,7 +452,7 @@ function renderMealCalendar(meals) {
    SHOPPING LIST FUNCTIONS
 ============================================================================ */
 
-async function loadShoppingList() {
+async function loadShoppingList({ fromRealtime = false } = {}) {
   try {
     showLoading();
     const shoppingData = await API.call('/shopping-list/');
@@ -461,7 +461,11 @@ async function loadShoppingList() {
     renderShoppingList(list);
 
     // Notify focus mode (or any listener) that shopping list updated
-    window.dispatchEvent(new CustomEvent('shopping-list-updated', { detail: list }));
+    // Skip dispatch when called from realtime to prevent event loop:
+    // realtime → loadShoppingList → event → focus mode render → API call → realtime
+    if (!fromRealtime) {
+      window.dispatchEvent(new CustomEvent('shopping-list-updated', { detail: list }));
+    }
   } catch (error) {
     showError('Failed to load shopping list');
     console.error('Shopping list load error:', error);
@@ -482,6 +486,7 @@ async function refreshShoppingList() {
 async function addManualItem(itemData) {
   try {
     showLoading();
+    if (typeof markLocalWrite === 'function') markLocalWrite();
     await API.call('/shopping-list/items', {
       method: 'POST',
       body: JSON.stringify(itemData)
@@ -498,6 +503,7 @@ async function addManualItem(itemData) {
 
 async function checkShoppingItem(itemId, checked) {
   try {
+    if (typeof markLocalWrite === 'function') markLocalWrite();
     await API.call(`/shopping-list/items/${itemId}`, {
       method: 'PATCH',
       body: JSON.stringify({ checked })
@@ -511,6 +517,7 @@ async function checkShoppingItem(itemId, checked) {
 
 async function deleteShoppingItem(itemId) {
   try {
+    if (typeof markLocalWrite === 'function') markLocalWrite();
     await API.call(`/shopping-list/items/${itemId}`, {
       method: 'DELETE'
     });
@@ -527,6 +534,7 @@ async function clearCheckedItems() {
 
   try {
     showLoading();
+    if (typeof markLocalWrite === 'function') markLocalWrite();
     await API.call('/shopping-list/clear-checked', {
       method: 'POST'
     });

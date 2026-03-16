@@ -400,6 +400,9 @@ class ShoppingFocusMode {
 
       if (!item) return;
 
+      // Mark local write so realtime ignores our own change
+      if (window.markLocalWrite) window.markLocalWrite();
+
       if (item.id) {
         // Manual item with ID — update backend
         await API.call(`/shopping-list/items/${item.id}`, {
@@ -407,27 +410,10 @@ class ShoppingFocusMode {
           body: JSON.stringify({ checked })
         });
       } else {
-        // Auto-generated item — create manual override in backend
-        // so checked state syncs across devices (same as main app)
-        try {
-          await API.call('/shopping-list/items', {
-            method: 'POST',
-            body: JSON.stringify({
-              name: item.name,
-              quantity: item.quantity,
-              unit: item.unit,
-              category: item.category || 'Other',
-              checked: checked
-            })
-          });
-          if (typeof setLocalCheckedItem === 'function') {
-            setLocalCheckedItem(itemKey, false); // clear localStorage since backend owns it now
-          }
-        } catch {
-          // Offline fallback — persist in localStorage
-          if (typeof setLocalCheckedItem === 'function') {
-            setLocalCheckedItem(itemKey, checked);
-          }
+        // Auto-generated item — use localStorage only (no manual override)
+        // Creating a manual item for auto-generated ones causes duplicates
+        if (typeof setLocalCheckedItem === 'function') {
+          setLocalCheckedItem(itemKey, checked);
         }
       }
 
@@ -644,6 +630,7 @@ class ShoppingFocusMode {
 
     try {
       // Clear backend manual checked items
+      if (window.markLocalWrite) window.markLocalWrite();
       await API.call('/shopping-list/clear-checked', { method: 'POST' });
       // Clear localStorage checked items
       if (typeof clearLocalCheckedItems === 'function') {
