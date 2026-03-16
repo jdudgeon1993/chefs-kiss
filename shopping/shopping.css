@@ -1,4 +1,6 @@
-/* Shopping-specific styles — Extracted from style.css (Phase 4.1) */
+/* ===================================================================
+   Shopping-specific styles (consolidated from shared.css + shopping.css)
+   =================================================================== */
 
 .shopping-section {
   min-height: 100dvh;
@@ -43,7 +45,9 @@
   transform: rotate(180deg);
 }
 
-/* Focus Mode Button - Large prominent version */
+/* ===================================================================
+   FOCUS MODE BUTTON
+   =================================================================== */
 .btn-focus-mode-large {
   display: block;
   width: 100%;
@@ -72,7 +76,9 @@
   box-shadow: 0 2px 8px rgba(45, 138, 78, 0.3);
 }
 
-/* Shopping List Add Input */
+/* ===================================================================
+   ADD INPUT
+   =================================================================== */
 .shopping-add-inline {
   display: flex;
   gap: 0.5rem;
@@ -109,14 +115,12 @@
   width: 44px;
   height: 44px;
   font-size: 1.5rem;
-  cursor: pointer !important;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 300;
   box-shadow: 0 4px 12px rgba(156,175,136,0.2);
-  pointer-events: auto !important;
-  opacity: 1 !important;
 }
 
 .btn-add-icon:hover {
@@ -128,7 +132,64 @@
   transform: translateY(1px);
 }
 
-/* Shopping List Items */
+/* Alternative add item layout */
+.shopping-add-item {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: rgba(255,255,255,0.5);
+  border-radius: 8px;
+}
+
+.shopping-input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(0,0,0,0.2);
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.shopping-input:focus {
+  border-color: #F1C338;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(241,195,56,0.2);
+}
+
+/* ===================================================================
+   GROUP-BY TOGGLE (moved from inline styles)
+   =================================================================== */
+.shopping-group-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  align-items: center;
+}
+
+.shopping-group-label {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.btn-pill-toggle {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--clay-warm, #c49a6c);
+  background: transparent;
+  color: var(--clay-warm, #c49a6c);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-pill-toggle.active {
+  background: var(--clay-warm, #c49a6c);
+  color: #fff;
+}
+
+/* ===================================================================
+   SHOPPING LIST ITEMS
+   =================================================================== */
 .shopping-list {
   display: flex;
   flex-direction: column;
@@ -138,7 +199,8 @@
   margin-bottom: 1rem;
 }
 
-.shopping-category-header {
+.shopping-category-header,
+.category-title {
   margin-top: 1rem;
   margin-bottom: 0.5rem;
   font-weight: 600;
@@ -186,7 +248,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100%; /* Explicit constraint */
+  max-width: 100%;
 }
 
 .shopping-sub {
@@ -206,6 +268,7 @@
   color: #8A9A5B;
 }
 
+/* Action buttons */
 .shopping-remove,
 .shopping-edit {
   background: none;
@@ -235,39 +298,6 @@
   opacity: 1;
 }
 
-.shopping-actions {
-  margin-top: 0;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(0,0,0,0.08);
-}
-
-/* -------------------------------------------------------------------
-   14. SHOPPING LIST IMPROVEMENTS
-   ------------------------------------------------------------------- */
-
-.shopping-add-item {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  padding: 0.75rem;
-  background: rgba(255,255,255,0.5);
-  border-radius: 8px;
-}
-
-.shopping-input {
-  flex: 1;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid rgba(0,0,0,0.2);
-  border-radius: 6px;
-  font-size: 1rem;
-}
-
-.shopping-input:focus {
-  border-color: #F1C338;
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(241,195,56,0.2);
-}
-
 .shopping-item .item-actions {
   display: flex;
   gap: 0.25rem;
@@ -283,11 +313,7 @@
   opacity: 1;
 }
 
-.edit-shopping-modal {
-  max-width: 450px;
-}
-
-/* Shopping item source + breakdown labels */
+/* Source + breakdown labels */
 .shopping-item .item-source {
   font-size: 0.72rem;
   font-style: italic;
@@ -304,7 +330,17 @@
   padding-left: 1.75rem;
 }
 
-/* Checked shopping items */
+/* Store tag */
+.item-store-tag {
+  font-size: 0.7rem;
+  background: rgba(196, 154, 108, 0.15);
+  color: var(--clay-warm, #c49a6c);
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* Checked state */
 .shopping-item.checked {
   opacity: 0.55;
 }
@@ -313,17 +349,31 @@
   text-decoration: line-through;
 }
 
-.category-title {
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #6a4f35;
-  margin: 1rem 0 0.5rem;
-  font-weight: 600;
-  opacity: 0.8;
+/* ===================================================================
+   SHOPPING ACTIONS (bottom bar)
+   =================================================================== */
+.shopping-actions {
+  margin-top: 0;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0,0,0,0.08);
 }
 
-/* Checkout modal */
+/* ===================================================================
+   EDIT MODAL
+   =================================================================== */
+.edit-shopping-modal {
+  max-width: 450px;
+}
+
+.edit-shopping-source-note {
+  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
+  display: none;
+}
+
+/* ===================================================================
+   CHECKOUT MODAL
+   =================================================================== */
 .checkout-modal {
   max-width: 550px;
   max-height: 80vh;
@@ -363,4 +413,50 @@
   border: 1px solid rgba(0,0,0,0.15);
   border-radius: 6px;
   font-size: 0.85rem;
+}
+
+/* ===================================================================
+   MOBILE (<=768px)
+   =================================================================== */
+@media (max-width: 768px) {
+  /* Touch targets: enforce Apple 44px minimum */
+  .shopping-check {
+    width: 22px;
+    height: 22px;
+    padding: 11px;
+    box-sizing: content-box;
+  }
+
+  .shopping-remove,
+  .shopping-edit {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Tighter spacing on mobile */
+  .shopping-item {
+    padding: 0.65rem 0.75rem;
+    gap: 0.5rem;
+  }
+
+  /* Checkout grid stacks on small screens */
+  .checkout-item-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-field select,
+  .checkout-field input {
+    font-size: 1rem;
+    padding: 0.5rem;
+  }
+
+  /* Focus mode button: full-width with good tap target */
+  .btn-focus-mode-large {
+    padding: 0.85rem 1rem;
+    font-size: 1rem;
+  }
+
+  .shopping-actions {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
 }
