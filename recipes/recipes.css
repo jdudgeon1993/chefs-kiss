@@ -26,8 +26,11 @@
   margin: 0;
 }
 
-/* Recipe Search */
+/* Recipe Search + Sort Controls */
 .recipes-controls {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem;
   margin-bottom: 1rem;
 }
 
@@ -45,6 +48,33 @@
 .recipe-search-input:focus {
   outline: none;
   border-color: var(--color-accent-olive);
+}
+
+.recipe-sort-select {
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(197,184,165,0.3);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: white;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.recipe-sort-select:focus {
+  outline: none;
+  border-color: var(--color-accent-olive);
+}
+
+/* Recipe Tag Filters */
+.recipe-tag-filters-container {
+  margin-bottom: 1rem;
+}
+
+.recipe-tag-filter-pills {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 /* Recipe Filter Pills (Horizontal Scroll) */
@@ -370,7 +400,8 @@
   }
 }
 
-.recipe-card-meta {
+/* Hide meta in vintage card stack view (not in grid cards) */
+.recipe-card-stack-front .recipe-card-meta {
   display: none;
 }
 
@@ -556,10 +587,11 @@
   backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
-  align-items: center;
-  z-index: 2000;
+  align-items: flex-start;
+  z-index: 10001;
   padding: 2rem;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .recipe-detail-modal-content {
@@ -702,6 +734,97 @@
   transition: all 0.2s;
 }
 
+/* Tags section in vintage card modal */
+.recipe-tags-section {
+  margin: 1rem 0;
+  padding: 1rem 0;
+  border-top: 1px solid var(--color-recipe-border);
+  border-bottom: 1px solid var(--color-recipe-border);
+}
+
+.recipe-tags-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.recipe-tags-label {
+  font-family: 'Caveat', cursive;
+  font-size: 1.2rem;
+  color: var(--clay-warm);
+  font-weight: 600;
+}
+
+.recipe-tags-display {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.recipe-tags-display .empty-hint {
+  opacity: 0.5;
+  font-size: 0.85rem;
+}
+
+.recipe-tag-add-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.recipe-tag-input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid var(--color-recipe-border);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+
+.recipe-tag-input:focus {
+  outline: none;
+  border-color: var(--color-accent-olive);
+}
+
+.recipe-vintage-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.recipe-vintage-header-row .recipe-vintage-card-id {
+  flex: 1;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.btn-favorite-toggle {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.recipe-vintage-card-photo {
+  width: 100%;
+  max-height: 240px;
+  overflow: hidden;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.recipe-vintage-card-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 /* Modal Close Button */
 .recipe-modal-close {
   position: fixed;
@@ -725,6 +848,110 @@
 .recipe-modal-close:hover {
   transform: scale(1.1);
   background: #f5f5f5;
+}
+
+/* -------------------------------------------------------------------
+   MOBILE RESPONSIVE
+   ------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  /* Controls stack vertically */
+  .recipes-controls {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .recipe-sort-select {
+    width: 100%;
+  }
+
+  /* Single-column grid */
+  .recipes-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .recipe-card-thumbnail {
+    height: 120px;
+  }
+
+  /* Vintage card modal: less padding, full width */
+  .recipe-detail-modal {
+    padding: 1rem 0.5rem;
+  }
+
+  .recipe-vintage-card {
+    padding: 1.25rem;
+    margin-bottom: 8px;
+    margin-right: 8px;
+  }
+
+  .recipe-vintage-card::after {
+    box-shadow:
+      3px 3px 0 -1px var(--buttermilk), 3px 3px 0 0 var(--color-recipe-border),
+      6px 6px 0 -2px var(--buttermilk), 6px 6px 0 -1px var(--color-recipe-border);
+    transform: rotate(0.8deg);
+  }
+
+  .recipe-vintage-card-title {
+    font-size: 1.5rem;
+  }
+
+  .recipe-vintage-card-meta {
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: center;
+    font-size: 0.85rem;
+  }
+
+  .recipe-vintage-card-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .recipe-vintage-card-actions .btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .recipe-modal-close {
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+  }
+
+  /* Stack view responsive */
+  .recipe-card-stack-container {
+    padding: 1rem 0;
+    margin: 1rem auto;
+  }
+
+  .recipe-card-stack-front {
+    padding: 1.5rem 1rem;
+  }
+
+  .recipe-card-actions {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .recipe-card-actions .btn {
+    width: 100%;
+  }
+
+  /* Touch-friendly inputs */
+  .recipe-search-input,
+  .recipe-sort-select {
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+}
+
+/* Larger phones: 2-column grid */
+@media (min-width: 480px) and (max-width: 768px) {
+  .recipes-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
 }
 
 /* -------------------------------------------------------------------
