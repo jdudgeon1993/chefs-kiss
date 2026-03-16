@@ -23,12 +23,7 @@
   <script defer src="../js/app.js?v=6"></script>
   <script defer src="pantry.js?v=6"></script>
 
-  <style>
-    /* Bulk entry section hidden by default, shown via JS */
-    .main-content > .onboarding-section { display: none; }
-    .main-content > .onboarding-section.section-visible { display: block; }
-    .section-hidden { display: none !important; }
-  </style>
+  <!-- Onboarding visibility handled in pantry.css -->
 </head>
 <body data-section="pantry">
   <!-- Page loader — inline so it paints before any CSS/JS loads -->
@@ -85,7 +80,7 @@
       </div>
 
       <div class="pantry-controls">
-        <input type="text" id="pantry-search-ledger" placeholder="Search ingredients..." class="pantry-search-input">
+        <input type="text" id="pantry-search-ledger" placeholder="Search ingredients..." class="pantry-search-input" enterkeyhint="search">
         <select id="filter-category-ledger" class="pantry-filter-select">
           <option value="">All categories</option>
           <option value="Meat">Meat</option>
@@ -105,13 +100,13 @@
       </div>
 
       <div id="pantry-ledger-display" class="pantry-ledger-display"></div>
-      <div id="pantry-display" class="pantry-display" style="display: none;"></div>
+      <div id="pantry-display" class="pantry-display"></div>
 
       <button class="btn btn-new-entry" id="btn-new-pantry-entry">+ ADD ITEMS</button>
     </section>
 
     <!-- BULK ENTRY SECTION (hidden, toggled by Add Items button) -->
-    <section class="onboarding-section" id="onboarding-section" style="display:none;">
+    <section class="onboarding-section" id="onboarding-section">
       <div class="onboarding-header">
         <div class="onboarding-title-row">
           <h2>BULK PANTRY ENTRY</h2>
@@ -134,12 +129,12 @@
           <table id="bulk-entry-table-live" class="bulk-entry-table">
             <thead>
               <tr>
-                <th style="width: 30%;">Item Name</th>
-                <th style="width: 10%;">Quantity</th>
-                <th style="width: 10%;">Unit</th>
-                <th style="width: 20%;">Category</th>
-                <th style="width: 20%;">Location</th>
-                <th style="width: 10%;"></th>
+                <th class="bulk-col-name">Item Name</th>
+                <th class="bulk-col-qty">Quantity</th>
+                <th class="bulk-col-unit">Unit</th>
+                <th class="bulk-col-category">Category</th>
+                <th class="bulk-col-location">Location</th>
+                <th class="bulk-col-actions"></th>
               </tr>
             </thead>
             <tbody id="bulk-entry-tbody-live"></tbody>

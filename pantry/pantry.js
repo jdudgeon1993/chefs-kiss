@@ -79,7 +79,7 @@
     }
 
     if (filtered.length === 0) {
-      ledgerDisplay.innerHTML = '<p style="text-align:center;opacity:0.5;padding:2rem;">No items to display</p>';
+      ledgerDisplay.innerHTML = '<p class="pantry-empty-state">No items to display</p>';
       return;
     }
 
@@ -164,7 +164,7 @@
         const expiryDays = getEarliestExpiry(item);
         let expiryHTML = '-';
         if (expiryDays !== null) {
-          const cls = expiryDays <= 3 ? 'expiry-warning' : expiryDays <= 7 ? 'expiry-warning' : '';
+          const cls = expiryDays <= 3 ? 'expiry-critical' : expiryDays <= 7 ? 'expiry-warning' : '';
           expiryHTML = `<span class="${cls}">${expiryDays}d</span>`;
         }
 
@@ -315,7 +315,12 @@
 
   function setupPantrySearch() {
     const input = document.getElementById('pantry-search-ledger');
-    if (input) input.addEventListener('input', renderPantryLedger);
+    if (!input) return;
+    let debounceTimer;
+    input.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(renderPantryLedger, 200);
+    });
   }
 
   function setupPantryFilters() {
@@ -325,21 +330,16 @@
     if (sort) sort.addEventListener('change', renderPantryLedger);
   }
 
-  // --- MutationObserver for pantry data changes ---
-  let _pantryRenderInProgress = false;
-
-  function setupPantryObserver() {
-    const pantryDisplay = document.getElementById('pantry-display');
-    if (!pantryDisplay) { setTimeout(setupPantryObserver, 500); return; }
-
-    const observer = new MutationObserver(() => {
-      if (_pantryRenderInProgress) return;
-      _pantryRenderInProgress = true;
-      try { renderPantryLedger(); }
-      finally { Promise.resolve().then(() => { _pantryRenderInProgress = false; }); }
-    });
-
-    observer.observe(pantryDisplay, { childList: true, subtree: true, characterData: true, attributes: true });
+  // --- Data watcher for pantry changes (replaces fragile MutationObserver) ---
+  function setupPantryDataWatcher() {
+    let lastPantryRef = window.pantry;
+    const interval = setInterval(() => {
+      if (window.pantry && window.pantry !== lastPantryRef) {
+        lastPantryRef = window.pantry;
+        renderPantryLedger();
+      }
+    }, 1000);
+    window.addEventListener('unload', () => clearInterval(interval));
   }
 
   // Expose for app.js
@@ -352,9 +352,9 @@
 
   // Init
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => { initPantryLedger(); setupPantryObserver(); });
+    document.addEventListener('DOMContentLoaded', () => { initPantryLedger(); setupPantryDataWatcher(); });
   } else {
     initPantryLedger();
-    setupPantryObserver();
+    setupPantryDataWatcher();
   }
 })();
