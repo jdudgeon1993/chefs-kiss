@@ -2547,15 +2547,15 @@ body[data-section] .floating-action-menu {
   /* Unified Ledger Mobile Adjustments */
   .unified-ledger {
     max-height: none;
-    overflow-x: auto;
+    overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
 
   .unified-ledger-table {
     font-size: 0.75rem;
-    min-width: 700px;
-    table-layout: auto;
+    table-layout: fixed;
+    width: 100%;
   }
 
   .unified-ledger-table thead th {
