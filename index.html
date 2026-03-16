@@ -44,7 +44,10 @@
 
           <div class="landing-form-group">
             <label for="landing-password">Password</label>
-            <input type="password" id="landing-password" placeholder="Enter your password" autocomplete="current-password">
+            <div class="landing-password-wrap">
+              <input type="password" id="landing-password" placeholder="Enter your password" autocomplete="current-password">
+              <button type="button" class="landing-pw-toggle" aria-label="Show password" data-target="landing-password">Show</button>
+            </div>
           </div>
 
           <div id="landing-auth-error" class="landing-auth-error" role="alert" aria-live="polite"></div>
@@ -67,12 +70,18 @@
 
           <div class="landing-form-group">
             <label for="landing-signup-password">Password</label>
-            <input type="password" id="landing-signup-password" placeholder="Create a password" autocomplete="new-password">
+            <div class="landing-password-wrap">
+              <input type="password" id="landing-signup-password" placeholder="Create a password" autocomplete="new-password">
+              <button type="button" class="landing-pw-toggle" aria-label="Show password" data-target="landing-signup-password">Show</button>
+            </div>
           </div>
 
           <div class="landing-form-group">
             <label for="landing-signup-confirm">Confirm Password</label>
-            <input type="password" id="landing-signup-confirm" placeholder="Confirm your password" autocomplete="new-password">
+            <div class="landing-password-wrap">
+              <input type="password" id="landing-signup-confirm" placeholder="Confirm your password" autocomplete="new-password">
+              <button type="button" class="landing-pw-toggle" aria-label="Show password" data-target="landing-signup-confirm">Show</button>
+            </div>
           </div>
 
           <div id="landing-signup-error" class="landing-auth-error" role="alert" aria-live="polite"></div>
@@ -96,7 +105,7 @@
     <section class="landing-features">
       <h2 class="landing-section-title">Simple. Organized. Powerful.</h2>
       <div class="landing-features-grid">
-        <div class="landing-feature">
+        <div class="landing-feature-card">
           <div class="landing-feature-icon">🏺</div>
           <h3 class="landing-feature-title">Pantry Management</h3>
           <p class="landing-feature-description">
@@ -104,7 +113,7 @@
           </p>
         </div>
 
-        <div class="landing-feature">
+        <div class="landing-feature-card">
           <div class="landing-feature-icon">🍳</div>
           <h3 class="landing-feature-title">Recipe Collection</h3>
           <p class="landing-feature-description">
@@ -112,7 +121,7 @@
           </p>
         </div>
 
-        <div class="landing-feature">
+        <div class="landing-feature-card">
           <div class="landing-feature-icon">📅</div>
           <h3 class="landing-feature-title">Meal Planning</h3>
           <p class="landing-feature-description">
@@ -120,7 +129,7 @@
           </p>
         </div>
 
-        <div class="landing-feature">
+        <div class="landing-feature-card">
           <div class="landing-feature-icon">🛒</div>
           <h3 class="landing-feature-title">Smart Shopping</h3>
           <p class="landing-feature-description">
