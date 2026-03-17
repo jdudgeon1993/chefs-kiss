@@ -435,6 +435,13 @@ class API {
       body: JSON.stringify({ household_id: householdId })
     });
   }
+
+  static async renameHousehold(householdId, name) {
+    return this.call(`/households/${householdId}/rename`, {
+      method: 'PUT',
+      body: JSON.stringify({ name })
+    });
+  }
 }
 
 // Export for use in other files

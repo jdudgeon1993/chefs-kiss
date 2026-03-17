@@ -320,6 +320,14 @@ async function saveBulkEntry() {
 
 /* ── Account & Household Management Modal ── */
 
+function _getInitials(email) {
+  if (!email) return '?';
+  const local = email.split('@')[0];
+  const parts = local.replace(/[._-]/g, ' ').split(' ').filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return local.substring(0, 2).toUpperCase();
+}
+
 async function openAccountModal() {
   const modalRoot = document.getElementById('modal-root');
   if (!modalRoot) return;
@@ -327,7 +335,7 @@ async function openAccountModal() {
   modalRoot.innerHTML = `
     <div class="modal-overlay">
       <div class="modal-content account-modal">
-        <h2>Loading...</h2>
+        <div class="account-loading"><div class="account-loading-spinner"></div><p>Loading account...</p></div>
       </div>
     </div>
   `;
@@ -344,74 +352,95 @@ async function openAccountModal() {
   }
 
   const email = userInfo?.user?.email || 'Not available';
+  const initials = _getInitials(email);
   const activeHid = API.getActiveHouseholdId() || userInfo?.household_id;
   const activeHousehold = households.find(h => h.id === activeHid);
+  const isOwner = activeHousehold?.role === 'owner';
 
-  const householdOptions = households.map(h => {
-    const isActive = h.id === activeHid;
-    const label = `${h.name} (${h.role})`;
-    return `<option value="${h.id}" ${isActive ? 'selected' : ''}>${label}</option>`;
-  }).join('');
+  const householdSwitcher = households.length > 1 ? `
+    <div class="account-card">
+      <div class="account-card-header">
+        <span class="account-card-icon">🏠</span>
+        <h3>Switch Kitchen</h3>
+      </div>
+      <div class="household-switcher-pills">
+        ${households.map(h => `
+          <button class="household-pill ${h.id === activeHid ? 'household-pill-active' : ''}" onclick="switchHousehold('${h.id}')">
+            <span class="household-pill-name">${h.name}</span>
+            <span class="household-pill-role">${h.role}</span>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  ` : '';
+
+  const householdName = activeHousehold?.name || 'Your Kitchen';
+  const escapedName = householdName.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
 
   modalRoot.innerHTML = `
     <div class="modal-overlay" onclick="closeModal()">
       <div class="modal-content account-modal" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="closeModal()">&times;</button>
-        <h2>Account & Household</h2>
 
-        <div class="account-section">
-          <h3>Your Account</h3>
-          <div class="account-info">
-            <p><strong>Email:</strong> ${email}</p>
+        <div class="account-profile-header">
+          <div class="account-avatar">${initials}</div>
+          <div class="account-profile-info">
+            <p class="account-email">${email}</p>
+            <span class="account-role-badge ${isOwner ? 'role-owner' : 'role-member'}">${activeHousehold?.role || 'owner'}</span>
           </div>
         </div>
 
-        ${households.length > 1 ? `
-        <div class="account-section">
-          <h3>Switch Household</h3>
-          <select id="household-switcher" class="form-control" onchange="switchHousehold(this.value)">
-            ${householdOptions}
-          </select>
-        </div>
-        ` : `
-        <div class="account-section">
-          <h3>Household</h3>
-          <p>${activeHousehold?.name || 'Your Household'} <span class="status-badge status-connected">${activeHousehold?.role || 'owner'}</span></p>
-        </div>
-        `}
-
-        <div class="account-section">
-          <h3>Members</h3>
-          <div id="members-list"><p>Loading members...</p></div>
-        </div>
-
-        <div class="account-section">
-          <h3>Invite a Member</h3>
-          <p class="help-text">Generate a code to share with someone. They enter it here to join your household.</p>
-          <div id="invite-section">
-            <button class="btn btn-secondary" onclick="generateInviteCode()">Generate Invite Code</button>
+        <div class="account-card">
+          <div class="account-card-header">
+            <span class="account-card-icon">🍳</span>
+            <h3>${isOwner ? '<span id="household-name-display" class="household-name-editable" onclick="startEditHouseholdName()" title="Click to rename">' + escapedName + ' <span class="household-name-edit-icon">&#9998;</span></span>' : escapedName}</h3>
+          </div>
+          <div id="household-name-edit" class="household-name-edit" style="display:none;">
+            <input type="text" id="household-name-input" class="form-control" value="${escapedName}" maxlength="60" />
+            <div class="household-name-edit-actions">
+              <button class="btn btn-sm btn-secondary" onclick="cancelEditHouseholdName()">Cancel</button>
+              <button class="btn btn-sm btn-primary" onclick="saveHouseholdName()">Save</button>
+            </div>
+          </div>
+          <div id="members-list" class="members-list">
+            <div class="member-row member-row-loading"><span>Loading members...</span></div>
           </div>
         </div>
 
-        <div class="account-section">
-          <h3>Join a Household</h3>
-          <p class="help-text">Enter an invite code from someone to join their household.</p>
-          <div style="display:flex;gap:8px;">
-            <input type="text" id="accept-invite-input" class="form-control" placeholder="Enter invite code" style="flex:1;text-transform:uppercase;" maxlength="8" />
-            <button class="btn btn-primary" onclick="acceptInviteCode()">Join</button>
+        ${householdSwitcher}
+
+        <div class="account-card">
+          <div class="account-card-header">
+            <span class="account-card-icon">✉️</span>
+            <h3>Invite & Join</h3>
           </div>
-          <div id="accept-invite-status"></div>
+          <div class="invite-tabs">
+            <button class="invite-tab invite-tab-active" id="tab-invite" onclick="showInviteTab('invite')">Send Invite</button>
+            <button class="invite-tab" id="tab-join" onclick="showInviteTab('join')">Join Kitchen</button>
+          </div>
+          <div id="invite-panel-invite" class="invite-panel">
+            <p class="help-text">Share a code so someone can join your kitchen.</p>
+            <div id="invite-section">
+              <button class="btn btn-secondary btn-full" onclick="generateInviteCode()">Generate Invite Code</button>
+            </div>
+          </div>
+          <div id="invite-panel-join" class="invite-panel" style="display:none;">
+            <p class="help-text">Enter an invite code to join someone else's kitchen.</p>
+            <div class="join-input-row">
+              <input type="text" id="accept-invite-input" class="form-control invite-code-input" placeholder="ABCD1234" maxlength="8" />
+              <button class="btn btn-primary" onclick="acceptInviteCode()">Join</button>
+            </div>
+            <div id="accept-invite-status"></div>
+          </div>
         </div>
 
-        <div class="account-section">
-          <div class="data-actions" style="display:flex;gap:8px;">
-            <button class="btn btn-secondary" onclick="exportData()">Export Data</button>
-            <button class="btn btn-danger" onclick="handleLogout()">Sign Out</button>
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button class="btn btn-primary" onclick="closeModal()">Done</button>
+        <div class="account-footer-actions">
+          <button class="btn btn-secondary btn-footer-action" onclick="exportData()">
+            <span class="btn-icon-label">Export Data</span>
+          </button>
+          <button class="btn btn-danger btn-footer-action" onclick="handleLogout()">
+            <span class="btn-icon-label">Sign Out</span>
+          </button>
         </div>
       </div>
     </div>
@@ -421,6 +450,49 @@ async function openAccountModal() {
   loadActiveInvite();
 }
 
+function showInviteTab(tab) {
+  document.getElementById('invite-panel-invite').style.display = tab === 'invite' ? '' : 'none';
+  document.getElementById('invite-panel-join').style.display = tab === 'join' ? '' : 'none';
+  document.getElementById('tab-invite').classList.toggle('invite-tab-active', tab === 'invite');
+  document.getElementById('tab-join').classList.toggle('invite-tab-active', tab === 'join');
+}
+
+function startEditHouseholdName() {
+  const display = document.getElementById('household-name-display');
+  const edit = document.getElementById('household-name-edit');
+  if (display) display.style.display = 'none';
+  if (edit) {
+    edit.style.display = '';
+    const input = document.getElementById('household-name-input');
+    if (input) { input.focus(); input.select(); }
+  }
+}
+
+function cancelEditHouseholdName() {
+  const display = document.getElementById('household-name-display');
+  const edit = document.getElementById('household-name-edit');
+  if (display) display.style.display = '';
+  if (edit) edit.style.display = 'none';
+}
+
+async function saveHouseholdName() {
+  const input = document.getElementById('household-name-input');
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) return;
+
+  const activeHid = API.getActiveHouseholdId();
+  if (!activeHid) return;
+
+  try {
+    await API.renameHousehold(activeHid, name);
+    showSuccess('Kitchen renamed!');
+    openAccountModal();
+  } catch (e) {
+    showError('Failed to rename: ' + e.message);
+  }
+}
+
 async function loadMembersList() {
   const container = document.getElementById('members-list');
   if (!container) return;
@@ -428,20 +500,22 @@ async function loadMembersList() {
   try {
     const data = await API.getHouseholdMembers();
     if (!data.members || data.members.length === 0) {
-      container.innerHTML = '<p>No members found.</p>';
+      container.innerHTML = '<div class="member-row"><span class="member-name">No members yet</span></div>';
       return;
     }
 
     container.innerHTML = data.members.map(m => {
-      const roleClass = m.role === 'owner' ? 'status-connected' : 'status-badge';
-      const youLabel = m.is_you ? ' (You)' : '';
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-color, #333);">
-        <span>Member${youLabel}</span>
-        <span class="status-badge ${roleClass}">${m.role}</span>
+      const isOwner = m.role === 'owner';
+      const youTag = m.is_you ? '<span class="member-you-tag">You</span>' : '';
+      const roleIcon = isOwner ? '👑' : '👤';
+      return `<div class="member-row">
+        <span class="member-avatar-sm">${roleIcon}</span>
+        <span class="member-name">Member ${m.user_id.substring(0, 6)}${youTag}</span>
+        <span class="account-role-badge ${isOwner ? 'role-owner' : 'role-member'}">${m.role}</span>
       </div>`;
     }).join('');
   } catch (e) {
-    container.innerHTML = '<p>Failed to load members.</p>';
+    container.innerHTML = '<div class="member-row"><span class="member-name">Failed to load members</span></div>';
   }
 }
 
@@ -455,13 +529,16 @@ async function loadActiveInvite() {
       const expiresAt = new Date(data.invite.expires_at);
       const hoursLeft = Math.max(0, Math.round((expiresAt - Date.now()) / 3600000));
       container.innerHTML = `
-        <div style="padding:12px;background:var(--card-bg, #1a1a2e);border-radius:8px;text-align:center;">
-          <p style="margin:0 0 8px;opacity:0.7;">Active invite code:</p>
-          <p style="font-size:1.5rem;font-weight:bold;letter-spacing:4px;margin:0 0 8px;">${data.invite.code}</p>
-          <p style="margin:0;opacity:0.5;font-size:0.85rem;">Expires in ${hoursLeft}h</p>
-          <button class="btn btn-secondary" style="margin-top:8px;" onclick="copyInviteCode('${data.invite.code}')">Copy Code</button>
+        <div class="invite-code-card">
+          <p class="invite-code-label">Active invite code</p>
+          <p class="invite-code-value">${data.invite.code}</p>
+          <p class="invite-code-expires">Expires in ${hoursLeft}h</p>
+          <div class="invite-code-actions">
+            <button class="btn btn-secondary btn-sm" onclick="copyInviteCode('${data.invite.code}')">Copy</button>
+            <button class="btn btn-secondary btn-sm" onclick="shareInviteCode('${data.invite.code}')">Share</button>
+          </div>
         </div>
-        <button class="btn btn-secondary" style="margin-top:8px;" onclick="generateInviteCode()">Generate New Code</button>
+        <button class="btn btn-secondary btn-sm btn-full" style="margin-top:0.5rem;" onclick="generateInviteCode()">Generate New Code</button>
       `;
     }
   } catch (e) {
@@ -473,28 +550,26 @@ async function generateInviteCode() {
   const container = document.getElementById('invite-section');
   if (!container) return;
 
-  container.innerHTML = '<p>Generating...</p>';
+  container.innerHTML = '<div class="invite-code-card"><p class="invite-code-label">Generating...</p></div>';
 
   try {
     const data = await API.createInvite(48);
     container.innerHTML = `
-      <div style="padding:12px;background:var(--card-bg, #1a1a2e);border-radius:8px;text-align:center;">
-        <p style="margin:0 0 8px;opacity:0.7;">Share this code:</p>
-        <p style="font-size:1.5rem;font-weight:bold;letter-spacing:4px;margin:0 0 8px;">${data.code}</p>
-        <p style="margin:0;opacity:0.5;font-size:0.85rem;">Expires in ${data.expires_hours}h</p>
-        <button class="btn btn-secondary" style="margin-top:8px;" onclick="copyInviteCode('${data.code}')">Copy Code</button>
+      <div class="invite-code-card">
+        <p class="invite-code-label">Share this code</p>
+        <p class="invite-code-value">${data.code}</p>
+        <p class="invite-code-expires">Expires in ${data.expires_hours}h</p>
+        <div class="invite-code-actions">
+          <button class="btn btn-secondary btn-sm" onclick="copyInviteCode('${data.code}')">Copy</button>
+          <button class="btn btn-secondary btn-sm" onclick="shareInviteCode('${data.code}')">Share</button>
+        </div>
       </div>
     `;
   } catch (e) {
-    const errP = document.createElement('p');
-    errP.style.color = 'var(--danger-color,red)';
-    errP.textContent = 'Failed to generate code: ' + e.message;
-    const retryBtn = document.createElement('button');
-    retryBtn.className = 'btn btn-secondary';
-    retryBtn.textContent = 'Try Again';
-    retryBtn.onclick = () => generateInviteCode();
-    container.innerHTML = '';
-    container.append(errP, retryBtn);
+    container.innerHTML = `
+      <p class="invite-error">Failed to generate code: ${e.message}</p>
+      <button class="btn btn-secondary btn-sm" onclick="generateInviteCode()">Try Again</button>
+    `;
   }
 }
 
@@ -506,6 +581,17 @@ function copyInviteCode(code) {
   });
 }
 
+function shareInviteCode(code) {
+  if (navigator.share) {
+    navigator.share({
+      title: "Chef's Kiss - Kitchen Invite",
+      text: `Join my kitchen on Chef's Kiss! Use invite code: ${code}`
+    }).catch(() => {});
+  } else {
+    copyInviteCode(code);
+  }
+}
+
 async function acceptInviteCode() {
   const input = document.getElementById('accept-invite-input');
   const statusEl = document.getElementById('accept-invite-status');
@@ -513,37 +599,26 @@ async function acceptInviteCode() {
 
   const code = input.value.trim();
   if (!code) {
-    statusEl.innerHTML = '<p style="color:var(--danger-color,red);">Please enter a code.</p>';
+    statusEl.innerHTML = '<p class="invite-error">Please enter a code.</p>';
     return;
   }
 
-  statusEl.innerHTML = '<p>Joining...</p>';
+  statusEl.innerHTML = '<p class="invite-status-msg">Joining...</p>';
 
   try {
     const data = await API.acceptInvite(code);
-    const successP = document.createElement('p');
-    successP.style.color = 'var(--success-color,#4ade80)';
-    successP.textContent = data.message;
-    statusEl.innerHTML = '';
-    statusEl.appendChild(successP);
+    statusEl.innerHTML = `<p class="invite-success">${data.message}</p>`;
     input.value = '';
-
     API.setActiveHouseholdId(data.household_id);
-
-    setTimeout(() => openAccountModal(), 1500);
-    setTimeout(() => window.location.reload(), 2000);
+    setTimeout(() => window.location.reload(), 1500);
   } catch (e) {
-    const errP = document.createElement('p');
-    errP.style.color = 'var(--danger-color,red)';
-    errP.textContent = e.message;
-    statusEl.innerHTML = '';
-    statusEl.appendChild(errP);
+    statusEl.innerHTML = `<p class="invite-error">${e.message}</p>`;
   }
 }
 
 async function switchHousehold(householdId) {
   API.setActiveHouseholdId(householdId);
-  showSuccess('Switching household...');
+  showSuccess('Switching kitchen...');
   setTimeout(() => window.location.reload(), 500);
 }
 
@@ -877,8 +952,13 @@ window.openAccountModal = openAccountModal;
 window.openSettingsModal = openSettingsModal;
 window.generateInviteCode = generateInviteCode;
 window.copyInviteCode = copyInviteCode;
+window.shareInviteCode = shareInviteCode;
 window.acceptInviteCode = acceptInviteCode;
 window.switchHousehold = switchHousehold;
+window.showInviteTab = showInviteTab;
+window.startEditHouseholdName = startEditHouseholdName;
+window.cancelEditHouseholdName = cancelEditHouseholdName;
+window.saveHouseholdName = saveHouseholdName;
 window.exportData = exportData;
 window.updateBulkEntryCount = updateBulkEntryCount;
 window.loadUnits = loadUnits;
