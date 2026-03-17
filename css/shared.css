@@ -1931,6 +1931,369 @@ body[data-section] .floating-action-menu {
   min-width: 120px;
 }
 
+/* Account Profile Header */
+.account-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+.account-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #8B9376;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.account-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.account-email {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #555;
+  word-break: break-all;
+}
+
+.account-role-badge {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  width: fit-content;
+}
+
+.role-owner {
+  background: rgba(241,195,56,0.2);
+  color: #8a6d00;
+}
+
+.role-member {
+  background: rgba(139,147,118,0.15);
+  color: #5a6148;
+}
+
+/* Account Cards */
+.account-card {
+  background: rgba(255,255,255,0.5);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.account-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.account-card-icon {
+  font-size: 1.1rem;
+}
+
+.account-card-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #6a4f35;
+}
+
+/* Household Name Editing */
+.household-name-editable {
+  cursor: pointer;
+  border-bottom: 1px dashed rgba(0,0,0,0.2);
+  padding-bottom: 2px;
+}
+
+.household-name-editable:hover {
+  border-bottom-color: #8B9376;
+}
+
+.household-name-edit-icon {
+  font-size: 0.8rem;
+  opacity: 0.4;
+  margin-left: 0.25rem;
+}
+
+.household-name-editable:hover .household-name-edit-icon {
+  opacity: 0.7;
+}
+
+.household-name-edit {
+  margin-bottom: 0.75rem;
+}
+
+.household-name-edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  justify-content: flex-end;
+}
+
+/* Members List */
+.members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.member-row:last-child {
+  border-bottom: none;
+}
+
+.member-row-loading {
+  opacity: 0.6;
+}
+
+.member-avatar-sm {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.member-name {
+  flex: 1;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.member-you-tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  background: rgba(139,147,118,0.15);
+  color: #5a6148;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  margin-left: 0.35rem;
+  vertical-align: middle;
+}
+
+/* Household Switcher Pills */
+.household-switcher-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.household-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.15s ease;
+}
+
+.household-pill:hover {
+  background: rgba(139,147,118,0.1);
+}
+
+.household-pill-active {
+  background: #8B9376;
+  color: #fff;
+  border-color: #8B9376;
+}
+
+.household-pill-active:hover {
+  background: #7A8268;
+}
+
+.household-pill-name {
+  font-weight: 500;
+}
+
+.household-pill-role {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  text-transform: capitalize;
+}
+
+/* Invite Tabs */
+.invite-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 0.75rem;
+  border-bottom: 2px solid rgba(0,0,0,0.08);
+}
+
+.invite-tab {
+  flex: 1;
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #777;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.invite-tab:hover {
+  color: #555;
+}
+
+.invite-tab-active {
+  color: #6a4f35;
+  border-bottom-color: #8B9376;
+}
+
+.invite-panel {
+  padding-top: 0.25rem;
+}
+
+/* Invite Code Display */
+.invite-code-card {
+  background: rgba(139,147,118,0.08);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.invite-code-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+  color: #777;
+}
+
+.invite-code-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 4px;
+  margin: 0 0 0.35rem;
+  color: #333;
+}
+
+.invite-code-expires {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.invite-code-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 0.75rem;
+}
+
+.join-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.invite-code-input {
+  flex: 1;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.invite-error {
+  color: var(--danger-color, red);
+  font-size: 0.85rem;
+  margin: 0.5rem 0 0;
+}
+
+.invite-success {
+  color: var(--success-color, #4ade80);
+  font-size: 0.85rem;
+  margin: 0.5rem 0 0;
+}
+
+.invite-status-msg {
+  font-size: 0.85rem;
+  color: #777;
+  margin: 0.5rem 0 0;
+}
+
+/* Account Footer Actions */
+.account-footer-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.btn-footer-action {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+/* Button helpers */
+.btn-full {
+  width: 100%;
+}
+
+.btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.btn-icon-label {
+  font-size: 0.85rem;
+}
+
+/* Account Loading State */
+.account-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  gap: 1rem;
+}
+
+.account-loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(139,147,118,0.2);
+  border-top-color: #8B9376;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.account-loading p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #777;
+}
+
 /* Settings Modal */
 .settings-modal {
   max-width: 500px;
@@ -2005,6 +2368,22 @@ body.dark-theme .form-group textarea {
   .household-actions .btn,
   .data-actions .btn {
     width: 100%;
+  }
+
+  .account-footer-actions {
+    flex-direction: column;
+  }
+
+  .household-switcher-pills {
+    flex-direction: column;
+  }
+
+  .household-pill {
+    justify-content: center;
+  }
+
+  .join-input-row {
+    flex-direction: column;
   }
 }
 

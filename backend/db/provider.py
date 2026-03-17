@@ -266,6 +266,11 @@ class HouseholdProvider(ABC):
         """Create a household."""
         ...
 
+    @abstractmethod
+    def update_name(self, household_id: str, name: str) -> List[dict]:
+        """Rename a household."""
+        ...
+
     # --- Members ---
 
     @abstractmethod

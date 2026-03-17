@@ -334,6 +334,13 @@ class SupabaseHouseholdProvider(HouseholdProvider):
         resp = self._client.table('households').insert(data).execute()
         return resp.data
 
+    def update_name(self, household_id: str, name: str) -> List[dict]:
+        resp = self._client.table('households')\
+            .update({'name': name})\
+            .eq('id', household_id)\
+            .execute()
+        return resp.data
+
     # --- Members ---
 
     def get_memberships(self, user_id: str, fields: str = 'household_id') -> List[dict]:

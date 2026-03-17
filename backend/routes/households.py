@@ -211,6 +211,37 @@ async def accept_invite(
     }
 
 
+# ===== RENAME =====
+
+class RenameRequest(BaseModel):
+    name: str
+
+
+@router.put("/{household_id}/rename")
+async def rename_household(
+    household_id: str,
+    request: RenameRequest,
+    user: dict = Depends(get_current_user)
+):
+    """Rename a household. Only owners can rename."""
+    db = get_db()
+
+    name = request.name.strip()
+    if not name or len(name) > 60:
+        raise HTTPException(status_code=400, detail="Name must be 1-60 characters")
+
+    membership = db.households.check_membership_with_role(household_id, user['id'])
+    if not membership:
+        raise HTTPException(status_code=404, detail="Not a member of this household")
+
+    if membership[0]['role'] != 'owner':
+        raise HTTPException(status_code=403, detail="Only the owner can rename the household")
+
+    db.households.update_name(household_id, name)
+
+    return {"message": "Household renamed", "name": name}
+
+
 # ===== LEAVE =====
 
 @router.post("/leave")
