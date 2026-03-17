@@ -83,8 +83,10 @@ async def list_members(
 
     result = []
     for m in members:
+        email = db.auth.get_user_email(m['user_id'])
         member_info = {
             "user_id": m['user_id'],
+            "email": email,
             "role": m['role'],
             "joined_at": m['created_at'],
             "is_you": m['user_id'] == user['id']

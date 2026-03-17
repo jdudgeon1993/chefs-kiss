@@ -49,6 +49,13 @@ class AuthProvider(ABC):
         """
         ...
 
+    @abstractmethod
+    def get_user_email(self, user_id: str) -> Optional[str]:
+        """Look up a user's email by their ID.
+        Returns: email string or None if not found.
+        """
+        ...
+
 
 # ===== PANTRY =====
 
