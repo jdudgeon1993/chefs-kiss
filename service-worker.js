@@ -1,5 +1,5 @@
 /**
- * Service Worker — Chef's Kiss - Python Age 5.0
+ * Service Worker — Peachy Pantry - Python Age 5.0
  *
  * Provides offline support for the shopping list so Focus Mode
  * works in-store even with spotty connectivity.
@@ -10,8 +10,8 @@
  * - All other API calls: Network-only (no stale data for mutations)
  */
 
-const CACHE_NAME = 'chefs-kiss-v3';
-const API_CACHE = 'chefs-kiss-api-v1';
+const CACHE_NAME = 'peachy-pantry-v3';
+const API_CACHE = 'peachy-pantry-api-v1';
 
 // Static assets to pre-cache on install
 const STATIC_ASSETS = [

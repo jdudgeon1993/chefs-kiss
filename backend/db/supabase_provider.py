@@ -1,5 +1,5 @@
 """
-Supabase Implementation of DatabaseProvider - Chef's Kiss
+Supabase Implementation of DatabaseProvider - Peachy Pantry
 
 Wraps all existing Supabase calls behind the abstract provider interface.
 Every method here corresponds to a direct Supabase SDK call from the original codebase.

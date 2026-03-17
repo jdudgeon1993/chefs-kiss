@@ -1,7 +1,7 @@
 """
 Pantry Routes - Python Age 5.0
 
-The pantry is the heart of Chef's Kiss.
+The pantry is the heart of Peachy Pantry.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status

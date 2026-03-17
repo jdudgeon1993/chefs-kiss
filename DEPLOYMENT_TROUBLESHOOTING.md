@@ -1,4 +1,4 @@
-# Chef's Kiss - Deployment Troubleshooting Guide
+# Peachy Pantry - Deployment Troubleshooting Guide
 
 ## Common Authentication Issues
 

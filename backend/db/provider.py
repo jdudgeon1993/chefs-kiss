@@ -1,5 +1,5 @@
 """
-Database Provider Interface - Chef's Kiss
+Database Provider Interface - Peachy Pantry
 
 Abstract interface for all database operations.
 Implementations: SupabaseDatabaseProvider (current), PostgresDatabaseProvider (future).

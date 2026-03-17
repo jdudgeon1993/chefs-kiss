@@ -1,4 +1,4 @@
-# Chef's Kiss Backend - Python Age 5.0
+# Peachy Pantry Backend - Python Age 5.0
 # Core Framework
 fastapi==0.109.0
 uvicorn[standard]==0.27.0

@@ -1,5 +1,5 @@
 """
-Chef's Kiss API Routes - Python Age 5.0
+Peachy Pantry API Routes - Python Age 5.0
 """
 
 from . import auth, pantry, recipes, meal_plans, shopping_list, alerts, settings, households

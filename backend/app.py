@@ -1,5 +1,5 @@
 """
-Chef's Kiss Backend - Python Age 5.0
+Peachy Pantry Backend - Python Age 5.0
 
 Let's use Python for what it's designed to do: handle business logic beautifully.
 JavaScript will make the site breathe. Python will make it think.
@@ -32,7 +32,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 # Create FastAPI app
 app = FastAPI(
-    title="Chef's Kiss API",
+    title="Peachy Pantry API",
     description="Python Age 5.0 - Complete backend rebuild",
     version="5.0.0"
 )
@@ -102,7 +102,7 @@ app.include_router(households.router)
 async def root():
     """Root endpoint"""
     return {
-        "message": "Chef's Kiss API - Python Age 5.0",
+        "message": "Peachy Pantry API - Python Age 5.0",
         "version": "5.0.0",
         "status": "The pantry is the heart. The shopping list makes it beat."
     }
@@ -181,7 +181,7 @@ if __name__ == "__main__":
 
     port = int(os.getenv("PORT", 8000))
 
-    logger.info("🚀 Starting Chef's Kiss Backend - Python Age 5.0")
+    logger.info("🚀 Starting Peachy Pantry Backend - Python Age 5.0")
     logger.info(f"📍 Port: {port}")
     logger.info(f"🌍 Environment: {os.getenv('ENVIRONMENT', 'development')}")
 

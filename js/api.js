@@ -1,5 +1,5 @@
 /**
- * Chef's Kiss API Client - Python Age 5.0
+ * Peachy Pantry API Client - Python Age 5.0
  *
  * Simple wrapper around fetch() that talks to Python backend.
  * Replaces ALL Supabase SDK calls.
