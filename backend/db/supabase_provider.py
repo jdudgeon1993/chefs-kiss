@@ -59,6 +59,15 @@ class SupabaseAuthProvider(AuthProvider):
             }
         return {"user": None}
 
+    def get_user_email(self, user_id: str) -> Optional[str]:
+        try:
+            response = self._client.auth.admin.get_user_by_id(user_id)
+            if response and response.user:
+                return response.user.email
+        except Exception:
+            pass
+        return None
+
 
 # ===== PANTRY =====
 

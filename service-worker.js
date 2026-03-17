@@ -10,7 +10,7 @@
  * - All other API calls: Network-only (no stale data for mutations)
  */
 
-const CACHE_NAME = 'chefs-kiss-v2';
+const CACHE_NAME = 'chefs-kiss-v3';
 const API_CACHE = 'chefs-kiss-api-v1';
 
 // Static assets to pre-cache on install
