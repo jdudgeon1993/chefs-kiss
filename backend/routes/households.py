@@ -81,9 +81,11 @@ async def list_members(
 
     members = db.households.get_members(hid)
 
-    # Batch fetch emails to avoid N+1 queries
-    user_ids = [m['user_id'] for m in members]
-    email_map = db.auth.get_user_emails(user_ids)
+    # Build email map: use caller's email from JWT (always available),
+    # attempt admin lookup only for other members
+    other_ids = [m['user_id'] for m in members if m['user_id'] != user['id']]
+    email_map = db.auth.get_user_emails(other_ids) if other_ids else {}
+    email_map[user['id']] = user.get('email')
 
     result = []
     for m in members:
