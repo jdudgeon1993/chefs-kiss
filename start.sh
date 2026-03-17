@@ -1,5 +1,5 @@
 #!/bin/sh
-# Railway startup script for Chef's Kiss backend
+# Railway startup script for Peachy Pantry backend
 
 echo "Starting uvicorn on port ${PORT:-8080}..."
 

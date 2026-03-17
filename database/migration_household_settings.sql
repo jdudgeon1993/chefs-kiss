@@ -1,4 +1,4 @@
--- Chef's Kiss - Household Settings Migration
+-- Peachy Pantry - Household Settings Migration
 -- Stores per-household settings (categories, locations) previously in localStorage
 
 -- ============================================

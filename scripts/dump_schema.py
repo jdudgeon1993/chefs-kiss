@@ -30,7 +30,7 @@ def main():
     supabase = create_client(url, key)
 
     output = []
-    output.append("# Chef's Kiss Database Schema")
+    output.append("# Peachy Pantry Database Schema")
     output.append("")
     output.append(f"*Auto-generated on {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}*")
     output.append("")

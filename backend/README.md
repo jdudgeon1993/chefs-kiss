@@ -1,4 +1,4 @@
-# Chef's Kiss Backend - Python Age 5.0
+# Peachy Pantry Backend - Python Age 5.0
 
 **Python handles the thinking. JavaScript makes it breathe.**
 
@@ -384,8 +384,8 @@ CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 ```bash
-docker build -t chefs-kiss-backend .
-docker run -p 8000:8000 --env-file .env chefs-kiss-backend
+docker build -t peachy-pantry-backend .
+docker run -p 8000:8000 --env-file .env peachy-pantry-backend
 ```
 
 ---

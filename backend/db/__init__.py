@@ -1,5 +1,5 @@
 """
-Database Provider Factory - Chef's Kiss
+Database Provider Factory - Peachy Pantry
 
 Swap database backends without changing any route or business logic code.
 Currently uses Supabase. Future: direct PostgreSQL, SQLite, etc.

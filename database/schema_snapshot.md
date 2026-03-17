@@ -1,4 +1,4 @@
-# Chef's Kiss Database Schema
+# Peachy Pantry Database Schema
 
 *Last updated: 2026-01-28*
 

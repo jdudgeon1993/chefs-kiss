@@ -1,4 +1,4 @@
--- Chef's Kiss - Python Age 5.0 Migration (FIXED)
+-- Peachy Pantry - Python Age 5.0 Migration (FIXED)
 -- New tables and columns for Python backend features
 
 -- ============================================

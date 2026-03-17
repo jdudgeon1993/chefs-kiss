@@ -585,8 +585,8 @@ function copyInviteCode(code) {
 function shareInviteCode(code) {
   if (navigator.share) {
     navigator.share({
-      title: "Chef's Kiss - Kitchen Invite",
-      text: `Join my kitchen on Chef's Kiss! Use invite code: ${code}`
+      title: "Peachy Pantry - Kitchen Invite",
+      text: `Join my kitchen on Peachy Pantry! Use invite code: ${code}`
     }).catch(() => {});
   } else {
     copyInviteCode(code);
@@ -635,7 +635,7 @@ function exportData() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `chefs-kiss-export-${new Date().toISOString().split('T')[0]}.json`;
+  a.download = `peachy-pantry-export-${new Date().toISOString().split('T')[0]}.json`;
   a.click();
   URL.revokeObjectURL(url);
 

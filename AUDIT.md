@@ -1,4 +1,4 @@
-# Chef's Kiss — Code & UX Audit + Phased Implementation Plan
+# Peachy Pantry — Code & UX Audit + Phased Implementation Plan
 
 **Date:** 2026-02-17
 **Stack:** FastAPI / Supabase (PostgreSQL) / Redis / Vanilla JS / GitHub Pages

@@ -1,5 +1,5 @@
 -- ============================================
--- Chef's Kiss — Signup Health Check & Cleanup
+-- Peachy Pantry — Signup Health Check & Cleanup
 -- Run this in the Supabase SQL Editor
 -- ============================================
 

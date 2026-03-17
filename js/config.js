@@ -1,5 +1,5 @@
 /**
- * Chef's Kiss Configuration - Python Age 5.0
+ * Peachy Pantry Configuration - Python Age 5.0
  *
  * UPDATE THIS FILE with your Railway backend URL!
  */
