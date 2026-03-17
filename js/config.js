@@ -1,18 +1,11 @@
 /**
  * Peachy Pantry Configuration - Python Age 5.0
  *
- * UPDATE THIS FILE with your Railway backend URL!
+ * Frontend and API are served from the same domain.
  */
 
-// STEP 1: Get your Railway URL
-// Go to Railway → Your service → Settings → Domains
-// Copy the URL (e.g., https://chefs-kiss-production.up.railway.app)
-
-// STEP 2: Paste it here (replace the placeholder)
-const RAW_BACKEND_URL = 'https://api.peachypantryapp.com';  // ✅ HTTPS required
-
-// Normalize: force https and strip trailing slash
-const BACKEND_URL = RAW_BACKEND_URL.replace(/^http:/, 'https:').replace(/\/+$/, '');
+// API lives on the same origin as the frontend
+const BACKEND_URL = window.location.origin;
 
 // Base path for GitHub Pages (e.g., '/chefs-kiss' for username.github.io/chefs-kiss/)
 // Set to '' if deployed at root domain. Auto-detected from <base> or script path.

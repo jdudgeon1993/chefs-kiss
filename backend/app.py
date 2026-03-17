@@ -7,9 +7,11 @@ JavaScript will make the site breathe. Python will make it think.
 The pantry is the heart. The shopping list is what makes everything beat.
 """
 
+from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -66,7 +68,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 app.add_middleware(SecurityHeadersMiddleware)
 
 # CORS middleware - Allow frontend to call API
-cors_origins_raw = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8080")
+cors_origins_raw = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8080,https://peachypantryapp.com")
 cors_origins = [origin.strip().rstrip('/') for origin in cors_origins_raw.split(",")]
 
 logger.info(f"🌍 CORS origins configured: {cors_origins}")
@@ -98,14 +100,33 @@ app.include_router(alerts.router)
 app.include_router(settings.router)
 app.include_router(households.router)
 
+# --- Static frontend serving ---
+# Resolve the project root (one level up from backend/)
+FRONTEND_DIR = Path(__file__).resolve().parent.parent
+
+# Mount static asset directories
+for folder in ("css", "js", "scripts"):
+    folder_path = FRONTEND_DIR / folder
+    if folder_path.is_dir():
+        app.mount(f"/{folder}", StaticFiles(directory=str(folder_path)), name=folder)
+
+# Mount page directories (each has its own index.html)
+for page in ("pantry", "shopping", "recipes", "meals"):
+    page_path = FRONTEND_DIR / page
+    if page_path.is_dir():
+        app.mount(f"/{page}", StaticFiles(directory=str(page_path), html=True), name=page)
+
+
 @app.get("/")
 async def root():
-    """Root endpoint"""
-    return {
-        "message": "Peachy Pantry API - Python Age 5.0",
-        "version": "5.0.0",
-        "status": "The pantry is the heart. The shopping list makes it beat."
-    }
+    """Serve the frontend landing page"""
+    return FileResponse(str(FRONTEND_DIR / "index.html"))
+
+
+@app.get("/service-worker.js")
+async def service_worker():
+    """Serve the service worker from the root"""
+    return FileResponse(str(FRONTEND_DIR / "service-worker.js"), media_type="application/javascript")
 
 
 @app.get("/api/realtime/config")
