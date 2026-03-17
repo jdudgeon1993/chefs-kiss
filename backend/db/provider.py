@@ -56,6 +56,13 @@ class AuthProvider(ABC):
         """
         ...
 
+    def get_user_emails(self, user_ids: List[str]) -> dict:
+        """Batch look up emails for multiple user IDs.
+        Returns: dict mapping user_id -> email (or None).
+        Override in implementations that support batch lookups.
+        """
+        return {uid: self.get_user_email(uid) for uid in user_ids}
+
 
 # ===== PANTRY =====
 

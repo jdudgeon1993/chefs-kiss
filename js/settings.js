@@ -320,6 +320,12 @@ async function saveBulkEntry() {
 
 /* ── Account & Household Management Modal ── */
 
+function _escapeHTML(str) {
+  const p = document.createElement('p');
+  p.textContent = str;
+  return p.innerHTML;
+}
+
 function _getInitials(email) {
   if (!email) return '?';
   const local = email.split('@')[0];
@@ -508,7 +514,7 @@ async function loadMembersList() {
       const isOwner = m.role === 'owner';
       const youTag = m.is_you ? '<span class="member-you-tag">You</span>' : '';
       const roleIcon = isOwner ? '👑' : '👤';
-      const displayName = m.email || `Member ${m.user_id.substring(0, 6)}`;
+      const displayName = _escapeHTML(m.email || `Member ${m.user_id.substring(0, 6)}`);
       return `<div class="member-row">
         <span class="member-avatar-sm">${roleIcon}</span>
         <span class="member-name">${displayName}${youTag}</span>

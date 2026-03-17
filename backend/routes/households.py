@@ -81,12 +81,15 @@ async def list_members(
 
     members = db.households.get_members(hid)
 
+    # Batch fetch emails to avoid N+1 queries
+    user_ids = [m['user_id'] for m in members]
+    email_map = db.auth.get_user_emails(user_ids)
+
     result = []
     for m in members:
-        email = db.auth.get_user_email(m['user_id'])
         member_info = {
             "user_id": m['user_id'],
-            "email": email,
+            "email": email_map.get(m['user_id']),
             "role": m['role'],
             "joined_at": m['created_at'],
             "is_you": m['user_id'] == user['id']

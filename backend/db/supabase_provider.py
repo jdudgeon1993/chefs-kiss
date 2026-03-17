@@ -64,8 +64,9 @@ class SupabaseAuthProvider(AuthProvider):
             response = self._client.auth.admin.get_user_by_id(user_id)
             if response and response.user:
                 return response.user.email
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+            logging.warning(f"Failed to get user email for {user_id}: {e}")
         return None
 
 
