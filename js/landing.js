@@ -339,7 +339,12 @@ function showQuickAccess() {
   document.getElementById('panel-password-access').style.display = 'none';
   document.getElementById('btn-quick-access').classList.add('active');
   document.getElementById('btn-password-access').classList.remove('active');
+  document.getElementById('landing-quick-fallback').style.display = 'none';
   clearErrors();
+
+  // Show first-time fields only when this browser has no device token yet
+  const isFirstTime = !localStorage.getItem('ck-device-token');
+  document.getElementById('quick-access-first-time').style.display = isFirstTime ? 'block' : 'none';
 }
 
 function showPasswordAccess() {
@@ -494,23 +499,80 @@ async function handleLandingSignUp() {
 }
 
 /**
- * Handle Quick Access code submission (backend not yet implemented)
+ * Handle Quick Access code submission.
+ *
+ * Returning browser  — sends { code, device_token }
+ * First-time browser — sends { code, email, password }
+ *
+ * On success the device_token is persisted in localStorage so future
+ * logins on this browser only need the 5-char code.
  */
 async function handleQuickAccess() {
-  const codeInput = document.getElementById('landing-quick-code');
-  const errorDiv = document.getElementById('landing-quick-error');
-  const code = codeInput?.value.trim();
+  const codeInput    = document.getElementById('landing-quick-code');
+  const errorDiv     = document.getElementById('landing-quick-error');
+  const btn          = document.getElementById('landing-quick-btn');
+  const fallbackBtn  = document.getElementById('landing-quick-fallback');
 
-  errorDiv.textContent = '';
+  errorDiv.textContent   = '';
+  errorDiv.style.color   = '#d32f2f';
+  fallbackBtn.style.display = 'none';
 
+  const code = (codeInput?.value || '').trim().toUpperCase();
   if (!code || code.length !== 5) {
     errorDiv.textContent = 'Please enter your 5-character access code';
     return;
   }
 
-  // Placeholder until backend quick-access endpoint is implemented
-  errorDiv.style.color = 'var(--color-accent-olive)';
-  errorDiv.textContent = 'Quick Access sign-in coming soon. Please use Password Access for now.';
+  const deviceToken = localStorage.getItem('ck-device-token');
+  let body;
+
+  if (deviceToken) {
+    body = { code, device_token: deviceToken };
+  } else {
+    const email    = document.getElementById('landing-quick-email')?.value.trim();
+    const password = document.getElementById('landing-quick-password')?.value;
+    if (!email || !password) {
+      errorDiv.textContent = 'Please enter your email and password for first-time verification';
+      return;
+    }
+    body = { code, email, password };
+  }
+
+  const originalText = btn.textContent;
+  btn.disabled    = true;
+  btn.textContent = 'Verifying…';
+
+  try {
+    const response = await API.call('/auth/quickaccess', {
+      method: 'POST',
+      body:   JSON.stringify(body)
+    });
+
+    if (response.session && response.session.access_token) {
+      if (response.device_token) {
+        localStorage.setItem('ck-device-token', response.device_token);
+      }
+      API.setToken(response.session.access_token);
+      if (response.session.refresh_token) {
+        API.setRefreshToken(response.session.refresh_token);
+      }
+      if (response.household_id) {
+        API.setActiveHouseholdId(response.household_id);
+      }
+      window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/pantry/';
+    }
+  } catch (err) {
+    // If the device token was rejected, clear it so next attempt goes
+    // back through the first-time verification flow
+    if (deviceToken && err.message && err.message.toLowerCase().includes('invalid')) {
+      localStorage.removeItem('ck-device-token');
+      document.getElementById('quick-access-first-time').style.display = 'block';
+    }
+    errorDiv.textContent = err.message || 'Verification failed. Please try again.';
+    fallbackBtn.style.display = 'block';
+    btn.disabled    = false;
+    btn.textContent = originalText;
+  }
 }
 
 /**
@@ -560,13 +622,17 @@ function initLandingPage() {
   const btnQuick = document.getElementById('landing-quick-btn');
   if (btnQuick) btnQuick.addEventListener('click', handleQuickAccess);
 
-  // Enter key for quick access code input
-  const quickCodeInput = document.getElementById('landing-quick-code');
-  if (quickCodeInput) {
-    quickCodeInput.addEventListener('keypress', (e) => {
+  // Fallback — switch to Password Access after a failure
+  const btnQuickFallback = document.getElementById('landing-quick-fallback');
+  if (btnQuickFallback) btnQuickFallback.addEventListener('click', showPasswordAccess);
+
+  // Enter key for quick access inputs
+  ['landing-quick-code', 'landing-quick-email', 'landing-quick-password'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); handleQuickAccess(); }
     });
-  }
+  });
 
   // Sign in button
   const btnSignIn = document.getElementById('landing-signin-btn');
