@@ -46,7 +46,9 @@ class API {
     if (!token) return false;
 
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      // JWT uses base64url (- and _ instead of + and /); atob needs standard base64
+      const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(atob(b64));
       if (!payload.exp) return false;
       // Refresh if less than 5 minutes remaining
       return payload.exp - (Date.now() / 1000) < 300;
