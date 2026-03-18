@@ -55,9 +55,13 @@ async function initRealtime() {
       _realtimeChannel = null;
     }
 
-    _supabaseClient = createClient(config.supabase_url, config.anon_key, {
-      auth: { persistSession: false, autoRefreshToken: false }
-    });
+    // Only create the Supabase client once — recreating it on every reconnect
+    // triggers a "Multiple GoTrueClient instances" warning from the SDK.
+    if (!_supabaseClient) {
+      _supabaseClient = createClient(config.supabase_url, config.anon_key, {
+        auth: { persistSession: false, autoRefreshToken: false, storageKey: 'ck-realtime' }
+      });
+    }
 
     // ── CRITICAL: authenticate Realtime with the user's JWT ──────────────────
     // Without this, the Supabase channel subscribes as the anonymous role.
@@ -120,7 +124,7 @@ async function initRealtime() {
       });
 
   } catch (error) {
-    console.warn('Failed to initialize Realtime:', error);
+    console.error('Failed to initialize Realtime:', error);
     _scheduleReconnect('init-error');
   }
 }
@@ -215,8 +219,11 @@ function cleanupRealtime() {
 // if the connection was lost while the tab was hidden.
 let _lastVisibilityReload = 0;
 const VISIBILITY_RELOAD_COOLDOWN = 10000; // 10s — tightened from 30s
+let _visibilityReloadSetup = false;
 
 function setupVisibilityReload() {
+  if (_visibilityReloadSetup) return;
+  _visibilityReloadSetup = true;
   document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState !== 'visible') return;
     if (!API.getToken()) return;
