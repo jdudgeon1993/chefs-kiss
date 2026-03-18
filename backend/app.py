@@ -105,7 +105,7 @@ app.include_router(households.router)
 FRONTEND_DIR = Path(__file__).resolve().parent.parent
 
 # Mount static asset directories
-for folder in ("css", "js", "scripts"):
+for folder in ("css", "js", "scripts", "assets"):
     folder_path = FRONTEND_DIR / folder
     if folder_path.is_dir():
         app.mount(f"/{folder}", StaticFiles(directory=str(folder_path)), name=folder)
