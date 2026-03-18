@@ -532,48 +532,27 @@ async def signout(authorization: Optional[str] = Header(None), body: Optional[Si
     """
     Sign out current user.
 
-    Accepts the current refresh_token in the body so we can pre-rotate it:
-    the new RT is cached in Redis for future QA logins, then the original
-    session is revoked via GoTrue scope=local (leaving the new RT alive).
-    This ensures QA returning-device logins survive logout.
+    Stores the current refresh_token in Redis so QA returning-device logins work
+    after logout. We intentionally skip calling Supabase logout — any scope
+    (local, global, others) invalidates the entire refresh token family/session chain,
+    which would kill the stored RT. The browser clears its own token state, so from
+    the user's perspective they are logged out. The Supabase session stays alive
+    server-side purely to support future QA returning logins via the stored RT.
     """
     at_client = authorization.replace("Bearer ", "").strip() if authorization and authorization.startswith("Bearer ") else None
     rt_client = (body.refresh_token or "").strip() if body else None
     db = get_db()
 
-    # Pre-rotate: create a spare refresh token that is NOT part of the session
-    # we're about to revoke. Store it in Redis for future QA logins.
+    # Store the current RT in Redis so QA returning-device can refresh from it.
     if at_client and rt_client:
         try:
             user_result = db.auth.get_user(at_client)
             user_id = (user_result.get("user") or {}).get("id")
             if user_id:
-                rotated = db.auth.refresh_session(rt_client)
-                spare_rt = (rotated.get("session") or rotated).get("refresh_token")
-                if spare_rt:
-                    _store_qa_refresh_token(user_id, spare_rt)
-                    _restore_service_role()
+                _store_qa_refresh_token(user_id, rt_client)
+            _restore_service_role()
         except Exception as e:
-            logger.debug(f"Pre-rotation on signout failed (non-fatal): {e}")
-
-    # Sign out the ORIGINAL session using the client's access token directly
-    # via GoTrue HTTP so we don't accidentally revoke the spare session.
-    try:
-        supabase_url = os.getenv("SUPABASE_URL", "")
-        service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
-        if at_client and supabase_url:
-            async with httpx.AsyncClient() as client:
-                await client.post(
-                    f"{supabase_url}/auth/v1/logout?scope=local",
-                    headers={
-                        "apikey": service_key,
-                        "Authorization": f"Bearer {at_client}",
-                    },
-                )
-        else:
-            db.auth.sign_out()
-    except Exception as e:
-        logger.warning(f"Signout revocation failed (non-fatal): {e}")
+            logger.debug(f"Store RT on signout failed (non-fatal): {e}")
 
     return {"message": "Signed out successfully"}
 
