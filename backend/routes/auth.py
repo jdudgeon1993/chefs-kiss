@@ -220,10 +220,11 @@ async def quick_access(body: QuickAccessRequest, request: Request):
     AUTH_FAILED = "Invalid access code or credentials"
     LOCKED_MSG  = "Too many failed attempts. Please use Password Access or try again in 30 minutes."
 
-    # 1. Look up code — fail silently if not found
+    # 1. Look up code — normalize to uppercase for case-insensitive match
+    code = body.code.strip().upper()
     profile_resp = sb.table("user_profiles") \
         .select("user_id, qa_failed_attempts, qa_locked_until") \
-        .eq("quick_access_code", body.code) \
+        .eq("quick_access_code", code) \
         .execute()
 
     if not profile_resp.data:

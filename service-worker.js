@@ -10,10 +10,12 @@
  * - All other API calls: Network-only (no stale data for mutations)
  */
 
-const CACHE_NAME = 'peachy-pantry-v3';
+const CACHE_NAME = 'peachy-pantry-v4';
 const API_CACHE = 'peachy-pantry-api-v1';
 
-// Static assets to pre-cache on install
+// Static assets to pre-cache on install.
+// NOTE: HTML files are intentionally excluded — they must always be fetched
+// fresh so updated JS/CSS version strings take effect immediately.
 const STATIC_ASSETS = [
   '/css/shared.css',
   '/css/shopping-focus-mode.css',
@@ -23,8 +25,6 @@ const STATIC_ASSETS = [
   '/js/config.js',
   '/js/settings.js',
   '/js/shopping-focus-mode.js',
-  '/shopping/',
-  '/shopping/index.html',
   '/shopping/shopping.css'
 ];
 
