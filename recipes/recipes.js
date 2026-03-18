@@ -510,6 +510,15 @@
     window.addEventListener('unload', () => clearInterval(interval));
   }
 
+  // Expose for app.js to call directly after data updates (avoids 1s watcher delay)
+  window.refreshRecipeView = function() {
+    if (!window.recipes) return;
+    filteredRecipes = [...window.recipes];
+    renderFilterPills();
+    renderTagFilterPills();
+    renderRecipesGrid();
+  };
+
   // Initialize when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
