@@ -416,45 +416,47 @@ async function openAccountModal() {
         ${householdSwitcher}
 
         <div class="account-card">
-          <div class="account-card-header">
-            <span class="account-card-icon">✉️</span>
-            <h3>Invite & Join</h3>
+          <div class="account-access-options">
+            <button class="account-access-btn" id="tab-household-share" onclick="showAccessTab('share')">Household Share</button>
+            <button class="account-access-btn" id="tab-quick-access" onclick="showAccessTab('qa')">Quick Access</button>
           </div>
-          <div class="invite-tabs">
-            <button class="invite-tab invite-tab-active" id="tab-invite" onclick="showInviteTab('invite')">Send Invite</button>
-            <button class="invite-tab" id="tab-join" onclick="showInviteTab('join')">Join Kitchen</button>
-          </div>
-          <div id="invite-panel-invite" class="invite-panel">
-            <p class="help-text">Share a code so someone can join your kitchen.</p>
+
+          <div id="access-panel-share" class="access-panel" style="display:none">
+            <p class="help-text">Share this code so someone can join your kitchen.</p>
             <div id="invite-section">
               <button class="btn btn-secondary btn-full" onclick="generateInviteCode()">Generate Invite Code</button>
             </div>
           </div>
-          <div id="invite-panel-join" class="invite-panel" style="display:none;">
-            <p class="help-text">Enter an invite code to join someone else's kitchen.</p>
-            <div class="join-input-row">
-              <input type="text" id="accept-invite-input" class="form-control invite-code-input" placeholder="ABCD1234" maxlength="8" />
-              <button class="btn btn-primary" onclick="acceptInviteCode()">Join</button>
+
+          <div id="access-panel-qa" class="access-panel" style="display:none">
+            <p class="help-text">Use this 5-character code to sign in quickly from trusted devices.</p>
+            <div class="qa-code-tap-area" onclick="toggleQuickCode()" role="button" tabindex="0" title="Tap to reveal your code">
+              <span class="quick-access-code-display" id="qa-code-display">•••••</span>
+              <span class="qa-code-tap-hint" id="qa-tap-hint">tap to reveal</span>
             </div>
-            <div id="accept-invite-status"></div>
+            <div>
+              <button class="btn btn-sm btn-secondary" onclick="regenerateQuickCode()">Regenerate Code</button>
+            </div>
+            <p class="help-text" style="margin-top:0.5rem;font-size:0.8rem;">Regenerating removes all trusted devices — every browser must re-verify once.</p>
           </div>
         </div>
 
-        <div class="account-card">
-          <div class="account-card-header">
-            <span class="account-card-icon">🔑</span>
-            <h3>Quick Access Code</h3>
+        ${isOwner ? `
+        <div class="account-join-section">
+          <p class="account-join-label">Join a Kitchen</p>
+          <div class="join-input-row">
+            <input type="text" id="accept-invite-input" class="form-control invite-code-input" placeholder="ABCD1234" maxlength="8" autocapitalize="characters" autocorrect="off" spellcheck="false" />
+            <button class="btn btn-primary" onclick="acceptInviteCode()">Join</button>
           </div>
-          <p class="help-text">Use this 5-character code to sign in quickly from trusted devices.</p>
-          <div class="quick-access-code-row">
-            <span class="quick-access-code-display" id="qa-code-display">••••••</span>
-            <button class="btn btn-sm btn-secondary" id="qa-reveal-btn" onclick="revealQuickCode()">Reveal</button>
-          </div>
-          <div class="quick-access-code-actions">
-            <button class="btn btn-sm btn-secondary" onclick="regenerateQuickCode()">Regenerate Code</button>
-          </div>
-          <p class="help-text" style="margin-top:0.5rem;font-size:0.8rem;">Regenerating removes all trusted devices — every browser must re-verify once.</p>
+          <div id="accept-invite-status"></div>
         </div>
+        ` : `
+        <div class="account-join-section">
+          <p class="account-join-label">Kitchen Membership</p>
+          <p class="help-text" style="margin-bottom:0.75rem;">You'll return to your own kitchen — your pantry and recipes will be right where you left them.</p>
+          <button class="btn btn-danger btn-full" onclick="leaveCurrentHousehold()">Leave Kitchen</button>
+        </div>
+        `}
 
         <div class="account-footer-actions">
           <button class="btn btn-secondary btn-footer-action" onclick="exportData()">
@@ -469,14 +471,70 @@ async function openAccountModal() {
   `;
 
   loadMembersList();
-  loadActiveInvite();
 }
 
-function showInviteTab(tab) {
-  document.getElementById('invite-panel-invite').style.display = tab === 'invite' ? '' : 'none';
-  document.getElementById('invite-panel-join').style.display = tab === 'join' ? '' : 'none';
-  document.getElementById('tab-invite').classList.toggle('invite-tab-active', tab === 'invite');
-  document.getElementById('tab-join').classList.toggle('invite-tab-active', tab === 'join');
+function showAccessTab(tab) {
+  const sharePanel = document.getElementById('access-panel-share');
+  const qaPanel = document.getElementById('access-panel-qa');
+  const shareBtn = document.getElementById('tab-household-share');
+  const qaBtn = document.getElementById('tab-quick-access');
+  if (!sharePanel || !qaPanel) return;
+
+  sharePanel.style.display = tab === 'share' ? '' : 'none';
+  qaPanel.style.display = tab === 'qa' ? '' : 'none';
+  shareBtn.classList.toggle('active', tab === 'share');
+  qaBtn.classList.toggle('active', tab === 'qa');
+
+  if (tab === 'share') loadActiveInvite();
+}
+
+async function toggleQuickCode() {
+  const display = document.getElementById('qa-code-display');
+  const hint = document.getElementById('qa-tap-hint');
+  if (!display) return;
+
+  if (display.dataset.revealed === 'true') {
+    display.textContent = '•••••';
+    display.dataset.revealed = 'false';
+    if (hint) hint.textContent = 'tap to reveal';
+    return;
+  }
+
+  if (hint) hint.textContent = 'loading…';
+  try {
+    const resp = await API.getMyCode();
+    display.textContent = resp.quick_access_code;
+    display.dataset.revealed = 'true';
+    if (hint) hint.textContent = 'tap to hide';
+
+    setTimeout(() => {
+      if (display.dataset.revealed === 'true') {
+        display.textContent = '•••••';
+        display.dataset.revealed = 'false';
+        if (hint) hint.textContent = 'tap to reveal';
+      }
+    }, 30000);
+  } catch (e) {
+    if (hint) hint.textContent = 'tap to reveal';
+    showError('Could not load code. Please try again.');
+  }
+}
+
+async function leaveCurrentHousehold() {
+  const activeHid = API.getActiveHouseholdId();
+  if (!activeHid) return;
+
+  if (!confirm("Leave this kitchen?\n\nYou'll return to your own kitchen — your pantry and recipes will be right where you left them.")) return;
+
+  try {
+    await API.leaveHousehold(activeHid);
+    localStorage.removeItem('active_household_id');
+    sessionStorage.clear();
+    showSuccess('Left kitchen. Returning to your own kitchen…');
+    setTimeout(() => window.location.reload(), 1200);
+  } catch (e) {
+    showError(e.message || 'Failed to leave kitchen.');
+  }
 }
 
 function startEditHouseholdName() {
@@ -1025,12 +1083,13 @@ window.copyInviteCode = copyInviteCode;
 window.shareInviteCode = shareInviteCode;
 window.acceptInviteCode = acceptInviteCode;
 window.switchHousehold = switchHousehold;
-window.showInviteTab = showInviteTab;
+window.showAccessTab = showAccessTab;
+window.toggleQuickCode = toggleQuickCode;
+window.leaveCurrentHousehold = leaveCurrentHousehold;
 window.startEditHouseholdName = startEditHouseholdName;
 window.cancelEditHouseholdName = cancelEditHouseholdName;
 window.saveHouseholdName = saveHouseholdName;
 window.exportData = exportData;
-window.revealQuickCode = revealQuickCode;
 window.regenerateQuickCode = regenerateQuickCode;
 window.updateBulkEntryCount = updateBulkEntryCount;
 window.loadUnits = loadUnits;
