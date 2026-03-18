@@ -610,15 +610,7 @@ async function loadActiveInvite() {
       const expiresAt = new Date(data.invite.expires_at);
       const hoursLeft = Math.max(0, Math.round((expiresAt - Date.now()) / 3600000));
       container.innerHTML = `
-        <div class="invite-code-card">
-          <p class="invite-code-label">Active invite code</p>
-          <p class="invite-code-value">${data.invite.code}</p>
-          <p class="invite-code-expires">Expires in ${hoursLeft}h</p>
-          <div class="invite-code-actions">
-            <button class="btn btn-secondary btn-sm" onclick="copyInviteCode('${data.invite.code}')">Copy</button>
-            <button class="btn btn-secondary btn-sm" onclick="shareInviteCode('${data.invite.code}')">Share</button>
-          </div>
-        </div>
+        ${_renderInviteCodeCard(data.invite.code, 'Active invite code', `Expires in ${hoursLeft}h`)}
         <button class="btn btn-secondary btn-sm btn-full" style="margin-top:0.5rem;" onclick="generateInviteCode()">Generate New Code</button>
       `;
     }
@@ -635,23 +627,56 @@ async function generateInviteCode() {
 
   try {
     const data = await API.createInvite(48);
-    container.innerHTML = `
-      <div class="invite-code-card">
-        <p class="invite-code-label">Share this code</p>
-        <p class="invite-code-value">${data.code}</p>
-        <p class="invite-code-expires">Expires in ${data.expires_hours}h</p>
-        <div class="invite-code-actions">
-          <button class="btn btn-secondary btn-sm" onclick="copyInviteCode('${data.code}')">Copy</button>
-          <button class="btn btn-secondary btn-sm" onclick="shareInviteCode('${data.code}')">Share</button>
-        </div>
-      </div>
-    `;
+    container.innerHTML = _renderInviteCodeCard(data.code, 'Share this code', `Expires in ${data.expires_hours}h`);
   } catch (e) {
     container.innerHTML = `
       <p class="invite-error">Failed to generate code: ${e.message}</p>
       <button class="btn btn-secondary btn-sm" onclick="generateInviteCode()">Try Again</button>
     `;
   }
+}
+
+function _renderInviteCodeCard(code, label, expiresLine) {
+  return `
+    <div class="invite-code-card" id="invite-code-card" data-code="${code}">
+      <p class="invite-code-label">${label}</p>
+      <div class="qa-code-tap-area" onclick="toggleInviteCode()" role="button" tabindex="0" title="Tap to reveal code">
+        <span class="quick-access-code-display" id="invite-code-display">•••••</span>
+        <span class="qa-code-tap-hint" id="invite-code-hint">tap to reveal</span>
+      </div>
+      <p class="invite-code-expires">${expiresLine}</p>
+      <div class="invite-code-actions">
+        <button class="btn btn-secondary btn-sm" onclick="copyInviteCode(document.getElementById('invite-code-card').dataset.code)">Copy</button>
+        <button class="btn btn-secondary btn-sm" onclick="shareInviteCode(document.getElementById('invite-code-card').dataset.code)">Share</button>
+      </div>
+    </div>
+  `;
+}
+
+function toggleInviteCode() {
+  const display = document.getElementById('invite-code-display');
+  const hint = document.getElementById('invite-code-hint');
+  const card = document.getElementById('invite-code-card');
+  if (!display || !card) return;
+
+  if (display.dataset.revealed === 'true') {
+    display.textContent = '•••••';
+    display.dataset.revealed = 'false';
+    if (hint) hint.textContent = 'tap to reveal';
+    return;
+  }
+
+  display.textContent = card.dataset.code;
+  display.dataset.revealed = 'true';
+  if (hint) hint.textContent = 'tap to hide';
+
+  setTimeout(() => {
+    if (display.dataset.revealed === 'true') {
+      display.textContent = '•••••';
+      display.dataset.revealed = 'false';
+      if (hint) hint.textContent = 'tap to reveal';
+    }
+  }, 30000);
 }
 
 function copyInviteCode(code) {
@@ -1079,6 +1104,7 @@ window.handleLogout = handleLogout;
 window.openAccountModal = openAccountModal;
 window.openSettingsModal = openSettingsModal;
 window.generateInviteCode = generateInviteCode;
+window.toggleInviteCode = toggleInviteCode;
 window.copyInviteCode = copyInviteCode;
 window.shareInviteCode = shareInviteCode;
 window.acceptInviteCode = acceptInviteCode;
