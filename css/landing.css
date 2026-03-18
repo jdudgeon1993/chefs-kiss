@@ -85,7 +85,7 @@ body.landing-active .main-content {
   background: rgba(255, 255, 255, 0.95);
   border: 3px solid var(--color-header-purple);
   border-radius: 20px;
-  padding: 2rem 2.5rem;
+  overflow: hidden;
   max-width: 420px;
   width: 90%;
   margin: 0 auto 3rem;
@@ -94,7 +94,116 @@ body.landing-active .main-content {
   backdrop-filter: blur(10px);
 }
 
-/* Auth Form */
+/* Tab buttons */
+.landing-auth-tabs {
+  display: flex;
+  border-bottom: 3px solid var(--color-header-purple);
+}
+
+.landing-tab-btn {
+  flex: 1;
+  padding: 1rem;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.5px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+  color: var(--color-header-purple);
+}
+
+.landing-tab-btn:first-child {
+  border-right: 1.5px solid var(--color-header-purple);
+}
+
+.landing-tab-btn:last-child {
+  border-left: 1.5px solid var(--color-header-purple);
+}
+
+.landing-tab-btn.active {
+  background: var(--color-header-purple);
+  color: white;
+}
+
+.landing-tab-btn:not(.active):hover {
+  background: rgba(125, 102, 122, 0.08);
+}
+
+/* Auth panels (get-started / sign-in) */
+.landing-auth-panel {
+  padding: 2rem 2.5rem;
+  animation: fadeIn 0.25s ease;
+}
+
+/* Sign-in sub-option buttons */
+.landing-signin-options {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.landing-signin-option-btn {
+  flex: 1;
+  padding: 0.85rem 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.5px;
+  border: 2px solid var(--color-accent-olive);
+  border-radius: 10px;
+  cursor: pointer;
+  background: white;
+  color: var(--color-accent-olive);
+  transition: all 0.2s ease;
+}
+
+.landing-signin-option-btn.active,
+.landing-signin-option-btn:hover {
+  background: var(--color-accent-olive);
+  color: white;
+}
+
+/* Sub-panels (quick access / password access) */
+.landing-auth-subpanel {
+  animation: fadeIn 0.2s ease;
+}
+
+.landing-auth-subtitle {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 1.2rem;
+  color: var(--color-header-purple);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.landing-auth-hint {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.landing-auth-hint-small {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+/* Quick access code input — centered, letter-spaced */
+.landing-code-input {
+  text-align: center;
+  letter-spacing: 0.4em;
+  font-size: 1.4rem !important;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Auth Form (legacy class kept for safety) */
 .landing-auth-form {
   width: 100%;
   animation: fadeIn 0.25s ease;
@@ -179,7 +288,8 @@ body.landing-active .main-content {
   font-weight: 500;
 }
 
-.landing-auth-card .landing-btn {
+.landing-auth-panel .landing-btn,
+.landing-auth-subpanel .landing-btn {
   width: 100%;
   margin-bottom: 1rem;
 }
@@ -444,15 +554,32 @@ body.landing-active .main-content {
    MOBILE RESPONSIVE
    =================================================================== */
 
-/* Demo section below auth card */
-.landing-demo-section {
+/* Demo CTA section (between steps and footer) */
+.landing-demo-cta {
+  padding: 3rem 2rem;
   text-align: center;
+  background: rgba(139, 168, 142, 0.1);
+  border-top: 1px solid rgba(139, 168, 142, 0.3);
+  border-bottom: 1px solid rgba(139, 168, 142, 0.3);
 }
 
-.landing-demo-text {
+.landing-demo-cta-inner {
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.landing-demo-cta-title {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 1.8rem;
+  color: var(--color-header-purple);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.landing-demo-cta-text {
   color: var(--color-text-secondary);
-  font-size: 0.95rem;
-  margin-bottom: 0.75rem;
+  font-size: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 @media (max-width: 768px) {
@@ -487,9 +614,12 @@ body.landing-active .main-content {
   }
 
   .landing-auth-card {
-    padding: 1.5rem 1.25rem;
     max-width: 100%;
     border-width: 2px;
+  }
+
+  .landing-auth-panel {
+    padding: 1.5rem 1.25rem;
   }
 
   .landing-auth-title {
