@@ -528,11 +528,12 @@ function handleTryDemo() {
 }
 
 /**
- * Scroll to top of page
+ * Scroll to top and activate the Get Started tab
  */
 function scrollToTop(e) {
   e.preventDefault();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  showGetStarted();
 }
 
 /* ===================================================================
