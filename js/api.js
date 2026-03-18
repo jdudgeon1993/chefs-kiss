@@ -216,7 +216,11 @@ class API {
   }
 
   static async signOut() {
-    await this.call('/auth/signout', { method: 'POST' });
+    const rt = this.getRefreshToken();
+    await this.call('/auth/signout', {
+      method: 'POST',
+      body: JSON.stringify({ refresh_token: rt || null })
+    });
     this.clearToken();
     localStorage.removeItem('active_household_id');
   }

@@ -461,8 +461,14 @@ async def regenerate_code(authorization: Optional[str] = Header(None)):
         "qa_locked_until":    None,
     }).execute()
 
-    # Revoke all trusted devices
+    # Revoke all trusted devices and clear the QA Redis RT
     sb.table("device_tokens").delete().eq("user_id", user_id).execute()
+    try:
+        from state_manager import redis_client as _rc
+        if _rc:
+            _rc.delete(_qa_rt_key(user_id))
+    except Exception:
+        pass
 
     return {
         "quick_access_code": new_code,
@@ -493,6 +499,14 @@ async def refresh_token(body: RefreshRequest, request: Request):
             )
 
         session = result['session']
+
+        # Keep the QA Redis RT fresh so returning-device QA logins survive
+        # intermediate token rotations triggered by api.js auto-refresh
+        new_rt = session.get('refresh_token')
+        user_id = (result.get('user') or {}).get('id')
+        if user_id and new_rt:
+            _store_qa_refresh_token(user_id, new_rt)
+
         return {
             "access_token": session['access_token'],
             "refresh_token": session['refresh_token'],
@@ -509,22 +523,59 @@ async def refresh_token(body: RefreshRequest, request: Request):
         )
 
 
+class SignoutRequest(BaseModel):
+    refresh_token: Optional[str] = None
+
+
 @router.post("/signout")
-async def signout():
+async def signout(authorization: Optional[str] = Header(None), body: Optional[SignoutRequest] = None):
     """
     Sign out current user.
+
+    Accepts the current refresh_token in the body so we can pre-rotate it:
+    the new RT is cached in Redis for future QA logins, then the original
+    session is revoked via GoTrue scope=local (leaving the new RT alive).
+    This ensures QA returning-device logins survive logout.
     """
+    at_client = authorization.replace("Bearer ", "").strip() if authorization and authorization.startswith("Bearer ") else None
+    rt_client = (body.refresh_token or "").strip() if body else None
     db = get_db()
 
+    # Pre-rotate: create a spare refresh token that is NOT part of the session
+    # we're about to revoke. Store it in Redis for future QA logins.
+    if at_client and rt_client:
+        try:
+            user_result = db.auth.get_user(at_client)
+            user_id = (user_result.get("user") or {}).get("id")
+            if user_id:
+                rotated = db.auth.refresh_session(rt_client)
+                spare_rt = (rotated.get("session") or rotated).get("refresh_token")
+                if spare_rt:
+                    _store_qa_refresh_token(user_id, spare_rt)
+                    _restore_service_role()
+        except Exception as e:
+            logger.debug(f"Pre-rotation on signout failed (non-fatal): {e}")
+
+    # Sign out the ORIGINAL session using the client's access token directly
+    # via GoTrue HTTP so we don't accidentally revoke the spare session.
     try:
-        db.auth.sign_out()
-        return {"message": "Signed out successfully"}
+        supabase_url = os.getenv("SUPABASE_URL", "")
+        service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
+        if at_client and supabase_url:
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    f"{supabase_url}/auth/v1/logout?scope=local",
+                    headers={
+                        "apikey": service_key,
+                        "Authorization": f"Bearer {at_client}",
+                    },
+                )
+        else:
+            db.auth.sign_out()
     except Exception as e:
-        logger.error(f"Signout failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to sign out"
-        )
+        logger.warning(f"Signout revocation failed (non-fatal): {e}")
+
+    return {"message": "Signed out successfully"}
 
 
 @router.get("/me")
