@@ -187,25 +187,31 @@ def _restore_service_role():
     get_supabase().postgrest.auth(key)
 
 
-async def _create_session_for_user(user_id: str) -> dict:
-    """
-    Call GoTrue's admin REST endpoint to create a session for a user
-    without requiring their password (used for returning device-token flow).
-    """
-    url = f"{os.getenv('SUPABASE_URL')}/auth/v1/admin/users/{user_id}/session"
-    key = os.getenv("SUPABASE_SERVICE_KEY")
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(
-            url,
-            headers={"apikey": key, "Authorization": f"Bearer {key}"},
-            json={}
-        )
-    if resp.status_code != 200:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create session"
-        )
-    return resp.json()
+# Redis key for storing QA refresh tokens (used by returning-device flow)
+def _qa_rt_key(user_id: str) -> str:
+    return f"qa_rt:{user_id}"
+
+
+def _store_qa_refresh_token(user_id: str, refresh_token: str) -> None:
+    """Persist refresh token in Redis for 60 days (returning device QA flow)."""
+    try:
+        from state_manager import redis_client
+        if redis_client:
+            redis_client.setex(_qa_rt_key(user_id), 60 * 24 * 3600, refresh_token)
+    except Exception as e:
+        logger.warning(f"Could not cache QA refresh token in Redis: {e}")
+
+
+def _get_qa_refresh_token(user_id: str) -> Optional[str]:
+    """Retrieve cached refresh token from Redis."""
+    try:
+        from state_manager import redis_client
+        if redis_client:
+            val = redis_client.get(_qa_rt_key(user_id))
+            return val.decode() if val else None
+    except Exception as e:
+        logger.warning(f"Could not retrieve QA refresh token from Redis: {e}")
+    return None
 
 
 # ------------------------------------------------------------------ #
@@ -295,8 +301,27 @@ async def quick_access(body: QuickAccessRequest, request: Request):
             .eq("id", token_row["id"]) \
             .execute()
 
-        # Create Supabase session via GoTrue admin REST API
-        session = await _create_session_for_user(user_id)
+        # Refresh the Supabase session using the stored refresh token
+        stored_rt = _get_qa_refresh_token(user_id)
+        if not stored_rt:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Device token verified but session has expired — please use Password Access to re-authorise this device."
+            )
+
+        try:
+            refreshed = db.auth.refresh_session(stored_rt)
+        except Exception as e:
+            logger.warning(f"QA refresh_session failed for {user_id}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session could not be refreshed — please use Password Access to re-authorise this device."
+            )
+
+        new_session = refreshed.get("session") or refreshed
+        new_rt = new_session.get("refresh_token") or stored_rt
+        # Keep Redis up to date with the rotated refresh token
+        _store_qa_refresh_token(user_id, new_rt)
 
         reset_attempts()
         _restore_service_role()
@@ -306,8 +331,8 @@ async def quick_access(body: QuickAccessRequest, request: Request):
 
         return {
             "session": {
-                "access_token":  session.get("access_token"),
-                "refresh_token": session.get("refresh_token"),
+                "access_token":  new_session.get("access_token"),
+                "refresh_token": new_rt,
             },
             "household_id": household_id,
             "device_token": body.device_token,
@@ -346,6 +371,12 @@ async def quick_access(body: QuickAccessRequest, request: Request):
         "user_id": user_id,
         "token":   device_token,
     }).execute()
+
+    # Cache the refresh token in Redis so the returning-device flow can
+    # refresh the session without the (blocked) GoTrue admin API
+    first_session = auth_result.get("session") or {}
+    if first_session.get("refresh_token"):
+        _store_qa_refresh_token(user_id, first_session["refresh_token"])
 
     reset_attempts()
     _restore_service_role()
