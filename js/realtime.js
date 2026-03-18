@@ -73,8 +73,8 @@ async function initRealtime() {
             showToast('Live sync connected', 'success', 2000);
           }
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('Realtime channel error - check Supabase Realtime settings');
-          showToast('Live sync unavailable', 'error', 3000);
+          console.warn('Realtime unavailable - live sync disabled');
+          cleanupRealtime();
         }
       });
 
