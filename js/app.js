@@ -145,7 +145,10 @@ function renderPantryList(items) {
   // Store transformed items globally for other scripts to access
   window.pantry = transformedItems;
 
-  // The actual rendering is done by the pantry ledger script in pantry.js
+  // Render immediately if the ledger is loaded (avoids 1s watcher delay)
+  if (typeof window.renderPantryLedger === 'function') window.renderPantryLedger();
+
+  // Also touch data-updated for the watcher fallback
   const container = document.getElementById('pantry-display');
   if (container) {
     container.setAttribute('data-updated', Date.now());
@@ -263,8 +266,10 @@ function renderRecipeList(recipes) {
   // Store transformed recipes globally (needed by meals page for recipe names)
   window.recipes = transformedRecipes;
 
-  // Signal the recipe grid observer to re-render by touching a data attribute.
-  // The actual rendering is handled by renderRecipesGrid() in recipes.js.
+  // Render immediately if the recipe view function is loaded (avoids 1s watcher delay)
+  if (typeof window.refreshRecipeView === 'function') window.refreshRecipeView();
+
+  // Also touch data-updated for the watcher fallback
   const container = document.getElementById('recipes-grid');
   if (container) {
     container.setAttribute('data-updated', Date.now());
@@ -821,6 +826,10 @@ async function toggleShoppingItem(itemKey, itemId, checked) {
         method: 'PATCH',
         body: JSON.stringify({ checked })
       });
+      // Update in-memory list so confirmCheckout() sees the correct checked state
+      // without requiring a full reload on every tap
+      const listItem = (window.shoppingList || []).find(i => String(i.id) === String(itemId));
+      if (listItem) listItem.checked = checked;
     } catch (error) {
       console.error('Error updating item:', error);
       setLocalCheckedItem(itemKey, checked);
@@ -835,6 +844,9 @@ async function toggleShoppingItem(itemKey, itemId, checked) {
     });
 
     if (item) {
+      // Keep localStorage checked while the network call is in flight so the
+      // UI stays consistent even if reload hasn't finished yet
+      setLocalCheckedItem(itemKey, checked);
       try {
         await API.call('/shopping-list/items', {
           method: 'POST',
@@ -846,12 +858,12 @@ async function toggleShoppingItem(itemKey, itemId, checked) {
             checked: checked
           })
         });
-        // Clear old localStorage entry since it's now backend-tracked
-        setLocalCheckedItem(itemKey, false);
+        // Reload so window.shoppingList gets the new manual item's ID;
+        // checkout and un-check operations need the proper backend ID
+        await loadShoppingList();
       } catch (error) {
         console.error('Error creating manual override:', error);
-        // Fall back to localStorage if offline/error
-        setLocalCheckedItem(itemKey, checked);
+        // localStorage fallback already set above; leave it in place
       }
     } else {
       // Can't find item data — fall back to localStorage
