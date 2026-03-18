@@ -41,14 +41,34 @@ app = FastAPI(
 app.state.limiter = limiter
 app.router.redirect_slashes = False
 
+# CORS middleware - Allow frontend to call API
+cors_origins_raw = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8080,https://peachypantryapp.com")
+cors_origins = [origin.strip().rstrip('/') for origin in cors_origins_raw.split(",")]
 
-# Rate limit exceeded handler
-@app.exception_handler(RateLimitExceeded)
+# Auto-include the Railway public domain so requests from Railway-served pages work
+_railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN") or os.getenv("RAILWAY_STATIC_URL")
+if _railway_domain:
+    _railway_origin = ("https://" + _railway_domain).rstrip("/") if not _railway_domain.startswith("http") else _railway_domain.rstrip("/")
+    if _railway_origin not in cors_origins:
+        cors_origins.append(_railway_origin)
+
+logger.info(f"🌍 CORS origins configured: {cors_origins}")
+
+
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
-    return JSONResponse(
+    """429 handler — must include CORS headers so the browser can read the error."""
+    response = JSONResponse(
         status_code=429,
         content={"detail": "Too many requests. Please try again later."}
     )
+    origin = request.headers.get("origin", "")
+    if origin in cors_origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
+
+# Register via add_exception_handler (more reliable with SlowAPI than decorator form)
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
 
 # Security headers middleware
@@ -66,12 +86,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(SecurityHeadersMiddleware)
-
-# CORS middleware - Allow frontend to call API
-cors_origins_raw = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8080,https://peachypantryapp.com")
-cors_origins = [origin.strip().rstrip('/') for origin in cors_origins_raw.split(",")]
-
-logger.info(f"🌍 CORS origins configured: {cors_origins}")
 
 app.add_middleware(
     CORSMiddleware,
