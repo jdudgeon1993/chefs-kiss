@@ -16,7 +16,9 @@
     try {
       const parts = token.split('.');
       if (parts.length === 3) {
-        const payload = JSON.parse(atob(parts[1]));
+        // JWT uses base64url (- and _ instead of + and /); atob needs standard base64
+        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(atob(base64));
         // exp is in seconds, Date.now() is milliseconds
         if (payload.exp && payload.exp < Date.now() / 1000) {
           // Token expired — try refresh before redirecting
