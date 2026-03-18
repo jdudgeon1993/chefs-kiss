@@ -106,7 +106,7 @@ class API {
       const refreshed = await this.refreshAccessToken();
       if (!refreshed && !localStorage.getItem('demo-mode')) {
         const base = (window.CONFIG && window.CONFIG.BASE_PATH) || '';
-        window.location.href = base + '/index.html';
+        window.location.href = base + '/';
         throw new Error('Session expired');
       }
     }
@@ -158,7 +158,7 @@ class API {
         // Refresh failed or retry failed — redirect to login
         this.clearToken();
         const base = (window.CONFIG && window.CONFIG.BASE_PATH) || '';
-        window.location.href = base + '/index.html';
+        window.location.href = base + '/';
         throw new Error('Session expired');
       }
 
