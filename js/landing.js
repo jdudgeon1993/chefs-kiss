@@ -308,25 +308,53 @@ function isDemoMode() {
    =================================================================== */
 
 /**
- * Toggle between sign-in and sign-up forms
+ * Activate a top-level tab (get-started or sign-in)
  */
-function showSignInForm() {
-  document.getElementById('landing-signin-form').style.display = 'block';
-  document.getElementById('landing-signup-form').style.display = 'none';
+function showGetStarted() {
+  document.getElementById('panel-get-started').style.display = 'block';
+  document.getElementById('panel-sign-in').style.display = 'none';
+  document.getElementById('tab-get-started').classList.add('active');
+  document.getElementById('tab-sign-in').classList.remove('active');
   clearErrors();
 }
 
-function showSignUpForm() {
-  document.getElementById('landing-signin-form').style.display = 'none';
-  document.getElementById('landing-signup-form').style.display = 'block';
+function showSignIn() {
+  document.getElementById('panel-get-started').style.display = 'none';
+  document.getElementById('panel-sign-in').style.display = 'block';
+  document.getElementById('tab-sign-in').classList.add('active');
+  document.getElementById('tab-get-started').classList.remove('active');
+  hideSubPanels();
+  clearErrors();
+}
+
+function hideSubPanels() {
+  document.getElementById('panel-quick-access').style.display = 'none';
+  document.getElementById('panel-password-access').style.display = 'none';
+  document.getElementById('btn-quick-access').classList.remove('active');
+  document.getElementById('btn-password-access').classList.remove('active');
+}
+
+function showQuickAccess() {
+  document.getElementById('panel-quick-access').style.display = 'block';
+  document.getElementById('panel-password-access').style.display = 'none';
+  document.getElementById('btn-quick-access').classList.add('active');
+  document.getElementById('btn-password-access').classList.remove('active');
+  clearErrors();
+}
+
+function showPasswordAccess() {
+  document.getElementById('panel-password-access').style.display = 'block';
+  document.getElementById('panel-quick-access').style.display = 'none';
+  document.getElementById('btn-password-access').classList.add('active');
+  document.getElementById('btn-quick-access').classList.remove('active');
   clearErrors();
 }
 
 function clearErrors() {
-  const signinError = document.getElementById('landing-auth-error');
-  const signupError = document.getElementById('landing-signup-error');
-  if (signinError) signinError.textContent = '';
-  if (signupError) signupError.textContent = '';
+  ['landing-auth-error', 'landing-signup-error', 'landing-quick-error'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '';
+  });
 }
 
 /**
@@ -466,6 +494,26 @@ async function handleLandingSignUp() {
 }
 
 /**
+ * Handle Quick Access code submission (backend not yet implemented)
+ */
+async function handleQuickAccess() {
+  const codeInput = document.getElementById('landing-quick-code');
+  const errorDiv = document.getElementById('landing-quick-error');
+  const code = codeInput?.value.trim();
+
+  errorDiv.textContent = '';
+
+  if (!code || code.length !== 5) {
+    errorDiv.textContent = 'Please enter your 5-character access code';
+    return;
+  }
+
+  // Placeholder until backend quick-access endpoint is implemented
+  errorDiv.style.color = 'var(--color-accent-olive)';
+  errorDiv.textContent = 'Quick Access sign-in coming soon. Please use Password Access for now.';
+}
+
+/**
  * Email validation helper
  */
 function isValidEmail(email) {
@@ -495,76 +543,63 @@ function scrollToTop(e) {
  * Initialize landing page - wire up event listeners
  */
 function initLandingPage() {
-  // Auth form toggles
-  const linkShowSignup = document.getElementById('landing-show-signup');
-  const linkShowSignin = document.getElementById('landing-show-signin');
+  // Top-level tab buttons
+  const tabGetStarted = document.getElementById('tab-get-started');
+  const tabSignIn = document.getElementById('tab-sign-in');
+  if (tabGetStarted) tabGetStarted.addEventListener('click', showGetStarted);
+  if (tabSignIn) tabSignIn.addEventListener('click', showSignIn);
 
-  if (linkShowSignup) {
-    linkShowSignup.addEventListener('click', (e) => {
-      e.preventDefault();
-      showSignUpForm();
-    });
-  }
+  // Sign-in sub-option buttons
+  const btnQuickAccess = document.getElementById('btn-quick-access');
+  const btnPasswordAccess = document.getElementById('btn-password-access');
+  if (btnQuickAccess) btnQuickAccess.addEventListener('click', showQuickAccess);
+  if (btnPasswordAccess) btnPasswordAccess.addEventListener('click', showPasswordAccess);
 
-  if (linkShowSignin) {
-    linkShowSignin.addEventListener('click', (e) => {
-      e.preventDefault();
-      showSignInForm();
+  // Quick Access submit
+  const btnQuick = document.getElementById('landing-quick-btn');
+  if (btnQuick) btnQuick.addEventListener('click', handleQuickAccess);
+
+  // Enter key for quick access code input
+  const quickCodeInput = document.getElementById('landing-quick-code');
+  if (quickCodeInput) {
+    quickCodeInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); handleQuickAccess(); }
     });
   }
 
   // Sign in button
   const btnSignIn = document.getElementById('landing-signin-btn');
-  if (btnSignIn) {
-    btnSignIn.addEventListener('click', handleLandingSignIn);
-  }
+  if (btnSignIn) btnSignIn.addEventListener('click', handleLandingSignIn);
 
   // Sign up button
   const btnSignUp = document.getElementById('landing-signup-btn');
-  if (btnSignUp) {
-    btnSignUp.addEventListener('click', handleLandingSignUp);
-  }
+  if (btnSignUp) btnSignUp.addEventListener('click', handleLandingSignUp);
 
-  // Enter key support for sign-in form
-  const signinEmail = document.getElementById('landing-email');
-  const signinPassword = document.getElementById('landing-password');
-  [signinEmail, signinPassword].forEach(input => {
+  // Enter key support for password access form
+  [document.getElementById('landing-email'), document.getElementById('landing-password')].forEach(input => {
     if (input) {
       input.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          handleLandingSignIn();
-        }
+        if (e.key === 'Enter') { e.preventDefault(); handleLandingSignIn(); }
       });
     }
   });
 
-  // Enter key support for sign-up form
-  const signupEmail = document.getElementById('landing-signup-email');
-  const signupPassword = document.getElementById('landing-signup-password');
-  const signupConfirm = document.getElementById('landing-signup-confirm');
-  [signupEmail, signupPassword, signupConfirm].forEach(input => {
+  // Enter key support for create account form
+  [document.getElementById('landing-signup-email'), document.getElementById('landing-signup-password'), document.getElementById('landing-signup-confirm')].forEach(input => {
     if (input) {
       input.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          handleLandingSignUp();
-        }
+        if (e.key === 'Enter') { e.preventDefault(); handleLandingSignUp(); }
       });
     }
   });
 
   // Demo button
   const btnTryDemo = document.getElementById('landing-try-demo');
-  if (btnTryDemo) {
-    btnTryDemo.addEventListener('click', handleTryDemo);
-  }
+  if (btnTryDemo) btnTryDemo.addEventListener('click', handleTryDemo);
 
   // Scroll to top link
   const linkScrollTop = document.getElementById('landing-scroll-top');
-  if (linkScrollTop) {
-    linkScrollTop.addEventListener('click', scrollToTop);
-  }
+  if (linkScrollTop) linkScrollTop.addEventListener('click', scrollToTop);
 
   // Password show/hide toggles
   document.querySelectorAll('.landing-pw-toggle').forEach(btn => {
@@ -600,7 +635,6 @@ function initLandingPage() {
     }, { threshold: 0.15 });
     featureCards.forEach(card => observer.observe(card));
   } else {
-    // Fallback: show immediately
     featureCards.forEach(card => card.classList.add('visible'));
   }
 
@@ -619,7 +653,6 @@ function initLandingPage() {
 
   // Show landing page for unauthenticated visitors
   updateLandingPageVisibility(false);
-
 }
 
 /* ===================================================================
