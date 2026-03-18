@@ -123,6 +123,13 @@ async def root():
     return FileResponse(str(FRONTEND_DIR / "index.html"))
 
 
+@app.get("/index.html")
+async def root_index():
+    """Redirect legacy /index.html links to /"""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/", status_code=301)
+
+
 @app.get("/service-worker.js")
 async def service_worker():
     """Serve the service worker from the root"""
