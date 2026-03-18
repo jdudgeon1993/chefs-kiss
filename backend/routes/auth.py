@@ -75,6 +75,22 @@ async def signup(credentials: SignUpRequest, request: Request):
             'role': 'owner'
         })
 
+        # Create user profile with a quick access code
+        from utils.supabase_client import get_supabase as _gs
+        _sb = _gs()
+        try:
+            code_resp = _sb.rpc("generate_quick_access_code").execute()
+            initial_code = (code_resp.data or '').upper()
+        except Exception:
+            initial_code = None
+
+        if initial_code:
+            _sb.table("user_profiles").upsert({
+                "user_id": user['id'],
+                "quick_access_code": initial_code,
+                "qa_failed_attempts": 0,
+            }).execute()
+
         return {
             "user": {
                 "id": user['id'],
@@ -367,8 +383,16 @@ async def get_my_code(authorization: Optional[str] = Header(None)):
         .eq("user_id", user_id) \
         .execute()
 
-    if not profile.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+    # Auto-create profile for accounts that predate the quick-access feature
+    if not profile.data or not profile.data[0].get("quick_access_code"):
+        code_resp = sb.rpc("generate_quick_access_code").execute()
+        new_code = (code_resp.data or '').upper()
+        sb.table("user_profiles").upsert({
+            "user_id": user_id,
+            "quick_access_code": new_code,
+            "qa_failed_attempts": 0,
+        }).execute()
+        return {"quick_access_code": new_code}
 
     return {"quick_access_code": profile.data[0]["quick_access_code"]}
 
@@ -396,13 +420,15 @@ async def regenerate_code(authorization: Optional[str] = Header(None)):
 
     # Call the Postgres function to generate a collision-free code
     new_code_resp = sb.rpc("generate_quick_access_code").execute()
-    new_code = new_code_resp.data
+    new_code = (new_code_resp.data or '').upper()
 
-    sb.table("user_profiles").update({
+    # UPSERT so this also works for accounts created before user_profiles existed
+    sb.table("user_profiles").upsert({
+        "user_id":            user_id,
         "quick_access_code":  new_code,
         "qa_failed_attempts": 0,
         "qa_locked_until":    None,
-    }).eq("user_id", user_id).execute()
+    }).execute()
 
     # Revoke all trusted devices
     sb.table("device_tokens").delete().eq("user_id", user_id).execute()
