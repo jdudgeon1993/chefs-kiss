@@ -223,6 +223,14 @@ class API {
     return this.call('/auth/me');
   }
 
+  static async getMyCode() {
+    return this.call('/auth/my-code');
+  }
+
+  static async regenerateCode() {
+    return this.call('/auth/regenerate-code', { method: 'POST' });
+  }
+
   // ===== PANTRY =====
 
   static async getPantry() {

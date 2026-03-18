@@ -440,6 +440,22 @@ async function openAccountModal() {
           </div>
         </div>
 
+        <div class="account-card">
+          <div class="account-card-header">
+            <span class="account-card-icon">🔑</span>
+            <h3>Quick Access Code</h3>
+          </div>
+          <p class="help-text">Use this 5-character code to sign in quickly from trusted devices.</p>
+          <div class="quick-access-code-row">
+            <span class="quick-access-code-display" id="qa-code-display">••••••</span>
+            <button class="btn btn-sm btn-secondary" id="qa-reveal-btn" onclick="revealQuickCode()">Reveal</button>
+          </div>
+          <div class="quick-access-code-actions">
+            <button class="btn btn-sm btn-secondary" onclick="regenerateQuickCode()">Regenerate Code</button>
+          </div>
+          <p class="help-text" style="margin-top:0.5rem;font-size:0.8rem;">Regenerating removes all trusted devices — every browser must re-verify once.</p>
+        </div>
+
         <div class="account-footer-actions">
           <button class="btn btn-secondary btn-footer-action" onclick="exportData()">
             <span class="btn-icon-label">Export Data</span>
@@ -627,6 +643,53 @@ async function switchHousehold(householdId) {
   API.setActiveHouseholdId(householdId);
   showSuccess('Switching kitchen...');
   setTimeout(() => window.location.reload(), 500);
+}
+
+async function revealQuickCode() {
+  const display = document.getElementById('qa-code-display');
+  const btn = document.getElementById('qa-reveal-btn');
+  if (!display || !btn) return;
+
+  if (btn.textContent === 'Hide') {
+    display.textContent = '••••••';
+    btn.textContent = 'Reveal';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '…';
+  try {
+    const resp = await API.getMyCode();
+    display.textContent = resp.quick_access_code;
+    btn.textContent = 'Hide';
+    btn.disabled = false;
+
+    // Auto-hide after 30 seconds
+    setTimeout(() => {
+      if (display.textContent !== '••••••') {
+        display.textContent = '••••••';
+        btn.textContent = 'Reveal';
+      }
+    }, 30000);
+  } catch (e) {
+    btn.textContent = 'Reveal';
+    btn.disabled = false;
+    showError('Could not load code. Please try again.');
+  }
+}
+
+async function regenerateQuickCode() {
+  if (!confirm('Regenerate your Quick Access code? All trusted devices will need to re-verify once.')) return;
+
+  try {
+    const resp = await API.regenerateCode();
+    // Clear the local device token — this browser must re-verify too
+    localStorage.removeItem('ck-device-token');
+    showSuccess('New code: ' + resp.quick_access_code);
+    openAccountModal();
+  } catch (e) {
+    showError('Failed to regenerate code. Please try again.');
+  }
 }
 
 function exportData() {
@@ -967,6 +1030,8 @@ window.startEditHouseholdName = startEditHouseholdName;
 window.cancelEditHouseholdName = cancelEditHouseholdName;
 window.saveHouseholdName = saveHouseholdName;
 window.exportData = exportData;
+window.revealQuickCode = revealQuickCode;
+window.regenerateQuickCode = regenerateQuickCode;
 window.updateBulkEntryCount = updateBulkEntryCount;
 window.loadUnits = loadUnits;
 window.createIngredientDatalist = createIngredientDatalist;
