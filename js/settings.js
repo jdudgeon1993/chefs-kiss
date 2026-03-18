@@ -903,11 +903,11 @@ async function saveSettings() {
   const expirationDays = document.getElementById('setting-expiration-days').value;
 
   if (locations.length === 0) {
-    alert('You need at least one location.');
+    showError('You need at least one location.');
     return;
   }
   if (categories.length === 0) {
-    alert('You need at least one category.');
+    showError('You need at least one category.');
     return;
   }
 
