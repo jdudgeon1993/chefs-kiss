@@ -2143,35 +2143,84 @@ body[data-section] .floating-action-menu {
   text-transform: capitalize;
 }
 
-/* Invite Tabs */
-.invite-tabs {
+/* Account Access Option Buttons (Household Share / Quick Access) */
+.account-access-options {
   display: flex;
-  gap: 0;
-  margin-bottom: 0.75rem;
-  border-bottom: 2px solid rgba(0,0,0,0.08);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
 }
 
-.invite-tab {
+.account-access-btn {
   flex: 1;
-  padding: 0.5rem;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
+  padding: 0.75rem 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.3px;
+  border: 2px solid var(--color-accent-olive);
+  border-radius: 10px;
   cursor: pointer;
-  font-size: 0.85rem;
-  color: #777;
-  font-weight: 500;
-  transition: all 0.15s ease;
+  background: white;
+  color: var(--color-accent-olive);
+  transition: all 0.2s ease;
 }
 
-.invite-tab:hover {
-  color: #555;
+.account-access-btn.active,
+.account-access-btn:hover {
+  background: var(--color-accent-olive);
+  color: white;
 }
 
-.invite-tab-active {
-  color: #6a4f35;
-  border-bottom-color: #8B9376;
+.access-panel {
+  padding-top: 0.25rem;
+  animation: fadeIn 0.15s ease;
+}
+
+/* QA code tap-to-reveal area */
+.qa-code-tap-area {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(139,147,118,0.08);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  margin-bottom: 0.75rem;
+  transition: background 0.15s ease;
+  user-select: none;
+}
+
+.qa-code-tap-area:hover {
+  background: rgba(139,147,118,0.15);
+}
+
+.quick-access-code-display {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: #333;
+  flex: 1;
+  text-align: center;
+}
+
+.qa-code-tap-hint {
+  font-size: 0.75rem;
+  color: #999;
+  white-space: nowrap;
+}
+
+/* Join / Leave kitchen section */
+.account-join-section {
+  padding: 0.75rem 0 0;
+}
+
+.account-join-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #999;
+  margin: 0 0 0.6rem;
 }
 
 .invite-panel {
