@@ -292,7 +292,7 @@ function exitDemoMode() {
     localStorage.removeItem('planner');
 
     // Navigate back to landing page
-    window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/index.html';
+    window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/';
   }
 }
 

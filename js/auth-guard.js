@@ -7,7 +7,7 @@
 
   // No token and not demo → redirect to landing
   if (!token && !isDemo) {
-    window.location.href = base + '/index.html';
+    window.location.href = base + '/';
     return;
   }
 
@@ -28,7 +28,7 @@
             // No refresh token — clear and redirect
             localStorage.removeItem('auth_token');
             localStorage.removeItem('active_household_id');
-            window.location.href = base + '/index.html';
+            window.location.href = base + '/';
           }
         }
       }
@@ -36,7 +36,7 @@
       // Malformed token — clear and redirect
       localStorage.removeItem('auth_token');
       localStorage.removeItem('active_household_id');
-      window.location.href = base + '/index.html';
+      window.location.href = base + '/';
     }
   }
 })();

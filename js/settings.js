@@ -657,7 +657,7 @@ async function handleLogout() {
     localStorage.removeItem('recipes');
     localStorage.removeItem('planner');
     sessionStorage.clear();
-    window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/index.html';
+    window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/';
     return;
   }
 
@@ -669,7 +669,7 @@ async function handleLogout() {
     sessionStorage.clear();
     await API.signOut();
     // Navigate to landing page (multi-page architecture)
-    window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/index.html';
+    window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/';
   } catch (error) {
     console.error('Logout error:', error);
     showError('Failed to sign out');

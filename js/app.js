@@ -2239,7 +2239,7 @@ async function initApp() {
     await loadDemoApp();
   } else if (section) {
     // Not authenticated on a section page — redirect to landing
-    window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/index.html';
+    window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/';
   } else {
     // On landing page — no loader needed
     dismissLoader();
