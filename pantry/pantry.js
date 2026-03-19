@@ -1,6 +1,7 @@
 // Pantry Ledger Table — Mobile-first with expandable detail rows
 (function() {
-  let collapsedCategories = new Set();
+  let collapsedCategories = new Set(); // categories currently collapsed
+  let _seenCategories = new Set();     // categories ever rendered; new ones start collapsed
   let expandedRowIndex = null; // Track which row's detail panel is open
   let categoryEmojiMap = {};
 
@@ -126,6 +127,14 @@
       const items = grouped[category];
       if (items.length === 0) return;
 
+      // Auto-collapse categories that appear for the first time
+      if (!_seenCategories.has(category)) {
+        _seenCategories.add(category);
+        collapsedCategories.add(category);
+      }
+
+      const isCollapsed = collapsedCategories.has(category);
+      const chevron = isCollapsed ? '▸' : '▾';
       const categoryEmoji = getCategoryEmoji(category);
 
       // Category summary stats
@@ -136,13 +145,16 @@
       }, 0);
 
       tableHTML += `
-        <tr class="ledger-category-divider">
+        <tr class="ledger-category-divider" data-category-header="${esc(category)}">
           <td colspan="${totalCols}" class="ledger-category-header-cell">
+            <span class="category-chevron">${chevron}</span>
             <strong>${categoryEmoji} ${esc(category)}</strong>
             <span class="ledger-category-meta">${items.length} items &bull; OH ${totalOH.toFixed(1)} &bull; AV ${totalAV.toFixed(1)}</span>
           </td>
         </tr>
       `;
+
+      const hiddenAttr = isCollapsed ? 'style="display:none"' : '';
 
       items.forEach((item, itemIndex) => {
         const idx = allItems.length;
@@ -170,7 +182,7 @@
 
         // Data row — 5 mobile columns + 4 desktop-only columns
         tableHTML += `
-          <tr class="ledger-data-row ${rowClass} ${lowStockClass}" data-item-index="${idx}">
+          <tr class="ledger-data-row ${rowClass} ${lowStockClass}" data-item-index="${idx}" data-category-row="${esc(category)}" ${hiddenAttr}>
             <td class="ledger-col-emoji">${categoryEmoji}</td>
             <td class="ledger-col-item">${esc(item.name)} <span class="item-unit">(${esc(item.unit)})</span></td>
             <td class="ledger-col-oh">${item.totalQty.toFixed(1)}</td>
@@ -187,9 +199,10 @@
         `;
 
         // Expandable detail row (mobile only — hidden via CSS on desktop)
-        const isExpanded = expandedRowIndex === idx;
+        // Hidden if either the category is collapsed or the row isn't expanded
+        const isExpanded = !isCollapsed && expandedRowIndex === idx;
         tableHTML += `
-          <tr class="ledger-detail-row" data-detail-for="${idx}" ${isExpanded ? '' : 'style="display:none"'}>
+          <tr class="ledger-detail-row" data-detail-for="${idx}" data-category-row="${esc(category)}" ${isExpanded ? '' : 'style="display:none"'}>
             <td colspan="${totalCols}">
               <div class="ledger-detail-panel">
                 <div class="detail-chip">
@@ -223,7 +236,43 @@
     wireEventListeners(ledgerDisplay, allItems);
   }
 
+  function toggleCategory(container, category) {
+    const nowCollapsed = !collapsedCategories.has(category);
+    if (nowCollapsed) {
+      collapsedCategories.add(category);
+      // Also close any expanded detail row within this category
+    } else {
+      collapsedCategories.delete(category);
+    }
+
+    // Toggle all data and detail rows belonging to this category
+    container.querySelectorAll(`[data-category-row]`).forEach(row => {
+      if (row.getAttribute('data-category-row') !== category) return;
+      if (nowCollapsed) {
+        row.style.display = 'none';
+      } else if (!row.classList.contains('ledger-detail-row')) {
+        // Only show data rows; detail rows stay hidden until tapped
+        row.style.display = '';
+      }
+    });
+
+    // Update chevron
+    const headerRow = container.querySelector(`[data-category-header="${CSS.escape(category)}"]`);
+    if (headerRow) {
+      const chevron = headerRow.querySelector('.category-chevron');
+      if (chevron) chevron.textContent = nowCollapsed ? '▸' : '▾';
+    }
+  }
+
   function wireEventListeners(container, allItems) {
+    // Category header click — collapse / expand
+    container.querySelectorAll('.ledger-category-divider').forEach(headerRow => {
+      headerRow.addEventListener('click', () => {
+        const category = headerRow.getAttribute('data-category-header');
+        if (category) toggleCategory(container, category);
+      });
+    });
+
     // Row tap: on mobile toggle detail panel, on desktop open modal
     container.querySelectorAll('.ledger-data-row').forEach(row => {
       const idx = parseInt(row.getAttribute('data-item-index'));
