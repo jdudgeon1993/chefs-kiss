@@ -16,7 +16,7 @@
  * - SW skips waiting, activates, controllerchange fires, app reloads cleanly
  */
 
-const CACHE_NAME = 'peachy-pantry-v7';
+const CACHE_NAME = 'peachy-pantry-v8';
 const API_CACHE = 'peachy-pantry-api-v3';
 
 // Static assets to pre-cache on install.
@@ -31,6 +31,7 @@ const STATIC_ASSETS = [
   '/js/config.js',
   '/js/settings.js',
   '/js/shopping-focus-mode.js',
+  '/js/faq.js',
   '/shopping/shopping.css'
 ];
 
