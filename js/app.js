@@ -2357,7 +2357,118 @@ async function loadDemoApp() {
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     initApp();
+    initServiceWorker();
+    injectAppBetaStrip();
   });
 } else {
   initApp();
+  initServiceWorker();
+  injectAppBetaStrip();
+}
+
+/* ===================================================================
+   BETA STRIP — injected into every app page
+   =================================================================== */
+
+function injectAppBetaStrip() {
+  // Only inject on app pages (body has a data-section attribute)
+  if (!document.body.dataset.section) return;
+  // Don't inject twice
+  if (document.getElementById('app-beta-strip')) return;
+
+  const strip = document.createElement('div');
+  strip.id = 'app-beta-strip';
+  strip.className = 'app-beta-strip';
+  strip.innerHTML =
+    '<span class="app-beta-badge">Beta</span>' +
+    '<span class="app-beta-msg">Things may be a little rough around the edges.</span>' +
+    '<a href="https://docs.google.com/forms/d/e/1FAIpQLSeaL13TZXl5ey_grPlONWfFgiHZGBd5_AJDyHqel-Z4APnMcQ/viewform" ' +
+    'target="_blank" rel="noopener" class="app-beta-link">Found a bug? Tell us →</a>';
+
+  // Insert right after the site-header so it appears below the fixed bar
+  const header = document.querySelector('.site-header');
+  if (header && header.nextSibling) {
+    header.parentNode.insertBefore(strip, header.nextSibling);
+  } else {
+    document.body.prepend(strip);
+  }
+}
+
+/* ===================================================================
+   SERVICE WORKER — registration, update detection, banner
+   =================================================================== */
+
+let _swRegistration = null;
+
+function initServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+
+  const swPath = (window.CONFIG?.BASE_PATH || '') + '/service-worker.js';
+
+  navigator.serviceWorker.register(swPath)
+    .then(reg => {
+      _swRegistration = reg;
+
+      // If there's already a waiting SW on page load, show the banner
+      if (reg.waiting) {
+        showUpdateBanner(reg);
+      }
+
+      // New SW found while page is open
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateBanner(reg);
+          }
+        });
+      });
+
+      // Periodically check for updates when the page regains focus
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) reg.update();
+      });
+    })
+    .catch(err => console.warn('SW registration failed:', err));
+
+  // When a new SW takes control (after SKIP_WAITING), reload cleanly
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
+
+  // On navigation clicks — if an update is waiting, use the transition to reload
+  document.addEventListener('click', (e) => {
+    if (!_swRegistration?.waiting) return;
+    const navEl = e.target.closest('.nav-item, .bottom-nav-item, [data-section], a[href^="/"]');
+    if (navEl) {
+      // User is navigating — slip the update in during the transition
+      _swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      // controllerchange will fire and reload
+    }
+  }, { capture: true });
+}
+
+function showUpdateBanner(reg) {
+  // Don't show twice
+  if (document.getElementById('update-banner')) return;
+
+  const banner = document.createElement('div');
+  banner.id = 'update-banner';
+  banner.className = 'update-banner';
+  banner.innerHTML =
+    '<span class="update-banner-msg">✨ A new version of Peachy Pantry is ready.</span>' +
+    '<button class="update-banner-btn" id="update-banner-refresh">Refresh now</button>' +
+    '<button class="update-banner-dismiss" id="update-banner-dismiss" aria-label="Dismiss">✕</button>';
+
+  document.body.appendChild(banner);
+
+  document.getElementById('update-banner-refresh').addEventListener('click', () => {
+    if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    // controllerchange → reload
+  });
+
+  document.getElementById('update-banner-dismiss').addEventListener('click', () => {
+    banner.classList.add('update-banner-hiding');
+    setTimeout(() => banner.remove(), 350);
+  });
 }
