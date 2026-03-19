@@ -2751,6 +2751,14 @@ body[data-section] .floating-action-menu {
 }
 .app-beta-link:hover { opacity: 0.7; }
 
+/* Offset strip from the fixed sidebar on desktop/tablet */
+@media (min-width: 769px) {
+  .app-beta-strip { margin-left: 70px; }
+}
+@media (min-width: 1025px) {
+  .app-beta-strip { margin-left: 80px; }
+}
+
 @media (max-width: 480px) {
   .app-beta-msg { display: none; }
   .app-beta-strip { top: 60px; } /* mobile header is shorter */
