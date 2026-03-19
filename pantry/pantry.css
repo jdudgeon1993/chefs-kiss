@@ -161,6 +161,14 @@
   user-select: none;
 }
 
+.category-chevron {
+  display: inline-block;
+  margin-right: 0.35rem;
+  font-size: 0.65rem;
+  opacity: 0.6;
+  vertical-align: middle;
+}
+
 .ledger-category-meta {
   margin-left: 0.5rem;
   font-size: 0.7rem;
