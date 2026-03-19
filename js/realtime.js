@@ -11,11 +11,16 @@ let _reconnectTimer = null;
 let _wasDisconnected = false;
 let _disconnectedAt = 0;
 let _intentionalClose = false;
+let _initInProgress = false;       // guard against concurrent initRealtime() calls
+let _stableTimer = null;           // delays resetting _reconnectAttempts until connection proves stable
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAYS = [2000, 4000, 8000, 16000, 30000];
 // Only show "Live sync restored" toast if we were down for more than this long.
 // Suppresses the noisy toast on mobile OS briefly killing the WebSocket.
 const RESTORED_TOAST_MIN_OUTAGE_MS = 8000;
+// Minimum gap between "restored" / "offline" status toasts to prevent spam.
+const STATUS_TOAST_COOLDOWN_MS = 15000;
+let _lastStatusToastAt = 0;
 
 // Track our own recent writes so we don't double-reload on our own changes
 let _lastLocalWrite = 0;
@@ -26,6 +31,10 @@ function markLocalWrite() {
 }
 
 async function initRealtime() {
+  // Prevent concurrent init calls (e.g. reconnect timer + visibilitychange firing simultaneously)
+  if (_initInProgress) return;
+  _initInProgress = true;
+
   try {
     // Use cached realtime config to avoid extra API call on page switches
     let config;
@@ -49,8 +58,11 @@ async function initRealtime() {
       return;
     }
 
-    // Clean up any dead channel before re-subscribing
+    // Clean up any dead channel before re-subscribing.
+    // IMPORTANT: set _intentionalClose = true first so the CLOSED callback that fires
+    // asynchronously for the old channel does not trigger a second reconnect chain.
     if (_realtimeChannel && _supabaseClient) {
+      _intentionalClose = true;
       try { _supabaseClient.removeChannel(_realtimeChannel); } catch (e) {}
       _realtimeChannel = null;
     }
@@ -100,24 +112,40 @@ async function initRealtime() {
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          _reconnectAttempts = 0;
           if (_reconnectTimer) {
             clearTimeout(_reconnectTimer);
             _reconnectTimer = null;
           }
+          // Don't reset _reconnectAttempts immediately — wait 10s to confirm the
+          // connection is stable. A flapping connection (SUBSCRIBED → CHANNEL_ERROR
+          // within seconds) would otherwise reset the backoff counter every cycle,
+          // defeating exponential backoff entirely.
+          if (_stableTimer) clearTimeout(_stableTimer);
+          _stableTimer = setTimeout(() => {
+            _reconnectAttempts = 0;
+            _stableTimer = null;
+          }, 10000);
+
+          const now = Date.now();
           if (!sessionStorage.getItem('ck-realtime-connected')) {
             sessionStorage.setItem('ck-realtime-connected', '1');
             showToast('Live sync connected', 'success', 2000);
-          } else if (_wasDisconnected && (Date.now() - _disconnectedAt) >= RESTORED_TOAST_MIN_OUTAGE_MS) {
+            _lastStatusToastAt = now;
+          } else if (_wasDisconnected && (now - _disconnectedAt) >= RESTORED_TOAST_MIN_OUTAGE_MS
+                     && (now - _lastStatusToastAt) >= STATUS_TOAST_COOLDOWN_MS) {
             // Only announce "restored" if the outage was long enough to matter
+            // and we haven't just shown another status toast (prevents spam on flap)
             showToast('Live sync restored', 'success', 2000);
+            _lastStatusToastAt = now;
           }
           _wasDisconnected = false;
           _disconnectedAt = 0;
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          if (_stableTimer) { clearTimeout(_stableTimer); _stableTimer = null; }
           console.warn(`Realtime ${status} — scheduling reconnect`);
           _scheduleReconnect(status);
         } else if (status === 'CLOSED' && !_intentionalClose) {
+          if (_stableTimer) { clearTimeout(_stableTimer); _stableTimer = null; }
           console.warn('Realtime CLOSED unexpectedly — scheduling reconnect');
           _scheduleReconnect('CLOSED');
         }
@@ -126,6 +154,8 @@ async function initRealtime() {
   } catch (error) {
     console.error('Failed to initialize Realtime:', error);
     _scheduleReconnect('init-error');
+  } finally {
+    _initInProgress = false;
   }
 }
 
@@ -143,7 +173,11 @@ function _scheduleReconnect(reason) {
 
   if (_reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
     console.warn('Realtime: max reconnect attempts reached');
-    showToast("Live sync offline — refresh if changes aren't appearing", 'error', 8000);
+    const now = Date.now();
+    if ((now - _lastStatusToastAt) >= STATUS_TOAST_COOLDOWN_MS) {
+      showToast("Live sync offline — refresh if changes aren't appearing", 'error', 8000);
+      _lastStatusToastAt = now;
+    }
     return;
   }
 
