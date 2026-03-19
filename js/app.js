@@ -2064,7 +2064,7 @@ function showUpdateBanner(reg) {
   banner.id = 'update-banner';
   banner.className = 'update-banner';
   banner.innerHTML =
-    '<span class="update-banner-msg">✨ A new version of Chef\'s Kiss is ready.</span>' +
+    '<span class="update-banner-msg">✨ A new version of Peachy Pantry is ready.</span>' +
     '<button class="update-banner-btn" id="update-banner-refresh">Refresh now</button>' +
     '<button class="update-banner-dismiss" id="update-banner-dismiss" aria-label="Dismiss">✕</button>';
 

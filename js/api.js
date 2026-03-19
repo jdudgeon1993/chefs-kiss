@@ -1,5 +1,5 @@
 /**
- * Chef's Kiss — API Client
+ * Peachy Pantry API Client
  *
  * Thin wrapper around fetch() for the Python backend.
  */
