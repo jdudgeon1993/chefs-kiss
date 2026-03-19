@@ -392,6 +392,13 @@ body:not([data-section]) .landing-page { display: block; }
   background: var(--btn-primary-hover);
 }
 
+.btn-loading,
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .btn-secondary {
   background: white;
   color: var(--color-text-primary);

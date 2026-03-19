@@ -123,6 +123,16 @@ function closeModal() {
   if (btnAddSingle) btnAddSingle.classList.remove('active');
 }
 
+// Close modals on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const modalRoot = document.getElementById('modal-root');
+    if (modalRoot && modalRoot.children.length > 0) {
+      closeModal();
+    }
+  }
+});
+
 // ── Header Date/Time Clock ──
 function startHeaderClock() {
   const dateEl = document.getElementById('utility-date');
@@ -212,7 +222,27 @@ function normalizeKey(name, unit) {
   return `${normalizeName(name)}|${normalizeUnit(unit)}`;
 }
 
+// ── Double-submit prevention ──
+// Disables a button during an async action, re-enables after.
+async function withButtonLock(btn, asyncFn) {
+  if (!btn || btn.disabled) return;
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.classList.add('btn-loading');
+  try {
+    return await asyncFn();
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('btn-loading');
+    // Restore text only if it wasn't changed by the async function
+    if (btn.textContent !== originalText && btn.dataset.restoreText) {
+      btn.textContent = originalText;
+    }
+  }
+}
+
 // Expose globally
 window.showToast = showToast;
 window.closeModal = closeModal;
 window.normalizeKey = normalizeKey;
+window.withButtonLock = withButtonLock;

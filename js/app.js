@@ -397,8 +397,6 @@ async function deleteMealPlan(mealId) {
 }
 
 async function cookMeal(mealId) {
-  if (!confirm('Mark this meal as cooked?')) return;
-
   try {
     showLoading();
     await API.call(`/meal-plans/${mealId}/cook`, {
@@ -762,13 +760,15 @@ function editShoppingItem(itemKey, name, quantity, unit, category) {
   const form = document.getElementById('edit-shopping-form');
   form.onsubmit = async (e) => {
     e.preventDefault();
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
 
     const newName = document.getElementById('edit-item-name').value.trim();
     const newQty = parseFloat(document.getElementById('edit-item-qty').value) || 1;
     const newUnit = document.getElementById('edit-item-unit').value.trim() || 'unit';
     const newCategory = document.getElementById('edit-item-category').value;
 
-    if (!newName) { alert('Name is required'); return; }
+    if (!newName) { showError('Name is required'); return; }
 
     // Find the item to determine if it has a backend ID
     const items = window.shoppingList || [];
@@ -910,7 +910,7 @@ function openCheckoutModal() {
   });
 
   if (checkedItems.length === 0) {
-    alert('Please check off items you want to add to pantry first.');
+    showToast('Check off items you want to add to pantry first.', 'info');
     return;
   }
 
@@ -1007,7 +1007,7 @@ async function confirmCheckout() {
   });
 
   if (itemsToAdd.length === 0) {
-    alert('No items to add.');
+    showToast('No items to add.', 'info');
     return;
   }
 
@@ -1394,7 +1394,8 @@ function openIngredientModal(item) {
   const form = document.getElementById('ingredient-form');
   form.onsubmit = async (e) => {
     e.preventDefault();
-    await saveIngredient(item.id);
+    const submitBtn = form.querySelector('button[type="submit"]');
+    await withButtonLock(submitBtn, () => saveIngredient(item.id));
   };
 
   // Close bulk entry if open, then show panel
@@ -1504,7 +1505,7 @@ async function saveIngredient(itemId) {
   });
 
   if (!name) {
-    alert('Please enter a name');
+    showError('Please enter an item name');
     return;
   }
 
@@ -1561,7 +1562,7 @@ function openQuickDepleteModal(item) {
 
 async function quickDepleteItem(item, amount) {
   if (amount > item.totalQty) {
-    alert('Cannot use more than available');
+    showError('Cannot use more than available');
     return;
   }
 
@@ -1601,7 +1602,7 @@ async function quickDepleteItem(item, amount) {
 function openRecipeModal(recipeId) {
   const recipe = recipeId ? window.recipes.find(r => r.id === recipeId) : { name: '', servings: 4, ingredients: [], instructions: '', tags: [], category: '' };
   if (!recipe && recipeId) {
-    alert('Recipe not found');
+    showError('Recipe not found');
     return;
   }
 
@@ -1718,7 +1719,8 @@ function openRecipeModal(recipeId) {
   const form = document.getElementById('recipe-form');
   form.onsubmit = async (e) => {
     e.preventDefault();
-    await saveRecipe(recipeId);
+    const submitBtn = form.querySelector('button[type="submit"]');
+    await withButtonLock(submitBtn, () => saveRecipe(recipeId));
   };
 }
 
@@ -1757,7 +1759,7 @@ async function saveRecipe(recipeId) {
   });
 
   if (!name) {
-    alert('Please enter a recipe name');
+    showError('Please enter a recipe name');
     return;
   }
 
@@ -1837,7 +1839,8 @@ function openDayModal(dateKey) {
   const form = document.getElementById('add-meal-form');
   form.onsubmit = async (e) => {
     e.preventDefault();
-    await addMealToDay(dateKey);
+    const submitBtn = form.querySelector('button[type="submit"]');
+    await withButtonLock(submitBtn, () => addMealToDay(dateKey));
   };
 }
 
@@ -1846,7 +1849,7 @@ async function addMealToDay(dateKey) {
   const mealType = document.getElementById('meal-type').value;
 
   if (!recipeId) {
-    alert('Please select a recipe');
+    showError('Please select a recipe');
     return;
   }
 
