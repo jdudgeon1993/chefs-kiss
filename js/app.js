@@ -1316,36 +1316,26 @@ function showApp(section) {
  * Open modal to edit a pantry item
  */
 function openIngredientModal(item) {
-  const modalRoot = document.getElementById('modal-root');
-  const tpl = document.getElementById('tpl-ingredient-modal');
+  const panel = document.getElementById('panel-add-item');
   const tplLocRow = document.getElementById('tpl-location-row');
-  if (!modalRoot || !tpl) return;
+  if (!panel) return;
 
   const savedCategories = getSavedCategories();
   const savedLocations = getSavedLocations();
 
-  // Build a location options fragment once, clone per row
-  const locationOptionsFragment = document.createDocumentFragment();
-  savedLocations.forEach(loc => {
-    const opt = document.createElement('option');
-    opt.value = loc;
-    opt.textContent = loc;
-    locationOptionsFragment.appendChild(opt);
-  });
+  // Update heading
+  const heading = document.getElementById('inline-form-heading');
+  if (heading) heading.textContent = item.id ? 'Edit Item' : 'Add Item';
 
-  const clone = tpl.content.cloneNode(true);
+  // Populate simple fields
+  document.getElementById('ing-name').value = item.name || '';
+  document.getElementById('ing-unit').value = item.unit || '';
+  document.getElementById('ing-min').value = item.min || 0;
+  document.getElementById('ing-preferred-store').value = item.preferredStore || '';
 
-  // Heading
-  clone.querySelector('[data-field="heading"]').textContent = `${item.id ? 'Edit' : 'Add'} Pantry Item`;
-
-  // Populate fields
-  clone.querySelector('#ing-name').value = item.name || '';
-  clone.querySelector('#ing-unit').value = item.unit || '';
-  clone.querySelector('#ing-min').value = item.min || 0;
-  clone.querySelector('#ing-preferred-store').value = item.preferredStore || '';
-
-  // Category select
-  const catSelect = clone.querySelector('#ing-category');
+  // Category select — rebuild each time
+  const catSelect = document.getElementById('ing-category');
+  catSelect.innerHTML = '';
   savedCategories.forEach(cat => {
     const opt = document.createElement('option');
     opt.value = cat;
@@ -1354,8 +1344,18 @@ function openIngredientModal(item) {
     catSelect.appendChild(opt);
   });
 
-  // Location rows
-  const locationsList = clone.querySelector('#locations-list');
+  // Location rows — rebuild each time
+  const locationsList = document.getElementById('locations-list');
+  locationsList.innerHTML = '';
+
+  const locationOptionsFragment = document.createDocumentFragment();
+  savedLocations.forEach(loc => {
+    const opt = document.createElement('option');
+    opt.value = loc;
+    opt.textContent = loc;
+    locationOptionsFragment.appendChild(opt);
+  });
+
   const locations = item.locations || [];
   if (locations.length > 0 && tplLocRow) {
     locations.forEach((loc, idx) => {
@@ -1377,26 +1377,39 @@ function openIngredientModal(item) {
     locationsList.appendChild(hint);
   }
 
-  // Delete button for existing items
+  // Delete button for existing items — add/remove dynamically
+  const formActions = document.getElementById('ingredient-form-actions');
+  const existingDelete = formActions.querySelector('.btn-danger');
+  if (existingDelete) existingDelete.remove();
   if (item.id) {
-    const actions = clone.querySelector('[data-field="actions"]');
     const deleteBtn = document.createElement('button');
     deleteBtn.type = 'button';
     deleteBtn.className = 'btn btn-danger';
     deleteBtn.textContent = 'Delete';
     deleteBtn.onclick = () => deleteIngredientFromModal(item.id);
-    actions.insertBefore(deleteBtn, actions.firstChild);
+    formActions.insertBefore(deleteBtn, formActions.firstChild);
   }
 
-  modalRoot.innerHTML = '';
-  modalRoot.appendChild(clone);
-
+  // Wire form submit
   const form = document.getElementById('ingredient-form');
   form.onsubmit = async (e) => {
     e.preventDefault();
     const submitBtn = form.querySelector('button[type="submit"]');
     await withButtonLock(submitBtn, () => saveIngredient(item.id));
   };
+
+  // Close bulk entry if open, then show panel
+  const onboardingSection = document.getElementById('onboarding-section');
+  if (onboardingSection) onboardingSection.classList.remove('section-visible');
+  const btnBulk = document.getElementById('btn-new-pantry-entry');
+  if (btnBulk) btnBulk.classList.remove('active');
+
+  panel.hidden = false;
+  const btnAddSingle = document.getElementById('btn-add-single-item');
+  if (btnAddSingle) btnAddSingle.classList.add('active');
+
+  // Scroll panel into view
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 async function deleteIngredientFromModal(itemId) {
@@ -2111,21 +2124,42 @@ async function loadApp() {
  * Wire up all button click handlers
  */
 function wireUpButtons() {
-  // Single item add button
+  // Single item add button — toggles inline panel
   const btnAddSingle = document.getElementById('btn-add-single-item');
   if (btnAddSingle) {
-    btnAddSingle.addEventListener('click', () => openIngredientModal({}));
+    btnAddSingle.addEventListener('click', () => {
+      const panel = document.getElementById('panel-add-item');
+      if (panel && !panel.hidden) {
+        // Already open — close it
+        closeModal();
+      } else {
+        openIngredientModal({});
+      }
+    });
   }
 
-  // Bulk entry button — opens as overlay (pantry stays visible behind)
+  // Bulk entry button — toggles inline bulk entry section
   const btnNewPantry = document.getElementById('btn-new-pantry-entry');
   if (btnNewPantry) {
     btnNewPantry.addEventListener('click', () => {
       const onboardingSection = document.getElementById('onboarding-section');
-      if (onboardingSection) {
-        onboardingSection.classList.add('section-visible');
+      const isOpen = onboardingSection && onboardingSection.classList.contains('section-visible');
+      if (isOpen) {
+        onboardingSection.classList.remove('section-visible');
+        btnNewPantry.classList.remove('active');
+      } else {
+        // Close single-add panel first
+        const panel = document.getElementById('panel-add-item');
+        if (panel) panel.hidden = true;
+        if (btnAddSingle) btnAddSingle.classList.remove('active');
+
+        if (onboardingSection) {
+          onboardingSection.classList.add('section-visible');
+          onboardingSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        btnNewPantry.classList.add('active');
+        initBulkEntry();
       }
-      initBulkEntry();
     });
   }
 
@@ -2184,6 +2218,8 @@ function wireUpButtons() {
       if (onboardingSection) {
         onboardingSection.classList.remove('section-visible');
       }
+      const btnBulk = document.getElementById('btn-new-pantry-entry');
+      if (btnBulk) btnBulk.classList.remove('active');
     });
   }
 
