@@ -32,9 +32,35 @@
     return window.matchMedia('(min-width: 900px)').matches;
   }
 
+  function syncCategoryFilter() {
+    const filterSelect = document.getElementById('filter-category-ledger');
+    if (!filterSelect) return;
+
+    const pantry = window.pantry || [];
+    const categories = [...new Set(pantry.map(i => i.category).filter(Boolean))].sort();
+    const current = filterSelect.value;
+
+    // Rebuild options, preserving selection
+    filterSelect.innerHTML = '<option value="">All categories</option>';
+    categories.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = cat;
+      if (cat === current) opt.selected = true;
+      filterSelect.appendChild(opt);
+    });
+
+    // If previously-selected category no longer exists, reset to "all"
+    if (current && !categories.includes(current)) {
+      filterSelect.value = '';
+    }
+  }
+
   function renderPantryLedger() {
     const ledgerDisplay = document.getElementById('pantry-ledger-display');
     if (!ledgerDisplay) return;
+
+    syncCategoryFilter();
 
     const searchInput = document.getElementById('pantry-search-ledger');
     const filterSelect = document.getElementById('filter-category-ledger');

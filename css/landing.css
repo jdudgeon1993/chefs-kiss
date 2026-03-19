@@ -2,6 +2,58 @@
    LANDING PAGE STYLES
    =================================================================== */
 
+/* ===================================================================
+   BETA STRIP
+   =================================================================== */
+
+.landing-beta-strip {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.55rem 1rem;
+  background: rgba(90, 74, 58, 0.92);
+  backdrop-filter: blur(6px);
+  font-size: 0.8rem;
+  color: rgba(255, 252, 245, 0.92);
+  text-align: center;
+}
+
+.landing-beta-badge {
+  background: #d4a96a;
+  color: #3a2a14;
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.55rem;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.landing-beta-msg {
+  opacity: 0.88;
+}
+
+.landing-beta-link {
+  color: #f0d5a0;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+.landing-beta-link:hover { opacity: 0.75; }
+
+@media (max-width: 480px) {
+  .landing-beta-msg { display: none; }
+}
+
 /* Landing page container */
 .landing-page {
   position: fixed;
@@ -554,6 +606,45 @@ body.landing-active .main-content {
    MOBILE RESPONSIVE
    =================================================================== */
 
+/* Scroll nudge */
+.landing-scroll-nudge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  text-decoration: none;
+  color: var(--color-accent-olive);
+  margin-top: 1.5rem;
+  animation: nudge-bounce 2.4s ease-in-out infinite;
+}
+
+.landing-scroll-nudge-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.landing-scroll-chevron {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+@keyframes nudge-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+/* Section subtitle */
+.landing-section-subtitle {
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 1.05rem;
+  margin-top: -1.75rem;
+  margin-bottom: 2.5rem;
+}
+
 /* Demo CTA section (between steps and footer) */
 .landing-demo-cta {
   padding: 3rem 2rem;
@@ -581,6 +672,72 @@ body.landing-active .main-content {
   font-size: 1rem;
   margin-bottom: 1.25rem;
 }
+
+/* ===================================================================
+   FEEDBACK / BETA SECTION
+   =================================================================== */
+
+.landing-feedback {
+  padding: 4rem 2rem;
+  background: rgba(90, 74, 58, 0.04);
+  border-top: 1px solid rgba(139, 147, 118, 0.2);
+}
+
+.landing-feedback-inner {
+  max-width: 580px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.landing-feedback-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.landing-feedback-title {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 1.75rem;
+  color: var(--color-header-purple);
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+.landing-feedback-text {
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  margin-bottom: 1.75rem;
+  font-size: 0.95rem;
+}
+
+.landing-btn-feedback {
+  background: white;
+  color: var(--color-accent-olive);
+  border-color: var(--color-accent-olive);
+  font-size: 1rem;
+  padding: 0.85rem 2rem;
+}
+
+.landing-btn-feedback:hover {
+  background: var(--color-accent-olive);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(139, 147, 118, 0.3);
+}
+
+/* Footer fine print */
+.landing-footer-fine {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+  margin-top: 1.5rem;
+}
+
+.landing-footer-fine a {
+  color: var(--color-accent-olive);
+  text-decoration: none;
+}
+.landing-footer-fine a:hover { text-decoration: underline; }
 
 @media (max-width: 768px) {
   .landing-hero {
