@@ -23,13 +23,67 @@
 }
 
 /* ===================================================================
-   CONTROLS — Search, Filter, Sort
+   CONTROLS — Search, Filter, Sort, Add Actions
    =================================================================== */
 .pantry-controls {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-bottom: 1rem;
+  align-items: center;
+}
+
+/* The two add buttons sit as a group on the right */
+.pantry-add-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+
+.btn-pantry-action {
+  padding: 0.5rem 0.85rem;
+  border: none;
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: "Lato", sans-serif;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-pantry-add-single {
+  background: var(--btn-primary, #8B9376);
+  color: #fff;
+}
+
+.btn-pantry-add-single:hover {
+  background: var(--btn-primary-hover, #7A8268);
+  transform: translateY(-1px);
+}
+
+.btn-pantry-bulk {
+  background: transparent;
+  color: var(--color-pantry-header, #5a4a3a);
+  border: 1px solid rgba(90, 74, 58, 0.3);
+}
+
+.btn-pantry-bulk:hover {
+  background: rgba(139, 147, 118, 0.1);
+  border-color: var(--color-accent-olive, #8B9376);
+}
+
+@media (max-width: 480px) {
+  .pantry-add-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+  .btn-pantry-action {
+    flex: 1;
+    text-align: center;
+  }
 }
 
 .pantry-search-input {
@@ -324,27 +378,53 @@
 }
 
 /* ===================================================================
-   ADD ITEMS BUTTON
+   INGREDIENT MODAL — Pantry-specific overrides
    =================================================================== */
-.btn-new-entry {
-  width: 100%;
-  padding: 0.85rem;
-  background: var(--btn-primary);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-transform: uppercase;
-  -webkit-tap-highlight-color: transparent;
+.ingredient-modal {
+  border: 1px solid rgba(139, 147, 118, 0.3) !important;
+  box-shadow: 0 8px 40px rgba(90, 74, 58, 0.18) !important;
+  background: var(--color-card-bg, #FFFEF9) !important;
 }
 
-.btn-new-entry:active {
-  transform: scale(0.98);
-  opacity: 0.9;
+.ingredient-modal h2 {
+  font-family: "Libre Baskerville", Georgia, serif !important;
+  color: var(--color-pantry-header, #5a4a3a) !important;
+  font-size: 1.2rem !important;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid rgba(139, 147, 118, 0.2);
+  margin-bottom: 1.1rem !important;
+}
+
+.ingredient-modal .form-group label {
+  color: var(--color-pantry-header, #5a4a3a) !important;
+  font-size: 0.75rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+
+.ingredient-modal .form-group input,
+.ingredient-modal .form-group select,
+.ingredient-modal .form-group textarea {
+  border: 1px solid rgba(139, 147, 118, 0.35) !important;
+  background: #FAFAF7 !important;
+}
+
+.ingredient-modal .form-group input:focus,
+.ingredient-modal .form-group select:focus {
+  border-color: var(--color-accent-olive, #8B9376) !important;
+  box-shadow: 0 0 0 2px rgba(139, 147, 118, 0.18) !important;
+}
+
+.ingredient-modal .location-row select,
+.ingredient-modal .location-row input {
+  border: 1px solid rgba(139, 147, 118, 0.3) !important;
+  background: #FAFAF7 !important;
+}
+
+/* Delete button in the actions row */
+.ingredient-modal .form-actions .btn-danger {
+  margin-right: auto;
 }
 
 /* ===================================================================
@@ -478,11 +558,6 @@
     transform: scale(1.05);
   }
 
-  .btn-new-entry:hover {
-    background: var(--btn-primary-hover);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(139,147,118,0.3);
-  }
 }
 
 /* ===================================================================
@@ -495,47 +570,48 @@
 }
 
 /* ===================================================================
-   ONBOARDING VISIBILITY (moved from inline <style>)
+   BULK ENTRY — Full-screen overlay (pantry visible behind)
    =================================================================== */
-.main-content > .onboarding-section { display: none; }
-.main-content > .onboarding-section.section-visible { display: block; }
 .section-hidden { display: none !important; }
 
-/* ===================================================================
-   ONBOARDING / BULK ENTRY (moved from shared.css — pantry-only)
-   =================================================================== */
+/* Always hidden unless .section-visible is added */
 .onboarding-section {
-  min-height: 100dvh;
-  flex-direction: column;
-  padding: var(--layout-padding);
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  max-width: var(--layout-max-width-wide);
-  margin: 0 auto;
   display: none;
 }
 
+/* When open: covers the full viewport as an overlay */
+.onboarding-section.section-visible {
+  display: flex;
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  flex-direction: column;
+  background: var(--color-card-bg, #FFFEF9);
+  padding: var(--layout-padding);
+  overflow-y: auto;
+}
+
 .onboarding-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid var(--color-recipe-border);
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(139, 147, 118, 0.25);
 }
 
 .onboarding-title-row {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 
 .onboarding-header h2 {
-  font-size: 1.75rem;
-  color: var(--color-text-primary);
+  font-size: 1.35rem;
+  color: var(--color-pantry-header, #5a4a3a);
   font-family: "Libre Baskerville", Georgia, serif;
   margin: 0;
+  font-weight: 700;
 }
 
 .onboarding-status {
@@ -552,20 +628,21 @@
 }
 
 .btn-exit-onboarding {
-  background: var(--btn-secondary);
-  color: white;
-  border: none;
-  padding: 0.65rem 1.25rem;
-  border-radius: 8px;
-  font-size: 0.9rem;
+  background: transparent;
+  color: var(--color-pantry-header, #5a4a3a);
+  border: 1px solid rgba(90, 74, 58, 0.3);
+  padding: 0.5rem 1rem;
+  border-radius: 7px;
+  font-size: 0.85rem;
   font-weight: 600;
+  font-family: "Lato", sans-serif;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.18s;
 }
 
 .btn-exit-onboarding:hover {
-  background: var(--btn-secondary-hover);
-  transform: translateY(-2px);
+  background: rgba(90, 74, 58, 0.07);
+  border-color: var(--color-pantry-header, #5a4a3a);
 }
 
 .onboarding-content {
@@ -798,28 +875,25 @@
   }
 
   .onboarding-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
   }
 
   .onboarding-header h2 {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
   }
 
   .onboarding-title-row {
-    flex-direction: column;
-    gap: 0.5rem;
-    align-items: flex-start;
-  }
-
-  .onboarding-status {
-    flex-direction: column;
-    gap: 0.5rem;
+    flex-direction: row;
+    gap: 0.75rem;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
   }
 
   .btn-exit-onboarding {
-    width: 100%;
+    flex-shrink: 0;
   }
 
   .onboarding-actions {

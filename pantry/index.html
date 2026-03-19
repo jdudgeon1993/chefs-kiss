@@ -97,26 +97,27 @@
           <option value="expiring">Expiring Soon</option>
           <option value="recent">Recently Added</option>
         </select>
+        <div class="pantry-add-actions">
+          <button class="btn-pantry-action btn-pantry-add-single" id="btn-add-single-item">+ Add Item</button>
+          <button class="btn-pantry-action btn-pantry-bulk" id="btn-new-pantry-entry">Bulk Entry</button>
+        </div>
       </div>
 
       <div id="pantry-ledger-display" class="pantry-ledger-display"></div>
       <div id="pantry-display" class="pantry-display"></div>
-
-      <button class="btn btn-new-entry" id="btn-new-pantry-entry">+ ADD ITEMS</button>
     </section>
 
-    <!-- BULK ENTRY SECTION (hidden, toggled by Add Items button) -->
+    <!-- BULK ENTRY OVERLAY (opens as full-screen overlay, pantry stays behind) -->
     <section class="onboarding-section" id="onboarding-section">
       <div class="onboarding-header">
         <div class="onboarding-title-row">
-          <h2>BULK PANTRY ENTRY</h2>
+          <h2>Bulk Add Items</h2>
           <div class="onboarding-status">
-            <span id="onboarding-draft-status">Draft auto-saved</span>
             <span id="onboarding-item-count">0 items entered</span>
           </div>
         </div>
-        <button class="btn-exit-onboarding" id="btn-exit-onboarding" title="Exit Bulk Entry">
-          ← Back to Pantry
+        <button class="btn-exit-onboarding" id="btn-exit-onboarding" title="Close">
+          ✕ Close
         </button>
       </div>
 
