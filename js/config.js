@@ -1,5 +1,5 @@
 /**
- * Chef's Kiss — Configuration
+ * Peachy Pantry Configuration
  */
 
 const RAW_BACKEND_URL = 'https://chefs-kiss-production.up.railway.app';
