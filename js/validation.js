@@ -67,25 +67,16 @@ const UNIT_STANDARDS = {
   'ea': 'unit',
   'each': 'unit',
 
-  // Misc
-  'can': 'can',
+  // Misc (plurals → singular; pkg is the canonical abbreviation)
   'cans': 'can',
-  'jar': 'jar',
   'jars': 'jar',
-  'bottle': 'bottle',
   'bottles': 'bottle',
   'package': 'pkg',
   'packages': 'pkg',
-  'pkg': 'pkg',
-  'box': 'box',
   'boxes': 'box',
-  'bag': 'bag',
   'bags': 'bag',
-  'bunch': 'bunch',
   'bunches': 'bunch',
-  'head': 'head',
   'heads': 'head',
-  'clove': 'clove',
   'cloves': 'clove'
 };
 
@@ -313,16 +304,6 @@ function validateRecipe(recipe) {
 }
 
 /**
- * Validate shopping item
- * @param {Object} item - Shopping item to validate
- * @returns {{valid: boolean, error?: string, sanitized?: Object}}
- */
-function validateShoppingItem(item) {
-  // Shopping items use the same validation as pantry items
-  return validatePantryItem(item);
-}
-
-/**
  * Validate category name
  * @param {string} name - Category name to validate
  * @returns {{valid: boolean, error?: string, sanitized?: string}}
@@ -389,7 +370,6 @@ window.validation = {
   // Validation functions
   validatePantryItem,
   validateRecipe,
-  validateShoppingItem,
   validateCategoryName,
   validateLocationName
 };

@@ -1,11 +1,7 @@
 /**
- * Peachy Pantry API Client - Python Age 5.0
+ * Chef's Kiss — API Client
  *
- * Simple wrapper around fetch() that talks to Python backend.
- * Replaces ALL Supabase SDK calls.
- *
- * JavaScript's job: Make the site breathe.
- * Python's job: Make it think.
+ * Thin wrapper around fetch() for the Python backend.
  */
 
 // Get API base URL from config (update config.js with your Railway URL!)
