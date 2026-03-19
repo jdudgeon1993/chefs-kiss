@@ -64,6 +64,11 @@
   transform: translateY(-1px);
 }
 
+.btn-pantry-add-single.active {
+  background: var(--btn-primary-hover, #7A8268);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+}
+
 .btn-pantry-bulk {
   background: transparent;
   color: var(--color-pantry-header, #5a4a3a);
@@ -73,6 +78,12 @@
 .btn-pantry-bulk:hover {
   background: rgba(139, 147, 118, 0.1);
   border-color: var(--color-accent-olive, #8B9376);
+}
+
+.btn-pantry-bulk.active {
+  background: rgba(139, 147, 118, 0.15);
+  border-color: var(--color-accent-olive, #8B9376);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.08);
 }
 
 @media (max-width: 480px) {
@@ -574,21 +585,71 @@
    =================================================================== */
 .section-hidden { display: none !important; }
 
+/* ── Inline Add / Edit Item panel ── */
+.inline-form-panel {
+  background: var(--color-card-bg, #FFFEF9);
+  border: 1px solid rgba(139, 147, 118, 0.35);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem 1.5rem;
+  margin-bottom: 1.25rem;
+  animation: panel-slide-down 0.2s ease;
+}
+
+.inline-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(139, 147, 118, 0.25);
+}
+
+.inline-form-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-family: "Libre Baskerville", Georgia, serif;
+  color: var(--color-pantry-header, #5a4a3a);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.inline-form-close {
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  line-height: 1;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+.inline-form-close:hover {
+  color: var(--color-pantry-header, #5a4a3a);
+  background: rgba(139, 147, 118, 0.12);
+}
+
+@keyframes panel-slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* Always hidden unless .section-visible is added */
 .onboarding-section {
   display: none;
 }
 
-/* When open: covers the full viewport as an overlay */
+/* When open: expands inline in the document flow */
 .onboarding-section.section-visible {
   display: flex;
-  position: fixed;
-  inset: 0;
-  z-index: 900;
   flex-direction: column;
   background: var(--color-card-bg, #FFFEF9);
-  padding: var(--layout-padding);
-  overflow-y: auto;
+  border: 1px solid rgba(139, 147, 118, 0.35);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem 1.5rem;
+  margin-bottom: 1.25rem;
+  animation: panel-slide-down 0.2s ease;
 }
 
 .onboarding-header {

@@ -116,6 +116,11 @@ function closeModal() {
   if (modalRoot) {
     modalRoot.innerHTML = '';
   }
+  // Also close the inline add/edit panel if open
+  const panel = document.getElementById('panel-add-item');
+  if (panel) panel.hidden = true;
+  const btnAddSingle = document.getElementById('btn-add-single-item');
+  if (btnAddSingle) btnAddSingle.classList.remove('active');
 }
 
 // ── Header Date/Time Clock ──
