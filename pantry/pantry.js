@@ -25,6 +25,28 @@
     renderPantryLedger();
     setupPantrySearch();
     setupPantryFilters();
+    setupHelpStrip();
+  }
+
+  function setupHelpStrip() {
+    const toggle = document.getElementById('pantry-help-toggle');
+    const body   = document.getElementById('pantry-help-body');
+    if (!toggle || !body) return;
+
+    toggle.addEventListener('click', () => toggleHelpStrip());
+  }
+
+  function toggleHelpStrip(forceOpen) {
+    const toggle = document.getElementById('pantry-help-toggle');
+    const body   = document.getElementById('pantry-help-body');
+    if (!toggle || !body) return;
+
+    const isOpen = toggle.getAttribute('aria-expanded') === 'true';
+    const open = forceOpen !== undefined ? forceOpen : !isOpen;
+
+    toggle.setAttribute('aria-expanded', String(open));
+    body.classList.toggle('is-open', open);
+    toggle.querySelector('.help-chevron').textContent = open ? '▴' : '▾';
   }
 
   // Detect desktop (columns visible) vs mobile (detail panel needed)
@@ -291,6 +313,14 @@
   }
 
   function wireEventListeners(container, allItems) {
+    // OH / RE / AV column headers — tap to open the help strip
+    container.querySelectorAll('th.ledger-col-oh, th.ledger-col-re, th.ledger-col-av').forEach(th => {
+      th.addEventListener('click', () => {
+        toggleHelpStrip(true);
+        document.getElementById('pantry-help-strip')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    });
+
     // Category header click — collapse / expand
     container.querySelectorAll('.ledger-category-divider').forEach(headerRow => {
       headerRow.addEventListener('click', () => {
