@@ -29,7 +29,6 @@ async function checkAuth() {
 
 async function loadPantry() {
   try {
-    showLoading();
     const response = await API.call('/pantry/');
     // Backend returns {pantry_items: [...], shopping_list: [...]}
     const items = response.pantry_items || response || [];
@@ -37,8 +36,6 @@ async function loadPantry() {
   } catch (error) {
     showError('Failed to load pantry');
     console.error('Pantry load error:', error);
-  } finally {
-    hideLoading();
   }
 }
 
@@ -84,12 +81,6 @@ function renderPantryList(items) {
 
   // Render immediately if the ledger is loaded (avoids 1s watcher delay)
   if (typeof window.renderPantryLedger === 'function') window.renderPantryLedger();
-
-  // Also touch data-updated for the watcher fallback
-  const container = document.getElementById('pantry-display');
-  if (container) {
-    container.setAttribute('data-updated', Date.now());
-  }
 }
 
 /* ============================================================================
@@ -98,7 +89,6 @@ function renderPantryList(items) {
 
 async function loadRecipes(searchQuery = '') {
   try {
-    showLoading();
     const endpoint = searchQuery ? `/recipes/search?q=${encodeURIComponent(searchQuery)}` : '/recipes/';
     const response = await API.call(endpoint);
     // Backend returns {recipes: [...], ready_to_cook: [...]}
@@ -107,14 +97,11 @@ async function loadRecipes(searchQuery = '') {
   } catch (error) {
     showError('Failed to load recipes');
     console.error('Recipe load error:', error);
-  } finally {
-    hideLoading();
   }
 }
 
 async function updateRecipe(recipeId, recipeData) {
   try {
-    showLoading();
     await API.call(`/recipes/${recipeId}`, {
       method: 'PUT',
       body: JSON.stringify(recipeData)
@@ -124,8 +111,6 @@ async function updateRecipe(recipeId, recipeData) {
     showSuccess(`"${recipeData.name}" updated.`);
   } catch (error) {
     showError('Failed to update recipe');
-  } finally {
-    hideLoading();
   }
 }
 
@@ -136,7 +121,6 @@ async function deleteRecipe(recipeId) {
   const recipeName = recipe?.name;
 
   try {
-    showLoading();
     await API.call(`/recipes/${recipeId}`, {
       method: 'DELETE'
     });
@@ -145,8 +129,6 @@ async function deleteRecipe(recipeId) {
     showSuccess(recipeName ? `"${recipeName}" deleted.` : 'Recipe deleted!');
   } catch (error) {
     showError('Failed to delete recipe');
-  } finally {
-    hideLoading();
   }
 }
 
@@ -190,12 +172,6 @@ function renderRecipeList(recipes) {
 
   // Render immediately if the recipe view function is loaded (avoids 1s watcher delay)
   if (typeof window.refreshRecipeView === 'function') window.refreshRecipeView();
-
-  // Also touch data-updated for the watcher fallback
-  const container = document.getElementById('recipes-grid');
-  if (container) {
-    container.setAttribute('data-updated', Date.now());
-  }
 }
 
 /* ============================================================================
@@ -211,7 +187,6 @@ function renderRecipeList(recipes) {
 
 async function loadMealPlans() {
   try {
-    showLoading();
     const response = await API.call('/meal-plans/');
     // Backend returns {meal_plans: [...], reserved_ingredients: {...}}
     const meals = response.meal_plans || response || [];
@@ -247,8 +222,6 @@ async function loadMealPlans() {
     // Store reserved ingredients from backend (authoritative calculation)
     window.reservedIngredients = response.reserved_ingredients || {};
 
-    renderMealCalendar(meals);
-
     // Reload calendar if available
     if (window.reloadCalendar) {
       window.reloadCalendar();
@@ -257,43 +230,6 @@ async function loadMealPlans() {
     showError('Failed to load meal plans');
     console.error('Meal plans load error:', error);
     window.planner = {};
-  } finally {
-    hideLoading();
-  }
-}
-
-async function addMealPlan(mealData) {
-  try {
-    showLoading();
-    const newMeal = await API.call('/meal-plans/', {
-      method: 'POST',
-      body: JSON.stringify(mealData)
-    });
-
-    await Promise.all([loadMealPlans(), loadShoppingList()]);
-    showSuccess('Meal added to calendar!');
-    return newMeal;
-  } catch (error) {
-    showError('Failed to add meal');
-  } finally {
-    hideLoading();
-  }
-}
-
-async function updateMealPlan(mealId, mealData) {
-  try {
-    showLoading();
-    await API.call(`/meal-plans/${mealId}`, {
-      method: 'PUT',
-      body: JSON.stringify(mealData)
-    });
-
-    await Promise.all([loadMealPlans(), loadShoppingList()]);
-    showSuccess('Meal updated!');
-  } catch (error) {
-    showError('Failed to update meal');
-  } finally {
-    hideLoading();
   }
 }
 
@@ -301,7 +237,6 @@ async function deleteMealPlan(mealId) {
   if (!confirm('Remove this meal from calendar?')) return;
 
   try {
-    showLoading();
     await API.call(`/meal-plans/${mealId}`, {
       method: 'DELETE'
     });
@@ -310,67 +245,7 @@ async function deleteMealPlan(mealId) {
     showSuccess('Meal removed!');
   } catch (error) {
     showError('Failed to remove meal');
-  } finally {
-    hideLoading();
   }
-}
-
-async function cookMeal(mealId) {
-  try {
-    showLoading();
-    await API.call(`/meal-plans/${mealId}/cook`, {
-      method: 'POST'
-    });
-
-    await Promise.all([loadMealPlans(), loadPantry(), loadShoppingList()]);
-    showSuccess('Meal marked as cooked!');
-  } catch (error) {
-    showError('Failed to cook meal');
-  } finally {
-    hideLoading();
-  }
-}
-
-function renderMealCalendar(meals) {
-  const container = document.getElementById('meal-calendar');
-  if (!container) return;
-
-  if (!meals || meals.length === 0) {
-    container.innerHTML = '<p class="empty-state">No meals planned yet. Start planning!</p>';
-    return;
-  }
-
-  // Group by date
-  const byDate = {};
-  meals.forEach(meal => {
-    if (!byDate[meal.date]) byDate[meal.date] = [];
-    byDate[meal.date].push(meal);
-  });
-
-  let html = '';
-  for (const [date, dateMeals] of Object.entries(byDate).sort()) {
-    html += `
-      <div class="calendar-day">
-        <h3 class="day-date">${new Date(date).toLocaleDateString()}</h3>
-        <div class="day-meals">
-          ${dateMeals.map(meal => `
-            <div class="meal-item ${meal.cooked ? 'cooked' : ''}" data-id="${meal.id}">
-              <div class="meal-info">
-                <span class="meal-type">${escapeHTML(meal.meal_type || 'Dinner')}</span>
-                <span class="meal-recipe">${escapeHTML(meal.recipe_name || 'Recipe')}</span>
-              </div>
-              <div class="meal-actions">
-                ${!meal.cooked ? `<button onclick="cookMeal(${meal.id})" class="btn-cook">Cook</button>` : '<span class="cooked-badge">✓ Cooked</span>'}
-                <button onclick="deleteMealPlan(${meal.id})" class="btn-icon">🗑️</button>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  }
-
-  container.innerHTML = html;
 }
 
 /* ============================================================================
@@ -379,7 +254,6 @@ function renderMealCalendar(meals) {
 
 async function loadShoppingList({ fromRealtime = false } = {}) {
   try {
-    showLoading();
     const shoppingData = await API.call('/shopping-list/');
     // Backend returns {shopping_list: [...], total_items: ..., checked_items: ...}
     const list = shoppingData.shopping_list || shoppingData;
@@ -394,8 +268,6 @@ async function loadShoppingList({ fromRealtime = false } = {}) {
   } catch (error) {
     showError('Failed to load shopping list');
     console.error('Shopping list load error:', error);
-  } finally {
-    hideLoading();
   }
 }
 
@@ -405,38 +277,6 @@ async function refreshShoppingList() {
     showToast('Shopping list refreshed', 'sync', 2000);
   } catch (error) {
     showError('Failed to refresh shopping list');
-  }
-}
-
-async function addManualItem(itemData) {
-  try {
-    showLoading();
-    if (typeof markLocalWrite === 'function') markLocalWrite();
-    await API.call('/shopping-list/items', {
-      method: 'POST',
-      body: JSON.stringify(itemData)
-    });
-
-    await loadShoppingList();
-    showSuccess(`${itemData.name} added to your Shopping List.`);
-  } catch (error) {
-    showError('Failed to add item');
-  } finally {
-    hideLoading();
-  }
-}
-
-async function checkShoppingItem(itemId, checked) {
-  try {
-    if (typeof markLocalWrite === 'function') markLocalWrite();
-    await API.call(`/shopping-list/items/${itemId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ checked })
-    });
-
-    await loadShoppingList();
-  } catch (error) {
-    showError('Failed to update item');
   }
 }
 
@@ -455,30 +295,6 @@ async function deleteShoppingItem(itemId) {
   } catch (error) {
     showError('Failed to remove item');
   }
-}
-
-async function clearCheckedItems() {
-  if (!confirm('Clear all checked items?')) return;
-
-  try {
-    showLoading();
-    if (typeof markLocalWrite === 'function') markLocalWrite();
-    await API.call('/shopping-list/clear-checked', {
-      method: 'POST'
-    });
-
-    await loadShoppingList();
-    showSuccess('Checked items cleared!');
-  } catch (error) {
-    showError('Failed to clear items');
-  } finally {
-    hideLoading();
-  }
-}
-
-async function addCheckedToPantry() {
-  // Use the checkout modal instead of confirm prompt
-  openCheckoutModal();
 }
 
 // Track checked state for auto-generated items (no IDs) in localStorage
@@ -931,8 +747,6 @@ async function confirmCheckout() {
   }
 
   try {
-    showLoading();
-
     // Fetch fresh pantry data to ensure we have the latest state
     // (window.pantry might be stale or empty if we're on the shopping page)
     try {
@@ -1058,8 +872,6 @@ async function confirmCheckout() {
   } catch (error) {
     console.error('Checkout error:', error);
     showError('Failed to add items to pantry: ' + error.message);
-  } finally {
-    hideLoading();
   }
 }
 
@@ -1073,10 +885,6 @@ window.confirmCheckout = confirmCheckout;
    VIEW MANAGEMENT
 ============================================================================ */
 
-// Track the active section (set during init, used by realtime handlers)
-const AppState = {
-  currentView: 'pantry'
-};
 
 function showLandingPage() {
   const landing = document.getElementById('landing-page');
@@ -1911,7 +1719,6 @@ async function loadApp() {
   wireUpButtons();
   initRealtime();
   setupVisibilityReload();
-  AppState.currentView = section === 'meals' ? 'meal-planning' : section;
 
   updateLoaderProgress(100);
 
@@ -2146,13 +1953,9 @@ async function loadDemoApp() {
   if (typeof createIngredientDatalist === 'function') createIngredientDatalist();
   if (typeof createStoreDatalist === 'function') createStoreDatalist();
 
-  // Trigger renders by touching data attributes
-  const pantryDisplay = document.getElementById('pantry-display');
-  if (pantryDisplay) pantryDisplay.setAttribute('data-updated', Date.now());
-
-  const recipesGrid = document.getElementById('recipes-grid');
-  if (recipesGrid) recipesGrid.setAttribute('data-updated', Date.now());
-
+  // Trigger renders — watchers check window.pantry/recipes reference changes
+  if (typeof window.renderPantryLedger === 'function') window.renderPantryLedger();
+  if (typeof window.refreshRecipeView === 'function') window.refreshRecipeView();
   if (window.reloadCalendar) window.reloadCalendar();
 
   wireUpButtons();

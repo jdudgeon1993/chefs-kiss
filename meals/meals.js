@@ -291,7 +291,7 @@
     if (window.recipes) {
       var recipe = window.recipes.find(function(r) { return r.id === meal.recipeId || r.name === meal.recipeName; });
       if (recipe) {
-        recipeEmoji = getRecipeEmojiFromCategory(recipe.category) || '🍽️';
+        recipeEmoji = getRecipeEmoji(recipe);
       }
     }
     emoji.textContent = recipeEmoji;
@@ -358,15 +358,6 @@
     if (window.openCookNowModal) {
       window.openCookNowModal(recipe, meal.dateKey, meal.id);
     }
-  }
-
-  function getRecipeEmojiFromCategory(category) {
-    var emojis = {
-      'Breakfast': '🍳', 'Lunch': '🥗', 'Dinner': '🍝',
-      'Dessert': '🍰', 'Snack': '🍿', 'Appetizer': '🥟',
-      'Soup': '🍲', 'Salad': '🥗', 'Main': '🍽️', 'Side': '🥘'
-    };
-    return emojis[category] || '🍽️';
   }
 
   function formatDateKey(date) {

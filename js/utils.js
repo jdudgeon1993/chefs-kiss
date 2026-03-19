@@ -16,21 +16,6 @@ function escapeHTML(str) {
     .replace(/'/g, '&#39;');
 }
 
-function safeSetInnerHTMLById(id, html) {
-  let el = document.getElementById(id);
-  if (!el) {
-    console.warn(`Element with id="${id}" not found. Creating one automatically.`);
-    el = document.createElement('div');
-    el.id = id;
-    document.body.appendChild(el);
-  }
-  el.innerHTML = html;
-  return true;
-}
-
-function showLoading(message = 'Loading...') {}
-function hideLoading() {}
-
 // ── Toast Notification System ──
 function _getToastContainer() {
   let container = document.getElementById('toast-container');

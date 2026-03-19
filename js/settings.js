@@ -950,8 +950,6 @@ async function resetSettingsToDefaults() {
   if (!confirm('Reset all settings to defaults?')) return;
 
   try {
-    showLoading();
-
     await API.call('/settings/', {
       method: 'PUT',
       body: JSON.stringify({
@@ -969,8 +967,6 @@ async function resetSettingsToDefaults() {
   } catch (error) {
     console.error('Failed to reset settings:', error);
     showError('Failed to reset settings');
-  } finally {
-    hideLoading();
   }
 }
 
@@ -1009,8 +1005,6 @@ async function saveSettings() {
   }
 
   try {
-    showLoading();
-
     const response = await API.call('/settings/', {
       method: 'PUT',
       body: JSON.stringify({ locations, categories, category_emojis })
@@ -1033,8 +1027,6 @@ async function saveSettings() {
   } catch (error) {
     console.error('Failed to save settings:', error);
     showError('Failed to save settings');
-  } finally {
-    hideLoading();
   }
 }
 
