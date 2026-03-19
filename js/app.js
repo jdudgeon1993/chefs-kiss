@@ -1846,6 +1846,11 @@ function wireUpButtons() {
   if (btnSaveAll) btnSaveAll.addEventListener('click', saveBulkEntry);
 
   // Account button
+  const btnFaq = document.getElementById('btn-faq');
+  if (btnFaq) {
+    btnFaq.addEventListener('click', openFaqModal);
+  }
+
   const btnAccount = document.getElementById('btn-account');
   if (btnAccount) {
     btnAccount.addEventListener('click', openAccountModal);
