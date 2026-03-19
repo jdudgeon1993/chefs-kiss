@@ -2857,15 +2857,15 @@ body.dark-theme .form-group textarea {
 
 @media (max-width: 480px) {
   #toast-container {
-    top: auto;
-    bottom: 1rem;
+    top: calc(70px + 0.5rem); /* sit just below the fixed header, away from the bottom nav */
+    bottom: auto;
     left: 0.75rem;
     right: 0.75rem;
     max-width: 100%;
   }
 
   .toast {
-    transform: translateY(calc(100% + 1rem));
+    transform: translateY(calc(-100% - 1rem)); /* slide down from above */
   }
 
   .toast-show {
@@ -2873,7 +2873,7 @@ body.dark-theme .form-group textarea {
   }
 
   .toast-hide {
-    transform: translateY(calc(100% + 1rem));
+    transform: translateY(calc(-100% - 1rem));
   }
 }
 
