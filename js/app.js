@@ -2108,15 +2108,18 @@ async function loadApp() {
  * Wire up all button click handlers
  */
 function wireUpButtons() {
-  // New pantry entry button — toggles the bulk entry section
+  // Single item add button
+  const btnAddSingle = document.getElementById('btn-add-single-item');
+  if (btnAddSingle) {
+    btnAddSingle.addEventListener('click', () => openIngredientModal({}));
+  }
+
+  // Bulk entry button — opens as overlay (pantry stays visible behind)
   const btnNewPantry = document.getElementById('btn-new-pantry-entry');
   if (btnNewPantry) {
     btnNewPantry.addEventListener('click', () => {
-      const pantrySection = document.getElementById('pantry-section');
       const onboardingSection = document.getElementById('onboarding-section');
-      if (pantrySection) pantrySection.style.display = 'none';
       if (onboardingSection) {
-        onboardingSection.style.display = '';
         onboardingSection.classList.add('section-visible');
       }
       initBulkEntry();
@@ -2162,7 +2165,7 @@ function wireUpButtons() {
     btnCheckout.addEventListener('click', openCheckoutModal);
   }
 
-  // Exit bulk entry — return to pantry view (with unsaved changes warning)
+  // Close bulk entry overlay
   const btnExitOnboarding = document.getElementById('btn-exit-onboarding');
   if (btnExitOnboarding) {
     btnExitOnboarding.addEventListener('click', () => {
@@ -2170,17 +2173,14 @@ function wireUpButtons() {
       const tbody = document.getElementById('bulk-entry-tbody-live');
       const hasContent = tbody && Array.from(tbody.querySelectorAll('.bulk-name')).some(input => input.value.trim() !== '');
       if (hasContent) {
-        if (!confirm('You have unsaved items in the bulk entry. Leave without saving?')) {
+        if (!confirm('You have unsaved items. Close without saving?')) {
           return;
         }
       }
-      const pantrySection = document.getElementById('pantry-section');
       const onboardingSection = document.getElementById('onboarding-section');
       if (onboardingSection) {
         onboardingSection.classList.remove('section-visible');
-        onboardingSection.style.display = 'none';
       }
-      if (pantrySection) pantrySection.style.display = '';
     });
   }
 
