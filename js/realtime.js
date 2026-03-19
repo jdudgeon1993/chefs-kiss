@@ -159,10 +159,14 @@ function _scheduleReconnect(reason) {
 
 // Debounce reload calls per section to avoid rapid-fire reloads
 const _realtimeReloadTimers = {};
+const _realtimeLastPayloads = {};
 
 function handleRealtimeEvent(section, payload) {
   // Skip if this was our own write (within debounce window)
   if (Date.now() - _lastLocalWrite < LOCAL_WRITE_DEBOUNCE) return;
+
+  // Keep the latest payload so the toast can reference the changed record
+  _realtimeLastPayloads[section] = payload;
 
   // Debounce: if multiple events fire for the same section within 500ms, batch them
   if (_realtimeReloadTimers[section]) {
@@ -170,32 +174,55 @@ function handleRealtimeEvent(section, payload) {
   }
 
   _realtimeReloadTimers[section] = setTimeout(() => {
+    const latestPayload = _realtimeLastPayloads[section];
     delete _realtimeReloadTimers[section];
-    reloadSection(section, payload.eventType);
+    delete _realtimeLastPayloads[section];
+    reloadSection(section, latestPayload.eventType, latestPayload.new || latestPayload.old);
   }, 500);
 }
 
-async function reloadSection(section, eventType) {
-  const actionLabel = eventType === 'DELETE' ? 'removed' : 'updated';
+async function reloadSection(section, eventType, record) {
+  const isDelete = eventType === 'DELETE';
   try {
     switch (section) {
-      case 'pantry':
+      case 'pantry': {
         await Promise.all([loadPantry(), loadShoppingList({ fromRealtime: true })]);
-        showToast(`Pantry ${actionLabel} by another user`, 'sync', 3000);
+        const name = record?.name;
+        const msg = name
+          ? (isDelete ? `${name} removed from the Pantry` : `${name} updated in the Pantry`)
+          : (isDelete ? 'Pantry item removed' : 'Pantry updated');
+        showToast(msg, 'sync', 3000);
         break;
-      case 'recipes':
+      }
+      case 'recipes': {
         await loadRecipes();
-        showToast(`Recipes ${actionLabel} by another user`, 'sync', 3000);
+        const name = record?.name;
+        const msg = name
+          ? (isDelete ? `"${name}" removed from Recipes` : `"${name}" updated`)
+          : (isDelete ? 'Recipe removed' : 'Recipes updated');
+        showToast(msg, 'sync', 3000);
         break;
-      case 'meals':
+      }
+      case 'meals': {
         await Promise.all([loadMealPlans(), loadShoppingList({ fromRealtime: true })]);
         if (window.renderPantryLedger) window.renderPantryLedger();
-        showToast(`Meal plan ${actionLabel} by another user`, 'sync', 3000);
+        const recipeId = record?.recipe_id;
+        const recipe = recipeId ? (window.recipes || []).find(r => r.id === recipeId) : null;
+        const msg = recipe
+          ? (isDelete ? `${recipe.name} removed from the Meal Plan` : `${recipe.name} added to the Meal Plan`)
+          : (isDelete ? 'Meal plan updated' : 'Meal plan updated');
+        showToast(msg, 'sync', 3000);
         break;
-      case 'shopping':
+      }
+      case 'shopping': {
         await loadShoppingList({ fromRealtime: true });
-        showToast(`Shopping list ${actionLabel} by another user`, 'sync', 3000);
+        const name = record?.name;
+        const msg = name
+          ? (isDelete ? `${name} removed from the Shopping List` : `${name} added to the Shopping List`)
+          : 'Shopping list updated';
+        showToast(msg, 'sync', 3000);
         break;
+      }
     }
   } catch (err) {
     console.error(`Failed to reload ${section}:`, err);

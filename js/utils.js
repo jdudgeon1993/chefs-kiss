@@ -42,7 +42,15 @@ function _getToastContainer() {
   return container;
 }
 
-const MAX_TOASTS = 5;
+function _dismissToast(toast) {
+  if (!toast.parentNode) return;
+  toast.classList.remove('toast-show');
+  toast.classList.add('toast-hide');
+  toast.addEventListener('transitionend', () => { if (toast.parentNode) toast.remove(); }, { once: true });
+  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 400);
+}
+
+const MAX_TOASTS = 4;
 
 function showToast(message, type = 'info', duration = 4000) {
   const container = _getToastContainer();
@@ -54,16 +62,44 @@ function showToast(message, type = 'info', duration = 4000) {
 
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
-  const icons = { success: '✓', error: '✗', info: 'ℹ', sync: '🔄' };
-  toast.innerHTML = `<span class="toast-icon">${icons[type] || icons.info}</span><span class="toast-msg">${escapeHTML(message)}</span>`;
+  const icons = { success: '✓', error: '✕', info: 'ℹ', sync: '↻' };
+  toast.innerHTML = `<span class="toast-icon">${icons[type] || icons.info}</span><span class="toast-msg">${escapeHTML(message)}</span><button class="toast-close" aria-label="Dismiss">×</button><div class="toast-progress" style="animation-duration:${duration}ms"></div>`;
+
+  // Track remaining time accurately for hover-pause
+  let remaining = duration;
+  let startedAt = null;
+  let timer = null;
+
+  function schedule(ms) {
+    clearTimeout(timer);
+    startedAt = Date.now();
+    timer = setTimeout(() => _dismissToast(toast), ms);
+  }
+
+  // Pause dismiss timer on hover (CSS pauses the progress bar animation)
+  toast.addEventListener('mouseenter', () => {
+    const elapsed = startedAt ? Date.now() - startedAt : 0;
+    remaining = Math.max(0, remaining - elapsed);
+    clearTimeout(timer);
+  });
+  toast.addEventListener('mouseleave', () => {
+    schedule(remaining);
+  });
+
+  // Click anywhere on toast or the × button to dismiss
+  toast.querySelector('.toast-close').addEventListener('click', (e) => {
+    e.stopPropagation();
+    clearTimeout(timer);
+    _dismissToast(toast);
+  });
+  toast.addEventListener('click', () => {
+    clearTimeout(timer);
+    _dismissToast(toast);
+  });
+
   container.appendChild(toast);
   requestAnimationFrame(() => toast.classList.add('toast-show'));
-  setTimeout(() => {
-    toast.classList.remove('toast-show');
-    toast.classList.add('toast-hide');
-    toast.addEventListener('transitionend', () => toast.remove());
-    setTimeout(() => toast.remove(), 500);
-  }, duration);
+  schedule(duration);
 }
 
 function showError(message) {
