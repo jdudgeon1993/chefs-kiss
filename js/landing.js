@@ -689,20 +689,25 @@ function initLandingPage() {
     });
   }
 
-  // Scroll-triggered animations for feature cards
-  const featureCards = document.querySelectorAll('.landing-feature-card');
-  if (featureCards.length && 'IntersectionObserver' in window) {
-    const observer = new IntersectionObserver((entries) => {
+  // Scroll-triggered animations
+  if ('IntersectionObserver' in window) {
+    const revealObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           entry.target.classList.add('visible');
-          observer.unobserve(entry.target);
+          revealObserver.unobserve(entry.target);
         }
       });
-    }, { threshold: 0.15 });
-    featureCards.forEach(card => observer.observe(card));
+    }, { threshold: 0.12 });
+
+    document.querySelectorAll('.landing-feature-card, .fade-in-up').forEach(el => {
+      revealObserver.observe(el);
+    });
   } else {
-    featureCards.forEach(card => card.classList.add('visible'));
+    // Fallback: show everything immediately
+    document.querySelectorAll('.landing-feature-card, .fade-in-up').forEach(el => {
+      el.classList.add('visible');
+    });
   }
 
   // If already authenticated, redirect to the app immediately
