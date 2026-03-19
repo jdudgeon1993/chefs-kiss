@@ -377,13 +377,7 @@
 
   function getCategoryEmoji(category) {
     if (categoryEmojiMap[category]) return categoryEmojiMap[category];
-    const emojis = {
-      'Meat': '🥩', 'Dairy': '🧈', 'Produce': '🥬', 'Pantry': '🫙',
-      'Frozen': '🧊', 'Spices': '🌶️', 'Beverages': '🥤', 'Snacks': '🍿',
-      'Grains': '🌾', 'Baking': '🧁', 'Canned Goods': '🥫', 'Condiments': '🫗',
-      'Seafood': '🐟', 'Deli': '🥪', 'Other': '📦'
-    };
-    return emojis[category] || '📦';
+    return CATEGORY_EMOJIS[category] || '📦';
   }
 
   // --- Search & filter setup ---

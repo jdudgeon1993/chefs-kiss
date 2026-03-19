@@ -320,12 +320,6 @@ async function saveBulkEntry() {
 
 /* ── Account & Household Management Modal ── */
 
-function _escapeHTML(str) {
-  const p = document.createElement('p');
-  p.textContent = str;
-  return p.innerHTML;
-}
-
 function _getInitials(email) {
   if (!email) return '?';
   const local = email.split('@')[0];
@@ -588,7 +582,7 @@ async function loadMembersList() {
       const isOwner = m.role === 'owner';
       const youTag = m.is_you ? '<span class="member-you-tag">You</span>' : '';
       const roleIcon = isOwner ? '👑' : '👤';
-      const displayName = _escapeHTML(m.email || `Member ${m.user_id.substring(0, 6)}`);
+      const displayName = escapeHTML(m.email || `Member ${m.user_id.substring(0, 6)}`);
       return `<div class="member-row">
         <span class="member-avatar-sm">${roleIcon}</span>
         <span class="member-name">${displayName}${youTag}</span>
@@ -690,8 +684,8 @@ function copyInviteCode(code) {
 function shareInviteCode(code) {
   if (navigator.share) {
     navigator.share({
-      title: "Peachy Pantry - Kitchen Invite",
-      text: `Join my kitchen on Peachy Pantry! Use invite code: ${code}`
+      title: "Chef's Kiss — Kitchen Invite",
+      text: `Join my kitchen on Chef's Kiss! Use invite code: ${code}`
     }).catch(() => {});
   } else {
     copyInviteCode(code);
@@ -728,39 +722,6 @@ async function switchHousehold(householdId) {
   setTimeout(() => window.location.reload(), 500);
 }
 
-async function revealQuickCode() {
-  const display = document.getElementById('qa-code-display');
-  const btn = document.getElementById('qa-reveal-btn');
-  if (!display || !btn) return;
-
-  if (btn.textContent === 'Hide') {
-    display.textContent = '••••••';
-    btn.textContent = 'Reveal';
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = '…';
-  try {
-    const resp = await API.getMyCode();
-    display.textContent = resp.quick_access_code;
-    btn.textContent = 'Hide';
-    btn.disabled = false;
-
-    // Auto-hide after 30 seconds
-    setTimeout(() => {
-      if (display.textContent !== '••••••') {
-        display.textContent = '••••••';
-        btn.textContent = 'Reveal';
-      }
-    }, 30000);
-  } catch (e) {
-    btn.textContent = 'Reveal';
-    btn.disabled = false;
-    showError('Could not load code. Please try again.');
-  }
-}
-
 async function regenerateQuickCode() {
   if (!confirm('Regenerate your Quick Access code? All trusted devices will need to re-verify once.')) return;
 
@@ -787,7 +748,7 @@ function exportData() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `peachy-pantry-export-${new Date().toISOString().split('T')[0]}.json`;
+  a.download = `chefs-kiss-export-${new Date().toISOString().split('T')[0]}.json`;
   a.click();
   URL.revokeObjectURL(url);
 
@@ -841,7 +802,7 @@ function openSettingsModal() {
   const emojis = (window.householdSettings && window.householdSettings.category_emojis) || {};
   const categoriesHTML = categories.map((cat, idx) => `
     <div class="setting-item" data-idx="${idx}">
-      <button type="button" class="btn-emoji-pick" data-idx="${idx}" onclick="openEmojiPicker(this)" title="Pick icon">${emojis[cat] || getCategoryDefaultEmoji(cat)}</button>
+      <button type="button" class="btn-emoji-pick" data-idx="${idx}" onclick="openEmojiPicker(this)" title="Pick icon">${emojis[cat] || getCategoryEmoji(cat)}</button>
       <input type="text" value="${cat}" class="category-input">
       <button type="button" class="btn-icon btn-remove" onclick="removeCategory(${idx})">×</button>
     </div>
@@ -927,21 +888,11 @@ function removeLocation(idx) {
   if (item) item.remove();
 }
 
-const FOOD_EMOJI_OPTIONS = [
+const FOOD_EMOJI_OPTIONS = [ // emoji-maps.js handles category defaults; this is the picker palette
   '🥩','🧈','🥬','🫙','🧊','🌶️','🥤','🍿','🌾','🧁','🥫','🫗','🐟','🥪',
   '🍎','🥕','🥚','🍞','🧀','🍗','🥦','🌽','🍋','🫒','🍯','🥜','🍝','🍚',
   '🫘','🥥','🍫','🧃','🍵','☕','🧂','🫧','🛒','📦'
 ];
-
-function getCategoryDefaultEmoji(category) {
-  const defaults = {
-    'Meat': '🥩', 'Dairy': '🧈', 'Produce': '🥬', 'Pantry': '🫙',
-    'Frozen': '🧊', 'Spices': '🌶️', 'Beverages': '🥤', 'Snacks': '🍿',
-    'Grains': '🌾', 'Baking': '🧁', 'Canned Goods': '🥫', 'Condiments': '🫗',
-    'Seafood': '🐟', 'Deli': '🥪', 'Other': '📦'
-  };
-  return defaults[category] || '📦';
-}
 
 function openEmojiPicker(btn) {
   document.querySelectorAll('.emoji-picker-dropdown').forEach(el => el.remove());
@@ -999,8 +950,6 @@ async function resetSettingsToDefaults() {
   if (!confirm('Reset all settings to defaults?')) return;
 
   try {
-    showLoading();
-
     await API.call('/settings/', {
       method: 'PUT',
       body: JSON.stringify({
@@ -1018,8 +967,6 @@ async function resetSettingsToDefaults() {
   } catch (error) {
     console.error('Failed to reset settings:', error);
     showError('Failed to reset settings');
-  } finally {
-    hideLoading();
   }
 }
 
@@ -1058,8 +1005,6 @@ async function saveSettings() {
   }
 
   try {
-    showLoading();
-
     const response = await API.call('/settings/', {
       method: 'PUT',
       body: JSON.stringify({ locations, categories, category_emojis })
@@ -1082,8 +1027,6 @@ async function saveSettings() {
   } catch (error) {
     console.error('Failed to save settings:', error);
     showError('Failed to save settings');
-  } finally {
-    hideLoading();
   }
 }
 
@@ -1094,7 +1037,6 @@ window.addCategory = addCategory;
 window.removeCategory = removeCategory;
 window.openEmojiPicker = openEmojiPicker;
 window.selectEmoji = selectEmoji;
-window.getCategoryDefaultEmoji = getCategoryDefaultEmoji;
 window.resetSettingsToDefaults = resetSettingsToDefaults;
 window.saveSettings = saveSettings;
 window.loadSettings = loadSettings;

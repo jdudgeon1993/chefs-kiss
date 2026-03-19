@@ -1,5 +1,5 @@
 /**
- * Service Worker — Peachy Pantry
+ * Service Worker — Chef's Kiss
  *
  * Provides offline support for the shopping list so Focus Mode
  * works in-store even with spotty connectivity.
@@ -16,8 +16,8 @@
  * - SW skips waiting, activates, controllerchange fires, app reloads cleanly
  */
 
-const CACHE_NAME = 'peachy-pantry-v5';
-const API_CACHE = 'peachy-pantry-api-v2';
+const CACHE_NAME = 'chefs-kiss-v6';
+const API_CACHE = 'chefs-kiss-api-v3';
 
 // Static assets to pre-cache on install.
 // HTML files are intentionally excluded — always fetched fresh so

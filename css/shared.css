@@ -1,6 +1,5 @@
 /* ===================================================================
-   PEACHY PANTRY - KITCHEN MANAGEMENT APP
-   Organized CSS Structure
+   CHEF'S KISS — Kitchen Management App
    =================================================================== */
 
 /* @import MUST come before all other rules per CSS spec */
@@ -697,76 +696,6 @@ body:not([data-section]) .landing-page { display: block; }
   text-decoration: underline;
 }
 
-/* Checkout Item Cards */
-.checkout-item-card {
-  background: var(--color-card-bg);
-  border: 2px solid rgba(197, 184, 165, 0.3);
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-}
-
-.checkout-item-header {
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(197, 184, 165, 0.2);
-}
-
-.checkout-item-header strong {
-  font-size: 1rem;
-  color: var(--color-pantry-header);
-  font-family: "Libre Baskerville", Georgia, serif;
-}
-
-.checkout-item-fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.75rem;
-}
-
-.checkout-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.checkout-field label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--color-text-secondary);
-}
-
-.checkout-field input,
-.checkout-field select {
-  padding: 0.5rem 0.65rem;
-  border: 1px solid rgba(0,0,0,0.15);
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-family: inherit;
-  background: #fff;
-  box-sizing: border-box;
-}
-
-.checkout-field input:focus,
-.checkout-field select:focus {
-  outline: none;
-  border-color: #F1C338;
-  box-shadow: 0 0 0 2px rgba(241,195,56,0.1);
-}
-
-/* Mobile Checkout Responsive */
-@media (max-width: 768px) {
-  .checkout-item-fields {
-    grid-template-columns: 1fr;
-  }
-
-  .checkout-item-card {
-    padding: 0.75rem;
-  }
-}
-
 
 /* -------------------------------------------------------------------
    10. FLOATING ACTION BUTTON (Context-Aware)
@@ -1134,86 +1063,6 @@ body[data-section] .floating-action-menu {
   color: var(--color-text-secondary);
   opacity: 0.6;
   font-style: italic;
-}
-
-/* -------------------------------------------------------------------
-   11.5 MEAL PLANNER / CALENDAR
-   ------------------------------------------------------------------- */
-.planner-modal-content {
-  width: 100%;
-}
-
-.planner-header-row {
-  margin-bottom: 1.5rem;
-  text-align: center;
-}
-
-.planner-month-label {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-pantry-header);
-  font-family: "Libre Baskerville", Georgia, serif;
-}
-
-.planner-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 0.5rem;
-  width: 100%;
-}
-
-.planner-day {
-  background: var(--color-card-bg);
-  border: 2px solid var(--color-recipe-border);
-  border-radius: 8px;
-  padding: 0.75rem;
-  min-height: 100px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-.planner-day:hover {
-  border-color: var(--color-accent-olive);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.planner-day.empty {
-  background: transparent;
-  border: none;
-  cursor: default;
-}
-
-.planner-day.empty:hover {
-  transform: none;
-  box-shadow: none;
-}
-
-.planner-day-number {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--color-pantry-header);
-  margin-bottom: 0.5rem;
-}
-
-.planner-day-content {
-  font-size: 0.85rem;
-  line-height: 1.4;
-}
-
-.planner-empty {
-  color: var(--color-text-secondary);
-  opacity: 0.6;
-  font-style: italic;
-}
-
-.planner-recipe {
-  color: var(--color-accent-olive);
-  font-weight: 500;
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 
@@ -2384,31 +2233,6 @@ body[data-section] .floating-action-menu {
   margin: 0;
 }
 
-/* Dark Theme Support (for settings toggle) */
-body.dark-theme {
-  --color-card-bg: #2a2a2a;
-  --color-text: #e0e0e0;
-  background: #1a1a1a;
-  color: #e0e0e0;
-}
-
-body.dark-theme .modal-content {
-  background: #2a2a2a;
-  color: #e0e0e0;
-}
-
-body.dark-theme .modal-content h2,
-body.dark-theme .modal-content h3 {
-  color: #f0f0f0;
-}
-
-body.dark-theme .form-group input,
-body.dark-theme .form-group select,
-body.dark-theme .form-group textarea {
-  background: #3a3a3a;
-  color: #e0e0e0;
-  border-color: #555;
-}
 
 /* Mobile responsive for account/settings */
 @media (max-width: 480px) {

@@ -213,39 +213,6 @@
     });
   }
 
-  function getRecipeEmoji(recipe) {
-    const category = (recipe.category || '').toLowerCase();
-    const emojis = {
-      'dinner': '🍝',
-      'lunch': '🥗',
-      'breakfast': '🍳',
-      'dessert': '🍰',
-      'snack': '🍪',
-      'appetizer': '🥙',
-      'soup': '🍲',
-      'salad': '🥗',
-      'pasta': '🍝',
-      'pizza': '🍕',
-      'burger': '🍔',
-      'sandwich': '🥪',
-      'seafood': '🦞',
-      'chicken': '🍗',
-      'beef': '🥩',
-      'pork': '🥓',
-      'vegetarian': '🥬',
-      'vegan': '🌱',
-      'bread': '🥖',
-      'cake': '🎂',
-      'cookie': '🍪'
-    };
-
-    for (const [key, emoji] of Object.entries(emojis)) {
-      if (category.includes(key)) return emoji;
-    }
-
-    return '🍽️';
-  }
-
   function openRecipeDetailModal(recipe) {
     // Initialize tags and favorite if not present
     if (!recipe.tags) recipe.tags = [];

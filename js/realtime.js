@@ -230,6 +230,8 @@ async function reloadSection(section, eventType, record) {
       }
       case 'recipes': {
         await loadRecipes();
+        // Refresh the meal calendar if open so recipe name changes are reflected
+        if (window.reloadCalendar) window.reloadCalendar();
         const name = record?.name;
         const msg = name
           ? (isDelete ? `"${name}" removed from Recipes` : `"${name}" updated`)
