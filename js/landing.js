@@ -14,7 +14,7 @@ function demoDate(dayOffset) {
 
 /**
  * Build demo data fresh each time so dates are always relative to today.
- * Saved to localStorage only, NOT synced to Supabase.
+ * Saved to localStorage only — demo mode, no API calls.
  */
 function buildDemoData() {
   return {

@@ -1,66 +1,3 @@
-// ===== DASHBOARD MODULE =====
-const Dashboard = {
-  container: null,
-
-  init() {
-    // Try to find the dashboard container
-    this.container = document.getElementById('dashboard');
-
-    // If not found, create it automatically
-    if (!this.container) {
-      console.warn('Dashboard container not found during init. Creating automatically.');
-      this.container = document.createElement('div');
-      this.container.id = 'dashboard';
-      document.body.appendChild(this.container);
-    }
-
-    // Bind buttons (if any)
-    this.bindButtons();
-  },
-
-  bindButtons() {
-    if (!this.container) return;
-
-    // Example: dashboard refresh button
-    const refreshBtn = this.container.querySelector('#dashboard-refresh-btn');
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', () => {
-        this.load();
-      });
-    }
-
-    // Add more button bindings here as needed
-  },
-
-  async load() {
-    if (!this.container) return;
-
-    // Show loading message immediately
-    safeSetInnerHTMLById('dashboard', '<p>Loading dashboard...</p>');
-
-    try {
-      // Make sure endpoint matches your backend
-      const data = await API.call('/alerts/dashboard');
-
-      const pantryCount = data?.pantry_count ?? 0;
-      const recipeCount = data?.recipe_count ?? 0;
-
-      const html = `
-        <p>Pantry: ${pantryCount}</p>
-        <p>Recipes: ${recipeCount}</p>
-      `;
-
-      safeSetInnerHTMLById('dashboard', html);
-
-      // Re-bind buttons in case the container content changed
-      this.bindButtons();
-    } catch (err) {
-      console.error('Failed to load dashboard data:', err);
-      safeSetInnerHTMLById('dashboard', '<p>Unable to load dashboard</p>');
-    }
-  }
-};
-
 /* ============================================================================
    AUTHENTICATION
 ============================================================================ */
@@ -170,24 +107,6 @@ async function loadRecipes(searchQuery = '') {
   } catch (error) {
     showError('Failed to load recipes');
     console.error('Recipe load error:', error);
-  } finally {
-    hideLoading();
-  }
-}
-
-async function addRecipe(recipeData) {
-  try {
-    showLoading();
-    const newRecipe = await API.call('/recipes/', {
-      method: 'POST',
-      body: JSON.stringify(recipeData)
-    });
-
-    await loadRecipes();
-    showSuccess(`"${recipeData.name}" added to your recipes.`);
-    return newRecipe;
-  } catch (error) {
-    showError('Failed to add recipe');
   } finally {
     hideLoading();
   }
@@ -1151,127 +1070,13 @@ window.openCheckoutModal = openCheckoutModal;
 window.confirmCheckout = confirmCheckout;
 
 /* ============================================================================
-   ALERTS & DASHBOARD
-============================================================================ */
-
-async function loadDashboard() {
-  try {
-    const dashboard = await API.call('/alerts/dashboard');
-    renderDashboard(dashboard);
-  } catch (error) {
-    console.error('Failed to load dashboard:', error);
-  }
-}
-
-async function loadExpiringItems() {
-  try {
-    const expiring = await API.call('/alerts/expiring');
-    renderExpiringItems(expiring);
-  } catch (error) {
-    console.error('Failed to load expiring items:', error);
-  }
-}
-
-function renderDashboard(data) {
-  const container = document.getElementById('dashboard');
-  if (!container) return;
-
-  container.innerHTML = `
-    <div class="dashboard-stats">
-      <div class="stat-card">
-        <h3>Pantry Items</h3>
-        <p class="stat-number">${data.pantry_count || 0}</p>
-      </div>
-      <div class="stat-card">
-        <h3>Recipes</h3>
-        <p class="stat-number">${data.recipe_count || 0}</p>
-      </div>
-      <div class="stat-card">
-        <h3>Upcoming Meals</h3>
-        <p class="stat-number">${data.upcoming_meals || 0}</p>
-      </div>
-      <div class="stat-card">
-        <h3>Shopping Items</h3>
-        <p class="stat-number">${data.shopping_count || 0}</p>
-      </div>
-    </div>
-    ${data.expiring_soon && data.expiring_soon.length > 0 ? `
-      <div class="dashboard-alerts">
-        <h3>⚠️ Items Expiring Soon</h3>
-        <ul>
-          ${data.expiring_soon.map(item => `
-            <li>${escapeHTML(item.item_name)} - expires in ${parseInt(item.expires_in_days) || 0} days</li>
-          `).join('')}
-        </ul>
-      </div>
-    ` : ''}
-  `;
-}
-
-function renderExpiringItems(items) {
-  const container = document.getElementById('expiring-items');
-  if (!container) return;
-
-  if (!items || items.length === 0) {
-    container.innerHTML = '<p>No items expiring soon!</p>';
-    return;
-  }
-
-  container.innerHTML = items.map(item => `
-    <div class="expiring-item ${item.is_expired ? 'expired' : ''}">
-      <span class="item-name">${escapeHTML(item.item_name)}</span>
-      <span class="item-expires">Expires: ${escapeHTML(item.expires_on)}</span>
-      <span class="item-days">${parseInt(item.expires_in_days) || 0} days</span>
-    </div>
-  `).join('');
-}
-
-/* ============================================================================
    VIEW MANAGEMENT
 ============================================================================ */
 
-// App State
+// Track the active section (set during init, used by realtime handlers)
 const AppState = {
-  currentView: 'pantry',
-  loading: false
+  currentView: 'pantry'
 };
-
-function showView(viewName) {
-  AppState.currentView = viewName;
-
-  // Map view names to radio button IDs
-  const radioMap = {
-    'pantry': 'nav-pantry',
-    'recipes': 'nav-recipes',
-    'shopping': 'nav-shopping',
-    'planner': 'nav-meal-planning',
-    'meal-planning': 'nav-meal-planning',
-    'onboarding': 'nav-onboarding'
-  };
-
-  const radioId = radioMap[viewName];
-  if (radioId) {
-    const radio = document.getElementById(radioId);
-    if (radio) radio.checked = true;
-  }
-
-  // Load data for view
-  switch(viewName) {
-    case 'pantry':
-      loadPantry();
-      break;
-    case 'recipes':
-      loadRecipes();
-      break;
-    case 'planner':
-    case 'meal-planning':
-      loadMealPlans();
-      break;
-    case 'shopping':
-      loadShoppingList();
-      break;
-  }
-}
 
 function showLandingPage() {
   const landing = document.getElementById('landing-page');
@@ -2456,7 +2261,7 @@ function showUpdateBanner(reg) {
   banner.id = 'update-banner';
   banner.className = 'update-banner';
   banner.innerHTML =
-    '<span class="update-banner-msg">✨ A new version of Peachy Pantry is ready.</span>' +
+    '<span class="update-banner-msg">✨ A new version of Chef\'s Kiss is ready.</span>' +
     '<button class="update-banner-btn" id="update-banner-refresh">Refresh now</button>' +
     '<button class="update-banner-dismiss" id="update-banner-dismiss" aria-label="Dismiss">✕</button>';
 
