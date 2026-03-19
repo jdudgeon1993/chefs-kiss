@@ -2843,3 +2843,119 @@ body[data-section] .floating-action-menu {
     bottom: 2rem; /* no bottom nav on desktop */
   }
 }
+
+
+/* ===================================================================
+   FAQ MODAL
+   =================================================================== */
+
+.faq-modal {
+  max-width: 680px;
+  padding: 1.5rem 2rem 2rem;
+}
+
+.faq-sections {
+  margin-top: 0.5rem;
+}
+
+.faq-section {
+  margin-bottom: 1.5rem;
+}
+
+.faq-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #6a4f35;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(156,175,136,0.3);
+}
+
+.faq-item {
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 0.35rem;
+}
+
+.faq-q {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  background: rgba(156,175,136,0.1);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #3a2e22;
+  line-height: 1.4;
+  transition: background 0.15s;
+}
+
+.faq-q:hover {
+  background: rgba(156,175,136,0.2);
+}
+
+.faq-item.faq-open .faq-q {
+  background: rgba(156,175,136,0.2);
+  border-radius: 8px 8px 0 0;
+}
+
+.faq-chevron {
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  color: #9CAF88;
+  font-weight: 400;
+  line-height: 1;
+  transform: rotate(0deg);
+  transition: transform 0.2s ease;
+  user-select: none;
+}
+
+.faq-item.faq-open .faq-chevron {
+  transform: rotate(90deg);
+}
+
+.faq-a {
+  display: none;
+  padding: 0.75rem 1rem 0.85rem;
+  background: rgba(255,248,240,0.7);
+  font-size: 0.85rem;
+  line-height: 1.65;
+  color: #4a3f2d;
+  border-radius: 0 0 8px 8px;
+  border: 1px solid rgba(156,175,136,0.2);
+  border-top: none;
+}
+
+.faq-item.faq-open .faq-a {
+  display: block;
+}
+
+.faq-list {
+  margin: 0.5rem 0 0 1.1rem;
+  padding: 0;
+}
+
+.faq-list li {
+  margin-bottom: 0.4rem;
+}
+
+.faq-a em {
+  display: block;
+  margin-top: 0.5rem;
+  color: #7a6a55;
+  font-style: italic;
+}
+
+@media (max-width: 600px) {
+  .faq-modal {
+    padding: 1.25rem 1.25rem 1.5rem;
+  }
+}
