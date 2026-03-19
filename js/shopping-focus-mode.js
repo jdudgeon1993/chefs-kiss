@@ -458,7 +458,7 @@ class ShoppingFocusMode {
       // Notify main app so it stays in sync
       this._notifyMainApp();
 
-      if (window.showToast) window.showToast('Item added!', 'success', 2000);
+      if (window.showToast) window.showToast(`${name} added to your list.`, 'success', 2000);
 
     } catch (error) {
       console.error('Failed to add item:', error);
@@ -593,7 +593,7 @@ class ShoppingFocusMode {
       this.render();
       this._notifyMainApp();
 
-      if (window.showToast) window.showToast('Item updated!', 'success', 2000);
+      if (window.showToast) window.showToast(`${name} updated.`, 'success', 2000);
 
     } catch (error) {
       console.error('Failed to update item:', error);
@@ -607,6 +607,9 @@ class ShoppingFocusMode {
   async deleteItem(itemId) {
     if (!confirm('Delete this item?')) return;
 
+    const item = this.shoppingList.find(i => String(i.id) === String(itemId));
+    const itemName = item?.name;
+
     try {
       await API.call(`/shopping-list/items/${itemId}`, { method: 'DELETE' });
 
@@ -615,7 +618,7 @@ class ShoppingFocusMode {
       this.render();
       this._notifyMainApp();
 
-      if (window.showToast) window.showToast('Item deleted', 'success', 2000);
+      if (window.showToast) window.showToast(itemName ? `${itemName} removed.` : 'Item removed.', 'success', 2000);
 
     } catch (error) {
       console.error('Failed to delete item:', error);
@@ -628,6 +631,8 @@ class ShoppingFocusMode {
    */
   async clearChecked() {
     if (!confirm('Remove all checked items from the list?')) return;
+
+    const checkedCount = this.shoppingList.filter(i => i.checked).length;
 
     try {
       // Clear backend manual checked items
@@ -642,7 +647,8 @@ class ShoppingFocusMode {
       this.render();
       this._notifyMainApp();
 
-      if (window.showToast) window.showToast('Checked items cleared!', 'success');
+      const n = checkedCount || 0;
+      if (window.showToast) window.showToast(`${n} item${n !== 1 ? 's' : ''} cleared from your list.`, 'success');
 
       // If list is now empty, prompt to exit
       if (this.shoppingList.length === 0) {

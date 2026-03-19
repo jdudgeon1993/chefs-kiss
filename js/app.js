@@ -184,7 +184,7 @@ async function addRecipe(recipeData) {
     });
 
     await loadRecipes();
-    showSuccess('Recipe added!');
+    showSuccess(`"${recipeData.name}" added to your recipes.`);
     return newRecipe;
   } catch (error) {
     showError('Failed to add recipe');
@@ -202,7 +202,7 @@ async function updateRecipe(recipeId, recipeData) {
     });
 
     await loadRecipes();
-    showSuccess('Recipe updated!');
+    showSuccess(`"${recipeData.name}" updated.`);
   } catch (error) {
     showError('Failed to update recipe');
   } finally {
@@ -213,6 +213,9 @@ async function updateRecipe(recipeId, recipeData) {
 async function deleteRecipe(recipeId) {
   if (!confirm('Delete this recipe?')) return;
 
+  const recipe = (window.recipes || []).find(r => r.id === recipeId);
+  const recipeName = recipe?.name;
+
   try {
     showLoading();
     await API.call(`/recipes/${recipeId}`, {
@@ -220,7 +223,7 @@ async function deleteRecipe(recipeId) {
     });
 
     await loadRecipes();
-    showSuccess('Recipe deleted!');
+    showSuccess(recipeName ? `"${recipeName}" deleted.` : 'Recipe deleted!');
   } catch (error) {
     showError('Failed to delete recipe');
   } finally {
@@ -496,7 +499,7 @@ async function addManualItem(itemData) {
     });
 
     await loadShoppingList();
-    showSuccess('Item added to shopping list!');
+    showSuccess(`${itemData.name} added to your Shopping List.`);
   } catch (error) {
     showError('Failed to add item');
   } finally {
@@ -519,6 +522,9 @@ async function checkShoppingItem(itemId, checked) {
 }
 
 async function deleteShoppingItem(itemId) {
+  const item = (window.shoppingList || []).find(i => String(i.id) === String(itemId));
+  const itemName = item?.name;
+
   try {
     if (typeof markLocalWrite === 'function') markLocalWrite();
     await API.call(`/shopping-list/items/${itemId}`, {
@@ -526,7 +532,7 @@ async function deleteShoppingItem(itemId) {
     });
 
     await loadShoppingList();
-    showSuccess('Item removed!');
+    showSuccess(itemName ? `${itemName} removed from your Shopping List.` : 'Item removed!');
   } catch (error) {
     showError('Failed to remove item');
   }
@@ -1129,7 +1135,7 @@ async function confirmCheckout() {
     closeModal();
     await loadPantry();
     await loadShoppingList();
-    showSuccess(`Added ${itemsToAdd.length} items to pantry!`);
+    showSuccess(`Checkout complete! ${itemsToAdd.length} item${itemsToAdd.length !== 1 ? 's' : ''} added to your Pantry.`);
   } catch (error) {
     console.error('Checkout error:', error);
     showError('Failed to add items to pantry: ' + error.message);
@@ -1396,10 +1402,13 @@ function openIngredientModal(item) {
 async function deleteIngredientFromModal(itemId) {
   if (!confirm('Delete this pantry item? This cannot be undone.')) return;
 
+  const pantryItem = (window.pantry || []).find(p => p.id === itemId);
+  const itemName = pantryItem?.name;
+
   try {
     await API.call(`/pantry/${itemId}`, { method: 'DELETE' });
     closeModal();
-    showSuccess('Item deleted');
+    showSuccess(itemName ? `${itemName} removed from your Pantry.` : 'Item deleted.');
     await Promise.all([loadPantry(), loadShoppingList()]);
   } catch (error) {
     console.error('Error deleting item:', error);
@@ -1498,13 +1507,13 @@ async function saveIngredient(itemId) {
         method: 'PUT',
         body: JSON.stringify(payload)
       });
-      showSuccess('Pantry item updated!');
+      showSuccess(`${name} updated in your Pantry.`);
     } else {
       await API.call('/pantry/', {
         method: 'POST',
         body: JSON.stringify(payload)
       });
-      showSuccess('Pantry item added!');
+      showSuccess(`${name} added to your Pantry.`);
     }
     closeModal();
     await Promise.all([loadPantry(), loadShoppingList()]);
@@ -1566,7 +1575,7 @@ async function quickDepleteItem(item, amount) {
       body: JSON.stringify({ locations: updatedLocations })
     });
     closeModal();
-    showSuccess('Item used!');
+    showSuccess(`${item.name} updated.`);
     await Promise.all([loadPantry(), loadShoppingList()]);
   } catch (error) {
     console.error('Error depleting item:', error);
@@ -1749,13 +1758,13 @@ async function saveRecipe(recipeId) {
         method: 'PUT',
         body: JSON.stringify(recipeData)
       });
-      showSuccess('Recipe updated!');
+      showSuccess(`"${name}" updated.`);
     } else {
       await API.call('/recipes/', {
         method: 'POST',
         body: JSON.stringify(recipeData)
       });
-      showSuccess('Recipe created!');
+      showSuccess(`"${name}" added to your recipes.`);
     }
     closeModal();
     await loadRecipes();
@@ -1831,6 +1840,9 @@ async function addMealToDay(dateKey) {
     return;
   }
 
+  const recipe = (window.recipes || []).find(r => String(r.id) === String(recipeId));
+  const day = new Date(dateKey + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
+
   try {
     await API.call('/meal-plans/', {
       method: 'POST',
@@ -1838,7 +1850,7 @@ async function addMealToDay(dateKey) {
     });
     closeModal();
     await Promise.all([loadMealPlans(), loadShoppingList()]);
-    showSuccess('Meal planned!');
+    showSuccess(recipe ? `${recipe.name} scheduled for ${day}!` : 'Meal planned!');
   } catch (error) {
     console.error('Error adding meal:', error);
     showError('Failed to add meal: ' + error.message);
@@ -1887,6 +1899,12 @@ function openCookNowModal(recipe, dateKey, mealId) {
  * Mark a meal as cooked and deduct from pantry
  */
 async function markMealCooked(dateKey, mealId, force = false) {
+  // Look up recipe name before the API call
+  const allMeals = Object.values(window.planner || {}).flat();
+  const planMeal = allMeals.find(m => m.id === mealId);
+  const recipe = planMeal ? (window.recipes || []).find(r => r.id === planMeal.recipeId) : null;
+  const recipeName = recipe?.name;
+
   try {
     const url = force
       ? `/meal-plans/${mealId}/cook?force=true`
@@ -1895,8 +1913,8 @@ async function markMealCooked(dateKey, mealId, force = false) {
     closeModal();
     await Promise.all([loadMealPlans(), loadPantry(), loadShoppingList()]);
     showSuccess(force
-      ? 'Meal marked as cooked (pantry unchanged).'
-      : 'Meal cooked! Ingredients deducted from pantry.');
+      ? (recipeName ? `${recipeName} marked as cooked.` : 'Meal marked as cooked (pantry unchanged).')
+      : (recipeName ? `${recipeName} cooked! Ingredients deducted from your Pantry.` : 'Meal cooked! Ingredients deducted from pantry.'));
   } catch (error) {
     console.error('Error marking meal as cooked:', error);
 

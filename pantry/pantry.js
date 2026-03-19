@@ -339,7 +339,7 @@
         renderPantryLedger();
       }
     }, 1000);
-    window.addEventListener('unload', () => clearInterval(interval));
+    window.addEventListener('pagehide', () => clearInterval(interval));
   }
 
   // Expose for app.js
