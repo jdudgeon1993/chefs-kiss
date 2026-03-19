@@ -997,3 +997,113 @@
   .unified-ledger-table .ledger-col-item      { width: 22%; }
   .unified-ledger-table .ledger-col-locations  { width: 25%; }
 }
+
+/* ===================================================================
+   PANTRY HELP STRIP — Collapsible OH/RE/AV legend
+   =================================================================== */
+.pantry-help-strip {
+  margin-bottom: 0.6rem;
+  border: 1px solid rgba(42, 36, 30, 0.12);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #faf8f5;
+}
+
+.pantry-help-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: "Lato", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #6b5e52);
+  text-align: left;
+  letter-spacing: 0.2px;
+}
+
+.pantry-help-toggle:hover {
+  background: rgba(42, 36, 30, 0.04);
+}
+
+.help-chevron {
+  font-size: 0.7rem;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.pantry-help-body {
+  display: none;
+  padding: 0.6rem 0.75rem 0.75rem;
+  border-top: 1px solid rgba(42, 36, 30, 0.1);
+}
+
+.pantry-help-body.is-open {
+  display: block;
+}
+
+.help-definitions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.help-def {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-family: "Lato", sans-serif;
+  font-size: 0.8rem;
+  color: var(--color-text-primary, #2a241e);
+}
+
+.help-abbr {
+  font-weight: 700;
+  min-width: 2.2rem;
+  color: #7a5c44;
+}
+
+.help-sep {
+  color: rgba(42, 36, 30, 0.3);
+  flex-shrink: 0;
+}
+
+.help-unit-note {
+  margin: 0;
+  font-family: "Lato", sans-serif;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary, #6b5e52);
+  font-style: italic;
+}
+
+/* Clickable column headers */
+.unified-ledger-table thead th.ledger-col-oh,
+.unified-ledger-table thead th.ledger-col-re,
+.unified-ledger-table thead th.ledger-col-av {
+  cursor: pointer;
+  text-decoration: underline dotted rgba(42, 36, 30, 0.4);
+  text-underline-offset: 2px;
+}
+
+.unified-ledger-table thead th.ledger-col-oh:hover,
+.unified-ledger-table thead th.ledger-col-re:hover,
+.unified-ledger-table thead th.ledger-col-av:hover {
+  color: #7a5c44;
+}
+
+/* ===================================================================
+   FORM HINT — subtle helper text below form fields
+   =================================================================== */
+.form-hint {
+  margin: 0.2rem 0 0;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary, #6b5e52);
+  font-style: italic;
+  font-family: "Lato", sans-serif;
+}
