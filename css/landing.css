@@ -102,6 +102,23 @@ body.landing-active .main-content {
   position: relative;
 }
 
+/* Warm radial gradient overlaid on the gingham — fades from cream centre */
+.landing-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 38%,
+    rgba(255, 248, 240, 0.88) 0%,
+    rgba(250, 243, 232, 0.65) 40%,
+    rgba(240, 232, 218, 0.3) 70%,
+    transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Ensure hero children sit above the gradient overlay */
+.landing-hero > * { position: relative; z-index: 1; }
+
 .landing-logo {
   font-size: 4rem;
   margin-bottom: 1rem;
@@ -473,19 +490,25 @@ body.landing-active .main-content {
 }
 
 .landing-feature-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  display: block;
-  animation: pulse 2s ease-in-out infinite;
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem;
+  font-size: 2rem;
+  transition: transform 0.3s ease;
 }
 
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
+/* Per-card icon tints */
+.landing-feature-card:nth-child(1) .landing-feature-icon { background: rgba(212, 169, 106, 0.18); }
+.landing-feature-card:nth-child(2) .landing-feature-icon { background: rgba(139, 147, 118, 0.18); }
+.landing-feature-card:nth-child(3) .landing-feature-icon { background: rgba(125, 102, 122, 0.16); }
+.landing-feature-card:nth-child(4) .landing-feature-icon { background: rgba(80, 140, 100, 0.14); }
 
 .landing-feature-card:hover .landing-feature-icon {
-  animation: pulse 0.4s ease;
+  transform: scale(1.08);
 }
 
 .landing-feature-title {
@@ -500,6 +523,25 @@ body.landing-active .main-content {
   color: var(--color-text-secondary);
   line-height: 1.6;
   font-size: 0.95rem;
+}
+
+/* ===================================================================
+   MANIFESTO LINE
+   =================================================================== */
+
+.landing-manifesto {
+  padding: 2.5rem 2rem 1rem;
+  text-align: center;
+}
+
+.landing-manifesto-text {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 1.5rem;
+  font-style: italic;
+  color: var(--color-text-secondary);
+  margin: 0;
+  opacity: 0.75;
+  letter-spacing: 0.02em;
 }
 
 /* ===================================================================
@@ -524,6 +566,20 @@ body.landing-active .main-content {
   text-align: center;
   padding: 2rem;
   position: relative;
+}
+
+/* Desktop step connectors — dashed line between circles */
+@media (min-width: 769px) {
+  .landing-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 4rem; /* vertically centres with the 60px circle (2rem padding + 30px radius) */
+    right: -1rem;
+    width: 2rem;
+    height: 0;
+    border-top: 2px dashed rgba(125, 102, 122, 0.35);
+    pointer-events: none;
+  }
 }
 
 .landing-step-number {
@@ -645,13 +701,11 @@ body.landing-active .main-content {
   margin-bottom: 2.5rem;
 }
 
-/* Demo CTA section (between steps and footer) */
+/* Demo CTA section — bold olive band */
 .landing-demo-cta {
-  padding: 3rem 2rem;
+  padding: 3.5rem 2rem;
   text-align: center;
-  background: rgba(139, 168, 142, 0.1);
-  border-top: 1px solid rgba(139, 168, 142, 0.3);
-  border-bottom: 1px solid rgba(139, 168, 142, 0.3);
+  background: #4a5c3d;
 }
 
 .landing-demo-cta-inner {
@@ -661,16 +715,53 @@ body.landing-active .main-content {
 
 .landing-demo-cta-title {
   font-family: "Playfair Display", Georgia, serif;
-  font-size: 1.8rem;
-  color: var(--color-header-purple);
+  font-size: 1.9rem;
+  color: rgba(255, 252, 240, 0.97);
   margin-bottom: 0.5rem;
   font-weight: 600;
 }
 
 .landing-demo-cta-text {
-  color: var(--color-text-secondary);
+  color: rgba(220, 215, 200, 0.88);
   font-size: 1rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.landing-btn-demo {
+  background: transparent;
+  color: rgba(255, 252, 240, 0.97);
+  border-color: rgba(255, 252, 240, 0.6);
+  font-size: 1rem;
+  padding: 0.85rem 2.25rem;
+}
+.landing-btn-demo:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 252, 240, 0.95);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+}
+
+/* ===================================================================
+   GENERIC FADE-IN-UP (IntersectionObserver adds .visible)
+   =================================================================== */
+
+.fade-in-up {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+
+.fade-in-up.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fade-in-up:nth-child(2) { transition-delay: 0.12s; }
+.fade-in-up:nth-child(3) { transition-delay: 0.24s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in-up { opacity: 1; transform: none; transition: none; }
 }
 
 /* ===================================================================
