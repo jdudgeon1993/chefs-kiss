@@ -19,8 +19,8 @@
   <script src="../js/settings.js?v=8"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../js/realtime.js?v=9"></script>
-  <script src="../js/emoji-maps.js?v=6"></script>
-  <script src="../js/faq.js?v=1"></script>
+  <script defer src="../js/emoji-maps.js?v=6"></script>
+  <script defer src="../js/faq.js?v=1"></script>
   <script defer src="../js/app.js?v=9"></script>
   <script defer src="recipes.js?v=7"></script>
 
@@ -177,7 +177,7 @@
               <input type="url" id="recipe-photo-url" placeholder="Paste URL" style="flex:1;min-width:150px;">
             </div>
             <div id="photo-upload-status" style="font-size:0.8rem;margin-top:0.25rem;"></div>
-            <img id="recipe-photo-preview" style="display:none;max-width:100%;max-height:120px;border-radius:8px;margin-top:0.5rem;object-fit:cover;">
+            <img id="recipe-photo-preview" alt="Recipe photo preview" style="display:none;max-width:100%;max-height:120px;border-radius:8px;margin-top:0.5rem;object-fit:cover;">
           </div>
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
