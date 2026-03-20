@@ -2201,14 +2201,28 @@ function injectAppBetaStrip() {
   // Don't inject twice
   if (document.getElementById('app-beta-strip')) return;
 
+  const isDemoMode = localStorage.getItem('demo-mode') === 'true';
   const strip = document.createElement('div');
   strip.id = 'app-beta-strip';
-  strip.className = 'app-beta-strip';
-  strip.innerHTML =
-    '<span class="app-beta-badge">Beta</span>' +
-    '<span class="app-beta-msg">Things may be a little rough around the edges.</span>' +
-    '<a href="https://docs.google.com/forms/d/e/1FAIpQLSeaL13TZXl5ey_grPlONWfFgiHZGBd5_AJDyHqel-Z4APnMcQ/viewform" ' +
-    'target="_blank" rel="noopener" class="app-beta-link">Found a bug? Tell us →</a>';
+
+  if (isDemoMode) {
+    document.body.classList.add('demo-mode-active');
+    strip.className = 'app-beta-strip app-demo-strip';
+    strip.innerHTML =
+      '<span class="app-demo-label">Demo Mode</span>' +
+      '<div class="app-demo-actions">' +
+        '<button onclick="window.demoCreateAccount()" class="app-demo-btn">Create Account</button>' +
+        '<button onclick="window.demoRestartTutorial()" class="app-demo-btn">Restart Tutorial</button>' +
+        '<button onclick="window.demoExitClean()" class="app-demo-btn app-demo-btn-ghost">Exit</button>' +
+      '</div>';
+  } else {
+    strip.className = 'app-beta-strip';
+    strip.innerHTML =
+      '<span class="app-beta-badge">Beta</span>' +
+      '<span class="app-beta-msg">Things may be a little rough around the edges.</span>' +
+      '<a href="https://docs.google.com/forms/d/e/1FAIpQLSeaL13TZXl5ey_grPlONWfFgiHZGBd5_AJDyHqel-Z4APnMcQ/viewform" ' +
+      'target="_blank" rel="noopener" class="app-beta-link">Found a bug? Tell us →</a>';
+  }
 
   // Insert right after the site-header so it appears below the fixed bar
   const header = document.querySelector('.site-header');
@@ -2218,6 +2232,23 @@ function injectAppBetaStrip() {
     document.body.prepend(strip);
   }
 }
+
+const _demoCleanKeys = ['demo-mode', 'demo-tutorial-step', 'pantry', 'recipes', 'planner', 'checkedShoppingItems'];
+
+window.demoCreateAccount = function () {
+  _demoCleanKeys.forEach(k => localStorage.removeItem(k));
+  window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/';
+};
+
+window.demoRestartTutorial = function () {
+  localStorage.setItem('demo-tutorial-step', '0');
+  window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/pantry/';
+};
+
+window.demoExitClean = function () {
+  _demoCleanKeys.forEach(k => localStorage.removeItem(k));
+  window.location.href = (window.CONFIG && window.CONFIG.BASE_PATH || '') + '/';
+};
 
 /* ===================================================================
    SERVICE WORKER — registration, update detection, banner

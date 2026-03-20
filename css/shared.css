@@ -2757,6 +2757,88 @@ body[data-section] .floating-action-menu {
 }
 
 /* ===================================================================
+   DEMO MODE STRIP
+   Replaces beta strip when demo-mode is active. Fixed full-width so
+   it always spans above the sidebar nav.
+   =================================================================== */
+
+.app-demo-strip {
+  position: fixed !important;
+  top: 70px;
+  left: 0;
+  right: 0;
+  height: 38px;
+  z-index: 199; /* above sidebar-nav */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  background: rgba(42, 36, 30, 0.97);
+  backdrop-filter: blur(6px);
+  font-size: 0.78rem;
+  color: rgba(255, 252, 245, 0.9);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+.app-demo-label {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  color: #d4a96a;
+  flex-shrink: 0;
+}
+
+.app-demo-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.app-demo-btn {
+  background: rgba(212, 169, 106, 0.85);
+  color: #2a241e;
+  border: none;
+  border-radius: 6px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.app-demo-btn:hover { background: #d4a96a; }
+
+.app-demo-btn-ghost {
+  background: transparent;
+  color: rgba(255, 252, 245, 0.6);
+  border: 1px solid rgba(255, 252, 245, 0.25);
+}
+.app-demo-btn-ghost:hover {
+  background: rgba(255, 252, 245, 0.08);
+  color: rgba(255, 252, 245, 0.9);
+}
+
+/* Push layout down when demo strip is visible */
+body.demo-mode-active {
+  padding-top: 108px; /* 70px header + 38px demo strip */
+}
+body.demo-mode-active .sidebar-nav {
+  top: 108px;
+  height: calc(100vh - 108px);
+}
+
+@media (max-width: 768px) {
+  .app-demo-strip { top: 60px; }
+  body.demo-mode-active { padding-top: 98px; } /* 60px + 38px */
+  .app-demo-label { display: none; }
+}
+
+@media (max-width: 480px) {
+  .app-demo-btn { font-size: 0.68rem; padding: 0.18rem 0.5rem; }
+}
+
+/* ===================================================================
    UPDATE AVAILABLE BANNER
    Shown at the bottom of the screen when a new SW version is ready
    =================================================================== */
