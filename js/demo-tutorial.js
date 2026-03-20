@@ -12,16 +12,24 @@
 
   // ── Helpers ──────────────────────────────────────────────────
 
-  function curStep()    { return parseInt(localStorage.getItem(STEP_KEY) ?? '-1', 10); }
-  function saveStep(n)  { localStorage.setItem(STEP_KEY, String(n)); }
-  function clearStep()  { localStorage.removeItem(STEP_KEY); }
-  function curPage()    { return document.body.dataset.section || ''; }
+  function curStep()   { return parseInt(localStorage.getItem(STEP_KEY) ?? '-1', 10); }
+  function saveStep(n) { localStorage.setItem(STEP_KEY, String(n)); }
+  function clearStep() { localStorage.removeItem(STEP_KEY); }
+  function curPage()   { return document.body.dataset.section || ''; }
 
   function tomorrowKey() {
     const d = new Date();
     d.setDate(d.getDate() + 1);
     return d.toISOString().split('T')[0];
   }
+
+  // Account for demo strip (38px) when present
+  function stripH() {
+    return document.body.classList.contains('demo-mode-active') ? 38 : 0;
+  }
+
+  // Top of safe viewport area (below fixed header + demo strip)
+  function safeTop() { return 70 + stripH() + 10; }
 
   // ── Step definitions ─────────────────────────────────────────
 
@@ -33,8 +41,8 @@
       page: 'pantry',
       type: 'center',
       title: 'Welcome to Peachy Pantry',
-      body: "This is a quick 2-minute tour. We'll add a grocery item, plan a meal for tomorrow, and watch the shopping list pull it all together.",
-      btn: "Let's go \u2192"
+      body: "A quick 2-minute tour. We\u2019ll add a grocery item, plan a meal for tomorrow, then watch the shopping list do its thing.",
+      btn: "Let\u2019s go \u2192"
     },
 
     // 1 — Pantry overview (pantry)
@@ -46,7 +54,7 @@
       fallback: '#pantry-section',
       position: 'below',
       title: 'Your Pantry',
-      body: 'Everything you have at home, tracked in one place. Organised by category with quantities, locations, and expiry dates.',
+      body: 'Everything you have at home, tracked in one place \u2014 categories, quantities, locations, and expiry dates.',
       btn: 'Next \u2192'
     },
 
@@ -72,7 +80,7 @@
       fallback: '#pantry-section',
       position: 'right',
       title: 'Adding an item',
-      body: "You just got back from the store with garlic. We\u2019ve filled in the details: <strong>Garlic</strong> \u00B7 category <strong>Produce</strong> \u00B7 unit <strong>cloves</strong> \u00B7 minimum <strong>4</strong> (your low-stock alert) \u00B7 <strong>4 cloves</strong> on the counter. Take a look at each field, then hit <strong>Save</strong>.",
+      body: "You just got back from the store with garlic. We\u2019ve pre-filled the form: <strong>name, category, unit</strong>, a <strong>minimum of 4</strong> so you get a low-stock alert, and <strong>4 cloves on the Counter</strong>. Take a look at each field, then hit <strong>Save</strong>.",
       waiting: 'Waiting for you to hit Save\u2026',
       waitFor: 'demo-item-saved',
       onShow() {
@@ -83,13 +91,8 @@
             unit: 'cloves',
             min: 4,
             preferredStore: '',
-            locations: [{
-              location: 'Counter',
-              qty: 4, quantity: 4,
-              expiry: '', expiration_date: ''
-            }]
+            locations: [{ location: 'Counter', qty: 4, quantity: 4, expiry: '', expiration_date: '' }]
           });
-          // Reposition spotlight after the panel scrolls into view
           setTimeout(() => repositionSpot('#panel-add-item', 'right'), 400);
         }
       }
@@ -106,11 +109,11 @@
       navigate: '/meals/'
     },
 
-    // 5 — Plan the meal (meals) — card at top so modal is fully accessible
+    // 5 — Plan the meal (meals) — card positioned beside the modal
     {
       id: 'plan-meal',
       page: 'meals',
-      type: 'top',
+      type: 'modal-adjacent',
       title: 'Plan a meal',
       body: "Chicken Stir-Fry is pre-selected for tomorrow\u2019s dinner. Take a look, then hit <strong>Add to Plan</strong>.",
       waiting: 'Waiting for you to add the meal\u2026',
@@ -122,9 +125,7 @@
           setTimeout(() => {
             const recSel = document.getElementById('meal-recipe');
             if (recSel) {
-              const opt = Array.from(recSel.options).find(o =>
-                o.text.toLowerCase().includes('stir')
-              );
+              const opt = Array.from(recSel.options).find(o => o.text.toLowerCase().includes('stir'));
               if (opt) recSel.value = opt.value;
             }
             const typeSel = document.getElementById('meal-type');
@@ -134,9 +135,9 @@
               );
               if (opt) typeSel.value = opt.value;
             }
-            // Reposition spotlight over the modal
-            repositionSpot('#modal-root', 'left');
-          }, 200);
+            // Reposition card now that modal has rendered
+            placeCardAdjacentToModal();
+          }, 250);
         }
       }
     },
@@ -161,7 +162,7 @@
       fallback: 'main',
       position: 'above',
       title: "Not just tonight\u2019s recipe",
-      body: "Peachy built this from two places: what your <strong>Chicken Stir-Fry</strong> needs, and what your <strong>pantry was already running low on</strong>. One list \u2014 nothing falls through the cracks.",
+      body: "Peachy built this from two sources: what your <strong>Chicken Stir-Fry</strong> needs, and what your <strong>pantry was already running low on</strong>. One list \u2014 nothing falls through the cracks.",
       btn: 'Next \u2192'
     },
 
@@ -192,13 +193,13 @@
         pointer-events: none;
       }
       #dt-overlay.dt-dimmed {
-        background: rgba(0,0,0,0.62);
+        background: rgba(0,0,0,0.58);
         pointer-events: all;
       }
       #dt-spot {
         position: fixed;
         border-radius: 6px;
-        box-shadow: 0 0 0 9999px rgba(0,0,0,0.62);
+        box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
         z-index: 8950;
         pointer-events: none;
       }
@@ -210,14 +211,18 @@
         padding: 1.4rem 1.6rem;
         max-width: 340px;
         width: calc(100vw - 32px);
-        box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+        box-shadow: 0 8px 40px rgba(0,0,0,0.28);
         font-family: inherit;
+      }
+      @media (min-width: 769px) {
+        #dt-card { max-width: 400px; }
+        #dt-card.dt-centered { max-width: 460px; }
       }
       #dt-card.dt-centered {
         top: 50% !important;
         left: 50% !important;
         transform: translate(-50%, -50%);
-        max-width: 420px;
+        max-width: 440px;
       }
       .dt-label {
         font-size: 0.68rem;
@@ -321,30 +326,36 @@
     spotBox.style.height = (h + pad * 2) + 'px';
   }
 
+  function cardWidth() {
+    // Respect the max-width set by CSS (400px on desktop, 340px on mobile)
+    return Math.min(window.innerWidth >= 769 ? 400 : 340, window.innerWidth - 32);
+  }
+
   function placeCard(el, pref) {
     const r   = el.getBoundingClientRect();
-    const W   = 340;
+    const W   = cardWidth();
     const H   = 240; // conservative estimate
     const gap = 18;
     const vw  = window.innerWidth;
     const vh  = window.innerHeight;
+    const top0 = safeTop();
 
     let top, left;
 
     if (pref === 'below' && r.bottom + H + gap < vh) {
       top  = r.bottom + gap;
       left = Math.max(16, Math.min(r.left, vw - W - 16));
-    } else if (pref === 'above' && r.top - H - gap > 0) {
+    } else if (pref === 'above' && r.top - H - gap > top0) {
       top  = r.top - H - gap;
       left = Math.max(16, Math.min(r.left, vw - W - 16));
     } else if (pref === 'right' && r.right + W + gap < vw) {
-      top  = Math.max(80, Math.min(r.top, vh - H - 16));
+      top  = Math.max(top0, Math.min(r.top, vh - H - 16));
       left = r.right + gap;
     } else if (pref === 'left' && r.left - W - gap > 0) {
-      top  = Math.max(80, Math.min(r.top, vh - H - 16));
+      top  = Math.max(top0, Math.min(r.top, vh - H - 16));
       left = r.left - W - gap;
     } else {
-      // fallback: below, clamped
+      // Fallback: below, clamped to viewport
       top  = Math.min(r.bottom + gap, vh - H - 16);
       left = Math.max(16, Math.min(r.left, vw - W - 16));
     }
@@ -352,6 +363,40 @@
     card.style.top  = top  + 'px';
     card.style.left = left + 'px';
     card.style.transform = '';
+  }
+
+  // Position card adjacent to an open modal (step 5)
+  function placeCardAdjacentToModal() {
+    if (!card) return;
+    const modalEl = document.querySelector('#modal-root > *');
+    const vw  = window.innerWidth;
+    const vh  = window.innerHeight;
+    const W   = cardWidth();
+    const H   = 220;
+    const gap = 16;
+    const top0 = safeTop();
+
+    if (modalEl) {
+      const r = modalEl.getBoundingClientRect();
+      // Prefer right of modal on desktop
+      if (r.right + W + gap <= vw - 8) {
+        card.style.top  = Math.max(top0, Math.min(r.top, vh - H - 16)) + 'px';
+        card.style.left = (r.right + gap) + 'px';
+      } else if (r.left - W - gap >= 8) {
+        card.style.top  = Math.max(top0, Math.min(r.top, vh - H - 16)) + 'px';
+        card.style.left = (r.left - W - gap) + 'px';
+      } else {
+        // Below modal (mobile / narrow screens)
+        card.style.top  = Math.min(r.bottom + gap, vh - H - 16) + 'px';
+        card.style.left = Math.max(16, (vw - W) / 2) + 'px';
+      }
+    } else {
+      // Modal not found yet — park below safe area
+      card.style.top  = top0 + 'px';
+      card.style.left = Math.max(16, (vw - W) / 2) + 'px';
+    }
+    card.style.transform = '';
+    card.style.width = W + 'px';
   }
 
   // ── Rendering ─────────────────────────────────────────────────
@@ -368,8 +413,8 @@
 
     if (step.type === 'center' || step.type === 'cta') {
       renderCenter(step, label);
-    } else if (step.type === 'top') {
-      renderTopCard(step, label);
+    } else if (step.type === 'modal-adjacent') {
+      renderModalAdjacent(step, label);
     } else {
       renderSpotlight(step, label);
     }
@@ -385,7 +430,7 @@
 
   function renderCenter(step, label) {
     if (spotBox) spotBox.style.display = 'none';
-    if (overlay) { overlay.classList.add('dt-dimmed'); }
+    if (overlay) overlay.classList.add('dt-dimmed');
 
     card.className = 'dt-centered';
 
@@ -394,7 +439,7 @@
         <div class="dt-label">${label}</div>
         <h3>${step.title}</h3>
         <p>${step.body}</p>
-        <a class="dt-cta-primary" href="${BASE}/">Create a free account \u2192</a>
+        <button class="dt-cta-primary" onclick="window.demoCreateAccount()">Create a free account \u2192</button>
         <button class="dt-cta-secondary" onclick="window.demoTutorial.finish()">Keep exploring the demo</button>
       `;
     } else {
@@ -411,35 +456,30 @@
     }
   }
 
-  // Card pinned to top of viewport — modal remains fully interactive below it
-  function renderTopCard(step, label) {
+  // Modal-adjacent: no extra dimming (modal provides its own backdrop),
+  // card positioned beside the modal so the form stays fully accessible.
+  function renderModalAdjacent(step, label) {
     if (spotBox) spotBox.style.display = 'none';
     if (overlay) overlay.classList.remove('dt-dimmed');
 
     buildSpotCard(step, label);
 
-    const vw = window.innerWidth;
-    const W  = Math.min(340, vw - 32);
-    card.className = '';
-    card.style.transform = '';
-    card.style.top  = '80px';
-    card.style.left = Math.max(16, (vw - W) / 2) + 'px';
+    // Initial placement (modal may not exist yet — onShow will reposition)
+    placeCardAdjacentToModal();
   }
 
   function renderSpotlight(step, label) {
     if (overlay) overlay.classList.remove('dt-dimmed');
 
-    const target   = step.target   ? document.querySelector(step.target)   : null;
-    const fallback = step.fallback  ? document.querySelector(step.fallback) : null;
+    const target   = step.target  ? document.querySelector(step.target)  : null;
+    const fallback = step.fallback ? document.querySelector(step.fallback) : null;
     const el       = target || fallback;
 
     if (el) {
       placeSpot(el);
-      // Card content first so we can measure
       buildSpotCard(step, label);
       placeCard(el, step.position || 'below');
     } else {
-      // No target — show as centered card
       if (spotBox) spotBox.style.display = 'none';
       if (overlay) overlay.classList.add('dt-dimmed');
       buildSpotCard(step, label);
