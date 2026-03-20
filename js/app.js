@@ -1581,6 +1581,47 @@ async function markMealCooked(dateKey, mealId, force = false) {
   const recipe = planMeal ? (window.recipes || []).find(r => r.id === planMeal.recipeId) : null;
   const recipeName = recipe?.name;
 
+  // Demo mode: mark cooked in localStorage and deduct from pantry
+  if (localStorage.getItem('demo-mode') === 'true') {
+    const planner = JSON.parse(localStorage.getItem('planner') || '{}');
+    let found = false;
+    for (const dateStr of Object.keys(planner)) {
+      const meal = (planner[dateStr] || []).find(m => m.id === mealId);
+      if (meal) {
+        meal.cooked = true;
+        found = true;
+        if (recipe) {
+          const pantry = JSON.parse(localStorage.getItem('pantry') || '[]');
+          for (const ing of (recipe.ingredients || [])) {
+            const item = pantry.find(p => p.name.toLowerCase() === (ing.name || '').toLowerCase());
+            if (item) {
+              let remaining = ing.qty || ing.quantity || 0;
+              for (const loc of (item.locations || [])) {
+                const deduct = Math.min(loc.qty || 0, remaining);
+                loc.qty = parseFloat((loc.qty - deduct).toFixed(2));
+                remaining = parseFloat((remaining - deduct).toFixed(2));
+                if (remaining <= 0) break;
+              }
+              item.totalQty = parseFloat(Math.max(0, (item.totalQty || 0) - (ing.qty || ing.quantity || 0)).toFixed(2));
+            }
+          }
+          localStorage.setItem('pantry', JSON.stringify(pantry));
+          window.pantry = pantry;
+        }
+        break;
+      }
+    }
+    if (found) {
+      localStorage.setItem('planner', JSON.stringify(planner));
+      window.planner = planner;
+      closeModal();
+      if (typeof window.reloadCalendar === 'function') window.reloadCalendar();
+      recalcDemoShoppingList();
+      showSuccess(recipeName ? `${recipeName} cooked! Ingredients deducted from your Pantry.` : 'Meal cooked!');
+    }
+    return;
+  }
+
   try {
     const url = force
       ? `/meal-plans/${mealId}/cook?force=true`
@@ -2013,28 +2054,64 @@ async function loadDemoApp() {
   if (typeof window.refreshRecipeView === 'function') window.refreshRecipeView();
   if (window.reloadCalendar) window.reloadCalendar();
 
+  calcDemoReservedIngredients();
   recalcDemoShoppingList();
   wireUpButtons();
   window.dispatchEvent(new CustomEvent('demo-app-ready'));
 }
 
 /**
+ * Calculate reserved ingredient quantities from future uncooked planned meals.
+ * Sets window.reservedIngredients so pantry RE/AV columns render correctly.
+ * Key format: "name|unit" (lowercase) — matches pantry.js _normalizeKey().
+ */
+function calcDemoReservedIngredients() {
+  const recipes = window.recipes || [];
+  const planner = window.planner || {};
+  const todayStr = new Date().toISOString().split('T')[0];
+  const reserved = {};
+
+  for (const [dateStr, meals] of Object.entries(planner)) {
+    if (dateStr < todayStr) continue;
+    for (const meal of (meals || [])) {
+      if (meal.cooked) continue;
+      const recipe = recipes.find(r => String(r.id) === String(meal.recipeId));
+      if (!recipe) continue;
+      for (const ing of (recipe.ingredients || [])) {
+        const key = `${(ing.name || '').trim().toLowerCase()}|${(ing.unit || '').trim().toLowerCase()}`;
+        reserved[key] = (reserved[key] || 0) + (ing.qty || ing.quantity || 0);
+      }
+    }
+  }
+
+  window.reservedIngredients = reserved;
+}
+
+/**
  * Recalculate the shopping list from localStorage data (demo mode only).
  * Mirrors the backend logic: threshold alerts + recipe gaps, merged per item.
+ * Aggregates needs across ALL planned meals before comparing to pantry.
  */
 function recalcDemoShoppingList() {
   if (localStorage.getItem('demo-mode') !== 'true') return;
 
-  const pantry  = window.pantry  || JSON.parse(localStorage.getItem('pantry')  || '[]');
-  const recipes = window.recipes || JSON.parse(localStorage.getItem('recipes') || '[]');
-  const planner = window.planner || JSON.parse(localStorage.getItem('planner') || '{}');
+  window.pantry  = window.pantry  || JSON.parse(localStorage.getItem('pantry')  || '[]');
+  window.recipes = window.recipes || JSON.parse(localStorage.getItem('recipes') || '[]');
+  window.planner = window.planner || JSON.parse(localStorage.getItem('planner') || '{}');
 
-  const items = {}; // key: "Name|unit"
+  // Keep reserved ingredients and pantry display in sync
+  calcDemoReservedIngredients();
+  if (typeof window.renderPantryLedger === 'function') window.renderPantryLedger();
 
-  // Build available-qty map (lowercase name → qty)
-  const avail = {};
+  const pantry  = window.pantry;
+  const recipes = window.recipes;
+  const planner = window.planner;
+  const items   = {}; // key: "Name|unit"
+
+  // Build on-hand map (lowercase name → qty)
+  const onHand = {};
   for (const p of pantry) {
-    avail[p.name.toLowerCase()] = p.totalQty || 0;
+    onHand[p.name.toLowerCase()] = p.totalQty || 0;
   }
 
   // 1. Threshold alerts
@@ -2053,8 +2130,12 @@ function recalcDemoShoppingList() {
     }
   }
 
-  // 2. Recipe gaps from future (or today's) uncooked planned meals
-  const todayStr = new Date().toISOString().split('T')[0];
+  // 2. Aggregate total recipe needs across all future uncooked meals first,
+  //    then compute the gap once (prevents under-counting when same ingredient
+  //    appears in multiple planned recipes).
+  const todayStr   = new Date().toISOString().split('T')[0];
+  const totalNeeds = {}; // key → { name, unit, qty, source }
+
   for (const [dateStr, meals] of Object.entries(planner)) {
     if (dateStr < todayStr) continue;
     for (const meal of (meals || [])) {
@@ -2062,27 +2143,33 @@ function recalcDemoShoppingList() {
       const recipe = recipes.find(r => String(r.id) === String(meal.recipeId));
       if (!recipe) continue;
       for (const ing of (recipe.ingredients || [])) {
-        const needed = ing.qty || ing.quantity || 0;
-        const have   = avail[ing.name.toLowerCase()] || 0;
-        const gap    = parseFloat(Math.max(0, needed - have).toFixed(2));
-        if (gap <= 0) continue;
         const key = `${ing.name}|${ing.unit}`;
-        if (items[key]) {
-          items[key].breakdown.meals += gap;
-          items[key].quantity = parseFloat(
-            Math.max(items[key].breakdown.meals, items[key].breakdown.threshold).toFixed(2)
-          );
-          if (items[key].breakdown.meals > 0) items[key].source = recipe.name;
-        } else {
-          items[key] = {
-            name: ing.name, unit: ing.unit,
-            category: 'Other',
-            quantity: gap,
-            source: recipe.name,
-            breakdown: { meals: gap, threshold: 0 }
-          };
+        if (!totalNeeds[key]) {
+          totalNeeds[key] = { name: ing.name, unit: ing.unit, qty: 0, source: recipe.name };
         }
+        totalNeeds[key].qty += ing.qty || ing.quantity || 0;
       }
+    }
+  }
+
+  for (const [key, need] of Object.entries(totalNeeds)) {
+    const have = onHand[need.name.toLowerCase()] || 0;
+    const gap  = parseFloat(Math.max(0, need.qty - have).toFixed(2));
+    if (gap <= 0) continue;
+    if (items[key]) {
+      items[key].breakdown.meals = gap;
+      items[key].quantity = parseFloat(
+        Math.max(items[key].breakdown.meals, items[key].breakdown.threshold).toFixed(2)
+      );
+      items[key].source = need.source;
+    } else {
+      items[key] = {
+        name: need.name, unit: need.unit,
+        category: 'Other',
+        quantity: gap,
+        source: need.source,
+        breakdown: { meals: gap, threshold: 0 }
+      };
     }
   }
 

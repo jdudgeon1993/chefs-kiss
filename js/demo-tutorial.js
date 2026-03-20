@@ -106,14 +106,11 @@
       navigate: '/meals/'
     },
 
-    // 5 — Plan the meal (meals) — modal pre-filled, user clicks Add to Plan
+    // 5 — Plan the meal (meals) — card at top so modal is fully accessible
     {
       id: 'plan-meal',
       page: 'meals',
-      type: 'spotlight',
-      target: '#modal-root',
-      fallback: '#calendar-container',
-      position: 'left',
+      type: 'top',
       title: 'Plan a meal',
       body: "Chicken Stir-Fry is pre-selected for tomorrow\u2019s dinner. Take a look, then hit <strong>Add to Plan</strong>.",
       waiting: 'Waiting for you to add the meal\u2026',
@@ -371,6 +368,8 @@
 
     if (step.type === 'center' || step.type === 'cta') {
       renderCenter(step, label);
+    } else if (step.type === 'top') {
+      renderTopCard(step, label);
     } else {
       renderSpotlight(step, label);
     }
@@ -410,6 +409,21 @@
       `;
       document.getElementById('dt-next-btn').addEventListener('click', () => advance());
     }
+  }
+
+  // Card pinned to top of viewport — modal remains fully interactive below it
+  function renderTopCard(step, label) {
+    if (spotBox) spotBox.style.display = 'none';
+    if (overlay) overlay.classList.remove('dt-dimmed');
+
+    buildSpotCard(step, label);
+
+    const vw = window.innerWidth;
+    const W  = Math.min(340, vw - 32);
+    card.className = '';
+    card.style.transform = '';
+    card.style.top  = '80px';
+    card.style.left = Math.max(16, (vw - W) / 2) + 'px';
   }
 
   function renderSpotlight(step, label) {
