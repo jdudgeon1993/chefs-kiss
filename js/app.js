@@ -1124,6 +1124,40 @@ async function saveIngredient(itemId) {
 
   // Locations are now optional - item can exist without specifying where it is
 
+  // Demo mode: write to localStorage instead of the API
+  if (localStorage.getItem('demo-mode') === 'true') {
+    const pantry = JSON.parse(localStorage.getItem('pantry') || '[]');
+    const totalQty = locations.reduce((s, l) => s + (l.quantity || 0), 0);
+    const item = {
+      id: itemId || ('demo-pantry-' + Date.now()),
+      name, category, unit,
+      min,
+      totalQty,
+      locations: locations.map(l => ({
+        id: 'demo-loc-' + Date.now() + Math.random(),
+        location: l.location,
+        qty: l.quantity || 0,
+        expiry: l.expiration_date || ''
+      })),
+      notes: '',
+      preferredStore: preferredStore || ''
+    };
+    if (itemId) {
+      const idx = pantry.findIndex(p => p.id === itemId);
+      if (idx !== -1) pantry[idx] = item;
+    } else {
+      pantry.push(item);
+    }
+    localStorage.setItem('pantry', JSON.stringify(pantry));
+    window.pantry = pantry;
+    showSuccess(`${name} ${itemId ? 'updated in' : 'added to'} your Pantry.`);
+    closeModal();
+    if (typeof window.renderPantryLedger === 'function') window.renderPantryLedger();
+    recalcDemoShoppingList();
+    window.dispatchEvent(new CustomEvent('demo-item-saved'));
+    return;
+  }
+
   try {
     const payload = { name, category, unit, min_threshold: min, locations };
     if (preferredStore) payload.preferred_store = preferredStore;
@@ -1468,6 +1502,22 @@ async function addMealToDay(dateKey) {
 
   const recipe = (window.recipes || []).find(r => String(r.id) === String(recipeId));
   const day = new Date(dateKey + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
+
+  // Demo mode: write to localStorage instead of the API
+  if (localStorage.getItem('demo-mode') === 'true') {
+    const planner = JSON.parse(localStorage.getItem('planner') || '{}');
+    const meals = planner[dateKey] || [];
+    meals.push({ id: 'demo-meal-' + Date.now(), recipeId, mealType, cooked: false });
+    planner[dateKey] = meals;
+    localStorage.setItem('planner', JSON.stringify(planner));
+    window.planner = planner;
+    closeModal();
+    if (typeof window.reloadCalendar === 'function') window.reloadCalendar();
+    recalcDemoShoppingList();
+    showSuccess(recipe ? `${recipe.name} scheduled for ${day}!` : 'Meal planned!');
+    window.dispatchEvent(new CustomEvent('demo-meal-saved'));
+    return;
+  }
 
   try {
     await API.call('/meal-plans/', {
@@ -1963,7 +2013,82 @@ async function loadDemoApp() {
   if (typeof window.refreshRecipeView === 'function') window.refreshRecipeView();
   if (window.reloadCalendar) window.reloadCalendar();
 
+  recalcDemoShoppingList();
   wireUpButtons();
+  window.dispatchEvent(new CustomEvent('demo-app-ready'));
+}
+
+/**
+ * Recalculate the shopping list from localStorage data (demo mode only).
+ * Mirrors the backend logic: threshold alerts + recipe gaps, merged per item.
+ */
+function recalcDemoShoppingList() {
+  if (localStorage.getItem('demo-mode') !== 'true') return;
+
+  const pantry  = window.pantry  || JSON.parse(localStorage.getItem('pantry')  || '[]');
+  const recipes = window.recipes || JSON.parse(localStorage.getItem('recipes') || '[]');
+  const planner = window.planner || JSON.parse(localStorage.getItem('planner') || '{}');
+
+  const items = {}; // key: "Name|unit"
+
+  // Build available-qty map (lowercase name → qty)
+  const avail = {};
+  for (const p of pantry) {
+    avail[p.name.toLowerCase()] = p.totalQty || 0;
+  }
+
+  // 1. Threshold alerts
+  for (const p of pantry) {
+    if (p.min > 0 && (p.totalQty || 0) < p.min) {
+      const gap = parseFloat((p.min - (p.totalQty || 0)).toFixed(2));
+      const key = `${p.name}|${p.unit}`;
+      items[key] = {
+        name: p.name, unit: p.unit,
+        category: p.category || 'Other',
+        quantity: gap,
+        source: 'Low stock',
+        breakdown: { meals: 0, threshold: gap },
+        preferred_store: p.preferredStore || ''
+      };
+    }
+  }
+
+  // 2. Recipe gaps from future (or today's) uncooked planned meals
+  const todayStr = new Date().toISOString().split('T')[0];
+  for (const [dateStr, meals] of Object.entries(planner)) {
+    if (dateStr < todayStr) continue;
+    for (const meal of (meals || [])) {
+      if (meal.cooked) continue;
+      const recipe = recipes.find(r => String(r.id) === String(meal.recipeId));
+      if (!recipe) continue;
+      for (const ing of (recipe.ingredients || [])) {
+        const needed = ing.qty || ing.quantity || 0;
+        const have   = avail[ing.name.toLowerCase()] || 0;
+        const gap    = parseFloat(Math.max(0, needed - have).toFixed(2));
+        if (gap <= 0) continue;
+        const key = `${ing.name}|${ing.unit}`;
+        if (items[key]) {
+          items[key].breakdown.meals += gap;
+          items[key].quantity = parseFloat(
+            Math.max(items[key].breakdown.meals, items[key].breakdown.threshold).toFixed(2)
+          );
+          if (items[key].breakdown.meals > 0) items[key].source = recipe.name;
+        } else {
+          items[key] = {
+            name: ing.name, unit: ing.unit,
+            category: 'Other',
+            quantity: gap,
+            source: recipe.name,
+            breakdown: { meals: gap, threshold: 0 }
+          };
+        }
+      }
+    }
+  }
+
+  const list = Object.values(items);
+  window.shoppingList = list;
+  if (typeof renderShoppingList === 'function') renderShoppingList(list);
 }
 
 // Initialize when DOM is ready

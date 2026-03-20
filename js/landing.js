@@ -15,214 +15,191 @@ function demoDate(dayOffset) {
 /**
  * Build demo data fresh each time so dates are always relative to today.
  * Saved to localStorage only — demo mode, no API calls.
+ *
+ * Narrative: pantry is mostly stocked but a few items are running low.
+ * The tutorial walks the user through adding garlic, planning Chicken
+ * Stir-Fry for tomorrow, then reveals the shopping list showing both
+ * the recipe gaps and the unrelated low-stock items.
  */
 function buildDemoData() {
   return {
     pantry: [
+      // ── Stir-Fry ingredients (recipe is planned during tutorial) ──
       {
         id: 'demo-pantry-1',
-        name: 'Flour',
+        name: 'Chicken Breast',
         unit: 'lb',
-        category: 'Baking',
-        min: 2,
-        totalQty: 5,
-        locations: [
-          { id: 'demo-loc-1', location: 'Pantry', qty: 3, expiry: '' },
-          { id: 'demo-loc-2', location: 'Storage', qty: 2, expiry: '' }
-        ],
+        category: 'Meat',
+        min: 1,
+        totalQty: 1.5,
+        locations: [{ id: 'demo-loc-1', location: 'Freezer', qty: 1.5, expiry: demoDate(30) }],
         notes: ''
       },
       {
+        // Missing entirely — recipe gap
         id: 'demo-pantry-2',
-        name: 'Sugar',
-        unit: 'lb',
-        category: 'Baking',
-        min: 1,
-        totalQty: 3,
-        locations: [
-          { id: 'demo-loc-3', location: 'Pantry', qty: 3, expiry: '' }
-        ],
+        name: 'Bell Pepper',
+        unit: 'whole',
+        category: 'Produce',
+        min: 2,
+        totalQty: 0,
+        locations: [],
         notes: ''
       },
       {
         id: 'demo-pantry-3',
-        name: 'Eggs',
-        unit: 'unit',
-        category: 'Dairy',
-        min: 12,
-        totalQty: 4,
-        locations: [
-          { id: 'demo-loc-4', location: 'Fridge', qty: 4, expiry: demoDate(5) }
-        ],
+        name: 'Broccoli',
+        unit: 'cup',
+        category: 'Produce',
+        min: 1,
+        totalQty: 2,
+        locations: [{ id: 'demo-loc-3', location: 'Fridge', qty: 2, expiry: demoDate(4) }],
         notes: ''
       },
       {
+        // Low threshold AND recipe gap — shows merged breakdown
         id: 'demo-pantry-4',
-        name: 'Milk',
-        unit: 'gal',
-        category: 'Dairy',
-        min: 1,
-        totalQty: 0.25,
-        locations: [
-          { id: 'demo-loc-5', location: 'Fridge', qty: 0.25, expiry: demoDate(-2) }
-        ],
+        name: 'Soy Sauce',
+        unit: 'tbsp',
+        category: 'Condiments',
+        min: 3,
+        totalQty: 1,
+        locations: [{ id: 'demo-loc-4', location: 'Pantry', qty: 1, expiry: '' }],
         notes: ''
       },
       {
         id: 'demo-pantry-5',
-        name: 'Butter',
-        unit: 'lb',
-        category: 'Dairy',
-        min: 1,
-        totalQty: 0.25,
-        locations: [
-          { id: 'demo-loc-6', location: 'Fridge', qty: 0.25, expiry: '' }
-        ],
+        name: 'Sesame Oil',
+        unit: 'tbsp',
+        category: 'Oils',
+        min: 2,
+        totalQty: 3,
+        locations: [{ id: 'demo-loc-5', location: 'Pantry', qty: 3, expiry: '' }],
         notes: ''
       },
       {
+        // Low threshold AND recipe gap — shows merged breakdown
         id: 'demo-pantry-6',
-        name: 'Chicken Breast',
-        unit: 'lb',
-        category: 'Meat',
-        min: 2,
-        totalQty: 4,
-        locations: [
-          { id: 'demo-loc-7', location: 'Freezer', qty: 4, expiry: demoDate(30) }
-        ],
+        name: 'Rice',
+        unit: 'cup',
+        category: 'Grains',
+        min: 1.5,
+        totalQty: 0.5,
+        locations: [{ id: 'demo-loc-6', location: 'Pantry', qty: 0.5, expiry: '' }],
         notes: ''
       },
+      // ── Other items — low stock, unrelated to tonight's recipe ──
       {
         id: 'demo-pantry-7',
-        name: 'Tomatoes',
+        name: 'Eggs',
         unit: 'unit',
-        category: 'Produce',
+        category: 'Dairy',
         min: 6,
-        totalQty: 2,
-        locations: [
-          { id: 'demo-loc-8', location: 'Counter', qty: 2, expiry: '' }
-        ],
+        totalQty: 3,
+        locations: [{ id: 'demo-loc-7', location: 'Fridge', qty: 3, expiry: demoDate(7) }],
         notes: ''
       },
       {
         id: 'demo-pantry-8',
+        name: 'Milk',
+        unit: 'gal',
+        category: 'Dairy',
+        min: 1,
+        totalQty: 0.5,
+        locations: [{ id: 'demo-loc-8', location: 'Fridge', qty: 0.5, expiry: demoDate(3) }],
+        notes: ''
+      },
+      // ── Well-stocked items — makes pantry feel real ──
+      {
+        id: 'demo-pantry-9',
         name: 'Pasta',
         unit: 'lb',
         category: 'Grains',
-        min: 1,
-        totalQty: 2,
-        locations: [
-          { id: 'demo-loc-9', location: 'Pantry', qty: 2, expiry: '' }
-        ],
-        notes: ''
-      },
-      {
-        id: 'demo-pantry-9',
-        name: 'Olive Oil',
-        unit: 'bottle',
-        category: 'Oils',
-        min: 2,
-        totalQty: 0.5,
-        locations: [
-          { id: 'demo-loc-10', location: 'Pantry', qty: 0.5, expiry: '' }
-        ],
+        min: 0.5,
+        totalQty: 1,
+        locations: [{ id: 'demo-loc-9', location: 'Pantry', qty: 1, expiry: '' }],
         notes: ''
       },
       {
         id: 'demo-pantry-10',
-        name: 'Garlic',
-        unit: 'bulb',
-        category: 'Produce',
-        min: 3,
-        totalQty: 1,
-        locations: [
-          { id: 'demo-loc-11', location: 'Counter', qty: 1, expiry: '' }
-        ],
+        name: 'Olive Oil',
+        unit: 'bottle',
+        category: 'Oils',
+        min: 1,
+        totalQty: 1.5,
+        locations: [{ id: 'demo-loc-10', location: 'Pantry', qty: 1.5, expiry: '' }],
         notes: ''
       },
       {
         id: 'demo-pantry-11',
-        name: 'Chocolate Chips',
-        unit: 'bag',
-        category: 'Baking',
-        min: 1,
-        totalQty: 0,
-        locations: [],
+        name: 'Onion',
+        unit: 'whole',
+        category: 'Produce',
+        min: 2,
+        totalQty: 3,
+        locations: [{ id: 'demo-loc-11', location: 'Counter', qty: 3, expiry: '' }],
         notes: ''
       }
+      // Note: Garlic is intentionally absent — the tutorial adds it
     ],
     recipes: [
       {
         id: 'demo-recipe-1',
-        name: 'Chocolate Chip Cookies',
-        servings: 24,
+        name: 'Spaghetti Bolognese',
+        servings: 4,
         ingredients: [
-          { name: 'Flour', qty: 2.5, unit: 'cup' },
-          { name: 'Sugar', qty: 1, unit: 'cup' },
-          { name: 'Butter', qty: 0.5, unit: 'lb' },
-          { name: 'Eggs', qty: 2, unit: 'unit' },
-          { name: 'Chocolate Chips', qty: 2, unit: 'cup' }
+          { name: 'Pasta', qty: 0.5, unit: 'lb' },
+          { name: 'Olive Oil', qty: 2, unit: 'tbsp' },
+          { name: 'Onion', qty: 1, unit: 'whole' }
         ],
-        instructions: '1. Preheat oven to 375\u00B0F\n2. Mix butter and sugar until fluffy\n3. Add eggs and mix well\n4. Gradually add flour\n5. Fold in chocolate chips\n6. Drop spoonfuls onto baking sheet\n7. Bake 10-12 minutes until golden',
+        instructions: '1. Boil pasta until al dente\n2. Saut\u00E9 onion in olive oil\n3. Add sauce and simmer 20 minutes\n4. Toss with pasta and serve',
         photo: '',
-        tags: ['Dessert', 'Baking'],
+        tags: ['Main Dish', 'Italian'],
         isFavorite: true
       },
       {
         id: 'demo-recipe-2',
-        name: 'Grilled Chicken',
-        servings: 4,
+        name: 'Veggie Omelette',
+        servings: 2,
         ingredients: [
-          { name: 'Chicken Breast', qty: 2, unit: 'lb' },
-          { name: 'Olive Oil', qty: 2, unit: 'tbsp' },
-          { name: 'Garlic Powder', qty: 1, unit: 'tsp' },
-          { name: 'Paprika', qty: 1, unit: 'tsp' }
+          { name: 'Eggs', qty: 3, unit: 'unit' },
+          { name: 'Milk', qty: 2, unit: 'tbsp' },
+          { name: 'Olive Oil', qty: 1, unit: 'tbsp' }
         ],
-        instructions: '1. Season chicken with oil and spices\n2. Let marinate 30 minutes\n3. Preheat grill to medium-high\n4. Grill 6-7 minutes per side\n5. Let rest 5 minutes before serving',
+        instructions: '1. Whisk eggs and milk\n2. Heat oil in non-stick pan\n3. Pour egg mixture and cook until edges set\n4. Fold and serve',
         photo: '',
-        tags: ['Main Dish', 'Healthy', 'Quick'],
-        isFavorite: true
+        tags: ['Breakfast', 'Quick', 'Vegetarian'],
+        isFavorite: false
       },
       {
+        // Tutorial target recipe — partially stocked
         id: 'demo-recipe-3',
-        name: 'Pasta with Tomato Sauce',
-        servings: 4,
+        name: 'Chicken Stir-Fry',
+        servings: 2,
         ingredients: [
-          { name: 'Pasta', qty: 1, unit: 'lb' },
-          { name: 'Tomatoes', qty: 6, unit: 'unit' },
-          { name: 'Olive Oil', qty: 3, unit: 'tbsp' },
-          { name: 'Garlic', qty: 4, unit: 'clove' },
-          { name: 'Basil', qty: 0.25, unit: 'cup' }
+          { name: 'Chicken Breast', qty: 1, unit: 'lb' },
+          { name: 'Bell Pepper', qty: 2, unit: 'whole' },
+          { name: 'Broccoli', qty: 1, unit: 'cup' },
+          { name: 'Soy Sauce', qty: 2, unit: 'tbsp' },
+          { name: 'Sesame Oil', qty: 1, unit: 'tbsp' },
+          { name: 'Rice', qty: 2, unit: 'cup' },
+          { name: 'Garlic', qty: 2, unit: 'cloves' }
         ],
-        instructions: '1. Boil water for pasta\n2. Dice tomatoes and saut\u00E9 with garlic and oil\n3. Cook pasta until al dente\n4. Combine pasta with sauce\n5. Top with fresh basil',
+        instructions: '1. Cook rice per package instructions\n2. Slice chicken and stir-fry 5-6 minutes\n3. Add vegetables and cook 3-4 minutes\n4. Add soy sauce and sesame oil\n5. Mince garlic and stir in\n6. Serve over rice',
         photo: '',
-        tags: ['Main Dish', 'Italian', 'Vegetarian'],
-        isFavorite: false
+        tags: ['Main Dish', 'Asian', 'Quick'],
+        isFavorite: true
       }
     ],
     planner: {
-      [demoDate(-2)]: [
-        { id: 'demo-meal-1', recipeId: 'demo-recipe-2', mealType: 'dinner', cooked: true }
+      // Past cooked meals — gives the calendar history
+      [demoDate(-3)]: [
+        { id: 'demo-meal-1', recipeId: 'demo-recipe-1', mealType: 'Dinner', cooked: true }
       ],
       [demoDate(-1)]: [
-        { id: 'demo-meal-2', recipeId: 'demo-recipe-3', mealType: 'dinner', cooked: true }
-      ],
-      [demoDate(0)]: [
-        { id: 'demo-meal-3', recipeId: 'demo-recipe-2', mealType: 'dinner', cooked: false }
-      ],
-      [demoDate(1)]: [
-        { id: 'demo-meal-4', recipeId: 'demo-recipe-1', mealType: 'snack', cooked: false }
-      ],
-      [demoDate(2)]: [
-        { id: 'demo-meal-5', recipeId: 'demo-recipe-3', mealType: 'lunch', cooked: false },
-        { id: 'demo-meal-6', recipeId: 'demo-recipe-2', mealType: 'dinner', cooked: false }
-      ],
-      [demoDate(3)]: [
-        { id: 'demo-meal-7', recipeId: 'demo-recipe-1', mealType: 'dessert', cooked: false }
-      ],
-      [demoDate(4)]: [
-        { id: 'demo-meal-8', recipeId: 'demo-recipe-3', mealType: 'dinner', cooked: false }
+        { id: 'demo-meal-2', recipeId: 'demo-recipe-2', mealType: 'Breakfast', cooked: true }
       ]
+      // Tomorrow is deliberately empty — tutorial plans Chicken Stir-Fry there
     }
   };
 }
@@ -265,6 +242,7 @@ function loadDemoAccount() {
   try {
     // Set demo mode flag and store demo data in localStorage
     localStorage.setItem('demo-mode', 'true');
+    localStorage.setItem('demo-tutorial-step', '0');
     const data = buildDemoData();
     localStorage.setItem('pantry', JSON.stringify(data.pantry));
     localStorage.setItem('recipes', JSON.stringify(data.recipes));
@@ -287,6 +265,7 @@ function exitDemoMode() {
   if (confirm('Exit demo mode? All demo data will be cleared.')) {
     // Clear demo flag and data
     localStorage.removeItem('demo-mode');
+    localStorage.removeItem('demo-tutorial-step');
     localStorage.removeItem('pantry');
     localStorage.removeItem('recipes');
     localStorage.removeItem('planner');
