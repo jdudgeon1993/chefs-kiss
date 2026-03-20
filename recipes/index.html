@@ -78,7 +78,7 @@
   </nav>
 
   <!-- MAIN CONTENT AREA -->
-  <div class="main-content">
+  <div class="main-content" role="main">
     <!-- FLOATING ACTION BUTTON -->
     <div class="floating-action-menu fab-recipes" id="fab-recipes">
       <button class="floating-action-btn" id="fab-btn-recipe" title="Add Recipe" onclick="if(window.openRecipeModal) window.openRecipeModal(null)">+</button>
@@ -92,7 +92,7 @@
 
       <div class="recipes-controls">
         <input type="text" id="recipe-search-ledger" placeholder="Search recipes..." class="recipe-search-input">
-        <select id="recipe-sort-select" class="recipe-sort-select">
+        <select id="recipe-sort-select" class="recipe-sort-select" aria-label="Sort recipes">
           <option value="a-z">Sort: A-Z</option>
           <option value="z-a">Sort: Z-A</option>
           <option value="favorites">Sort: Favorites First</option>

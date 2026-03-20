@@ -108,7 +108,7 @@
 .recipe-filter-pill {
   background: white;
   border: 2px solid var(--color-accent-olive);
-  color: var(--color-accent-olive);
+  color: #5a6147; /* darkened from #8b9376 — meets WCAG AA 4.5:1 on white */
   padding: 0.5rem 1.25rem;
   font-size: 0.85rem;
   font-weight: 600;

@@ -474,7 +474,7 @@
       }
     }, 1000);
     // Clean up if page unloads
-    window.addEventListener('unload', () => clearInterval(interval));
+    window.addEventListener('pagehide', () => clearInterval(interval));
   }
 
   // Expose for app.js to call directly after data updates (avoids 1s watcher delay)
