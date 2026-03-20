@@ -2951,6 +2951,13 @@ body[data-section] .sidebar-nav {
 @media (min-width: 769px) {
   .update-banner {
     bottom: 2rem; /* no bottom nav on desktop */
+    left: calc(50% + 40px); /* shift right by half the 80px sidebar */
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .update-banner {
+    left: calc(50% + 35px); /* sidebar is 70px on tablet */
   }
 }
 

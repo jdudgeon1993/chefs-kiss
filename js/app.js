@@ -2183,11 +2183,13 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     initApp();
     initServiceWorker();
+    initConnectionMonitor();
     injectAppBetaStrip();
   });
 } else {
   initApp();
   initServiceWorker();
+  initConnectionMonitor();
   injectAppBetaStrip();
 }
 
@@ -2255,6 +2257,115 @@ window.demoExitClean = function () {
    =================================================================== */
 
 let _swRegistration = null;
+let _swUpdatePending = false;
+let _connectionLost = false;
+let _offlineTimer = null;
+let _bannerDismissed = false;
+
+// Renders (or updates/removes) the single smart banner based on current state.
+// Only one banner ever exists; its message and dismiss availability adapt to
+// whichever combination of conditions is active.
+function _syncSmartBanner() {
+  const existing = document.getElementById('update-banner');
+
+  // Neither condition active — hide the banner if it's showing
+  if (!_swUpdatePending && !_connectionLost) {
+    if (existing) {
+      existing.classList.add('update-banner-hiding');
+      setTimeout(() => existing.remove(), 350);
+    }
+    return;
+  }
+
+  // User dismissed the update-only banner — don't re-show unless connection drops
+  if (_bannerDismissed && !_connectionLost) return;
+
+  // Dismiss is only allowed when there is no connection problem
+  const canDismiss = !_connectionLost;
+
+  let msg;
+  if (_swUpdatePending && _connectionLost) {
+    msg = "You're offline and a new update is available. Refresh to reconnect.";
+  } else if (_swUpdatePending) {
+    msg = '✨ A new version of Peachy Pantry is ready.';
+  } else {
+    msg = "You're offline — changes won't save. Refresh to reconnect.";
+  }
+
+  // If banner already exists, update it in place
+  if (existing) {
+    existing.querySelector('.update-banner-msg').textContent = msg;
+    const dismissBtn = existing.querySelector('.update-banner-dismiss');
+    if (dismissBtn) dismissBtn.style.display = canDismiss ? '' : 'none';
+    return;
+  }
+
+  // Build the banner
+  const banner = document.createElement('div');
+  banner.id = 'update-banner';
+  banner.className = 'update-banner';
+
+  const msgEl = document.createElement('span');
+  msgEl.className = 'update-banner-msg';
+  msgEl.textContent = msg;
+
+  const refreshBtn = document.createElement('button');
+  refreshBtn.className = 'update-banner-btn';
+  refreshBtn.textContent = 'Refresh now';
+
+  banner.appendChild(msgEl);
+  banner.appendChild(refreshBtn);
+
+  if (canDismiss) {
+    const dismissBtn = document.createElement('button');
+    dismissBtn.className = 'update-banner-dismiss';
+    dismissBtn.setAttribute('aria-label', 'Dismiss');
+    dismissBtn.textContent = '✕';
+    dismissBtn.addEventListener('click', () => {
+      _bannerDismissed = true;
+      banner.classList.add('update-banner-hiding');
+      setTimeout(() => banner.remove(), 350);
+    });
+    banner.appendChild(dismissBtn);
+  }
+
+  refreshBtn.addEventListener('click', () => {
+    if (_swRegistration?.waiting) {
+      _swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      // controllerchange will fire and reload
+    } else {
+      window.location.reload();
+    }
+  });
+
+  document.body.appendChild(banner);
+}
+
+function initConnectionMonitor() {
+  function handleOffline() {
+    clearTimeout(_offlineTimer);
+    // 6s debounce — ignore brief blips
+    _offlineTimer = setTimeout(() => {
+      _connectionLost = true;
+      _bannerDismissed = false; // connection lost overrides any prior dismiss
+      _syncSmartBanner();
+    }, 6000);
+  }
+
+  function handleOnline() {
+    clearTimeout(_offlineTimer);
+    if (_connectionLost) {
+      _connectionLost = false;
+      _syncSmartBanner();
+    }
+  }
+
+  window.addEventListener('offline', handleOffline);
+  window.addEventListener('online', handleOnline);
+
+  // Handle the case where the page loads while already offline
+  if (!navigator.onLine) handleOffline();
+}
 
 function initServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
@@ -2267,7 +2378,8 @@ function initServiceWorker() {
 
       // If there's already a waiting SW on page load, show the banner
       if (reg.waiting) {
-        showUpdateBanner(reg);
+        _swUpdatePending = true;
+        _syncSmartBanner();
       }
 
       // New SW found while page is open
@@ -2275,7 +2387,8 @@ function initServiceWorker() {
         const newWorker = reg.installing;
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            showUpdateBanner(reg);
+            _swUpdatePending = true;
+            _syncSmartBanner();
           }
         });
       });
@@ -2302,29 +2415,4 @@ function initServiceWorker() {
       // controllerchange will fire and reload
     }
   }, { capture: true });
-}
-
-function showUpdateBanner(reg) {
-  // Don't show twice
-  if (document.getElementById('update-banner')) return;
-
-  const banner = document.createElement('div');
-  banner.id = 'update-banner';
-  banner.className = 'update-banner';
-  banner.innerHTML =
-    '<span class="update-banner-msg">✨ A new version of Peachy Pantry is ready.</span>' +
-    '<button class="update-banner-btn" id="update-banner-refresh">Refresh now</button>' +
-    '<button class="update-banner-dismiss" id="update-banner-dismiss" aria-label="Dismiss">✕</button>';
-
-  document.body.appendChild(banner);
-
-  document.getElementById('update-banner-refresh').addEventListener('click', () => {
-    if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-    // controllerchange → reload
-  });
-
-  document.getElementById('update-banner-dismiss').addEventListener('click', () => {
-    banner.classList.add('update-banner-hiding');
-    setTimeout(() => banner.remove(), 350);
-  });
 }
