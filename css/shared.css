@@ -2710,7 +2710,7 @@ body[data-section] .floating-action-menu {
 .app-beta-strip {
   position: sticky;
   top: 70px; /* flush below the fixed 70px site-header */
-  z-index: 160; /* above sidebar-nav (150); icons sit below the 38px strip so they're never obscured */
+  z-index: 140; /* below sidebar-nav (150) */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2819,14 +2819,17 @@ body[data-section] .floating-action-menu {
   color: rgba(255, 252, 245, 0.9);
 }
 
-/* Push layout down when demo strip is visible */
+/* Push sidebar below the beta/demo strip on all app pages */
+body[data-section] .sidebar-nav {
+  top: 108px; /* 70px header + 38px strip */
+  height: calc(100vh - 108px);
+}
+
+/* Push layout down when demo strip is visible (fixed, not sticky) */
 body.demo-mode-active {
   padding-top: 108px; /* 70px header + 38px demo strip */
 }
-body.demo-mode-active .sidebar-nav {
-  top: 108px;
-  height: calc(100vh - 108px);
-}
+/* sidebar top is already 108px from the rule above */
 
 @media (max-width: 768px) {
   .app-demo-strip { top: 60px; }
