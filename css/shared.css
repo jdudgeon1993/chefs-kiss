@@ -2710,7 +2710,7 @@ body[data-section] .floating-action-menu {
 .app-beta-strip {
   position: sticky;
   top: 70px; /* flush below the fixed 70px site-header */
-  z-index: 140; /* below sidebar-nav (150) so nav stays on top */
+  z-index: 160; /* above sidebar-nav (150); icons sit below the 38px strip so they're never obscured */
   display: flex;
   align-items: center;
   justify-content: center;
