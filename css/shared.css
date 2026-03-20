@@ -2708,9 +2708,11 @@ body[data-section] .floating-action-menu {
    =================================================================== */
 
 .app-beta-strip {
-  position: sticky;
+  position: fixed;
   top: 70px; /* flush below the fixed 70px site-header */
-  z-index: 140; /* below sidebar-nav (150) */
+  left: 0;
+  right: 0;
+  z-index: 199; /* above sidebar-nav */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2751,7 +2753,7 @@ body[data-section] .floating-action-menu {
 }
 .app-beta-link:hover { opacity: 0.7; }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .app-beta-msg { display: none; }
   .app-beta-strip { top: 60px; } /* mobile header is shorter */
 }
@@ -2819,21 +2821,19 @@ body[data-section] .floating-action-menu {
   color: rgba(255, 252, 245, 0.9);
 }
 
-/* Push sidebar below the beta/demo strip on all app pages */
+/* All app pages: body pushed below header (70px) + fixed strip (38px) */
+body[data-section] {
+  padding-top: 108px;
+}
 body[data-section] .sidebar-nav {
-  top: 108px; /* 70px header + 38px strip */
+  top: 108px;
   height: calc(100vh - 108px);
 }
 
-/* Push layout down when demo strip is visible (fixed, not sticky) */
-body.demo-mode-active {
-  padding-top: 108px; /* 70px header + 38px demo strip */
-}
-/* sidebar top is already 108px from the rule above */
-
 @media (max-width: 768px) {
+  /* Mobile header is 60px; strip follows at top: 60px (set above on .app-beta-strip) */
+  body[data-section] { padding-top: 98px; } /* 60px + 38px */
   .app-demo-strip { top: 60px; }
-  body.demo-mode-active { padding-top: 98px; } /* 60px + 38px */
   .app-demo-label { display: none; }
 }
 
