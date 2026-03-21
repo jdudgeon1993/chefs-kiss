@@ -2,7 +2,7 @@
 // Loaded on all section pages (recipes, pantry, shopping, meals)
 (function() {
   const token = localStorage.getItem('auth_token');
-  const isDemo = localStorage.getItem('demo-mode') === 'true';
+  const isDemo = localStorage.getItem('demo-mode') === 'true' || new URLSearchParams(window.location.search).get('demo') === 'true';
   const base = (window.CONFIG && window.CONFIG.BASE_PATH) || '';
 
   // No token and not demo → redirect to landing
