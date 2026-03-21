@@ -5,12 +5,7 @@
 .shopping-section {
   min-height: 100dvh;
   flex-direction: column;
-  padding: var(--layout-padding);
   max-width: var(--layout-max-width-narrow);
-  margin: 0 auto;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .shopping-header {
@@ -22,8 +17,6 @@
 
 .shopping-header h2 {
   font-size: 1.75rem;
-  color: var(--color-text-primary);
-  font-family: "Libre Baskerville", Georgia, serif;
   margin: 0;
 }
 

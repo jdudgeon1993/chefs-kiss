@@ -804,6 +804,30 @@ body[data-section] .floating-action-menu {
 
 
 /* -------------------------------------------------------------------
+   7. PAGE SECTION CARD (shared across shopping / recipes / meal planning)
+   ------------------------------------------------------------------- */
+.shopping-section,
+.recipes-section,
+.meal-planning-section {
+  padding: var(--layout-padding);
+  margin: 0 auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* -------------------------------------------------------------------
+   8. PAGE HEADING TYPOGRAPHY (all four section h2s)
+   ------------------------------------------------------------------- */
+.shopping-header h2,
+.recipes-header h2,
+.meal-planning-header h2,
+.pantry-header h2 {
+  font-family: "Libre Baskerville", Georgia, serif;
+  color: var(--color-text-primary);
+}
+
+/* -------------------------------------------------------------------
    12. RESPONSIVE (Mobile & Tablet)
    ------------------------------------------------------------------- */
 
