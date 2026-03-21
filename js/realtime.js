@@ -138,6 +138,8 @@ async function initRealtime() {
             showToast('Live sync restored', 'success', 2000);
             _lastStatusToastAt = now;
           }
+          // Clear the smart banner if realtime was previously lost
+          if (window._notifyRealtimeState) window._notifyRealtimeState(false);
           _wasDisconnected = false;
           _disconnectedAt = 0;
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
@@ -173,11 +175,7 @@ function _scheduleReconnect(reason) {
 
   if (_reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
     console.warn('Realtime: max reconnect attempts reached');
-    const now = Date.now();
-    if ((now - _lastStatusToastAt) >= STATUS_TOAST_COOLDOWN_MS) {
-      showToast("Live sync offline — refresh if changes aren't appearing", 'error', 8000);
-      _lastStatusToastAt = now;
-    }
+    if (window._notifyRealtimeState) window._notifyRealtimeState(true);
     return;
   }
 

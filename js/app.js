@@ -2259,8 +2259,16 @@ window.demoExitClean = function () {
 let _swRegistration = null;
 let _swUpdatePending = false;
 let _connectionLost = false;
+let _realtimeLost = false;
 let _offlineTimer = null;
 let _bannerDismissed = false;
+
+// Called by realtime.js when WebSocket exhausts reconnect attempts (lost=true)
+// or successfully reconnects (lost=false).
+window._notifyRealtimeState = function(lost) {
+  _realtimeLost = lost;
+  _syncSmartBanner();
+};
 
 // Renders (or updates/removes) the single smart banner based on current state.
 // Only one banner ever exists; its message and dismiss availability adapt to
@@ -2268,8 +2276,8 @@ let _bannerDismissed = false;
 function _syncSmartBanner() {
   const existing = document.getElementById('update-banner');
 
-  // Neither condition active — hide the banner if it's showing
-  if (!_swUpdatePending && !_connectionLost) {
+  // No active conditions — hide the banner if it's showing
+  if (!_swUpdatePending && !_connectionLost && !_realtimeLost) {
     if (existing) {
       existing.classList.add('update-banner-hiding');
       setTimeout(() => existing.remove(), 350);
@@ -2277,19 +2285,23 @@ function _syncSmartBanner() {
     return;
   }
 
-  // User dismissed the update-only banner — don't re-show unless connection drops
+  // User dismissed — don't re-show unless a non-dismissable condition is active
   if (_bannerDismissed && !_connectionLost) return;
 
-  // Dismiss is only allowed when there is no connection problem
+  // Offline is undismissable (changes won't save); realtime lost alone can be dismissed
   const canDismiss = !_connectionLost;
 
   let msg;
-  if (_swUpdatePending && _connectionLost) {
+  if (_connectionLost && _swUpdatePending) {
     msg = "You're offline and a new update is available. Refresh to reconnect.";
-  } else if (_swUpdatePending) {
-    msg = '✨ A new version of Peachy Pantry is ready.';
-  } else {
+  } else if (_connectionLost) {
     msg = "You're offline — changes won't save. Refresh to reconnect.";
+  } else if (_realtimeLost && _swUpdatePending) {
+    msg = "Live sync lost and a new version is ready. Refresh to apply.";
+  } else if (_realtimeLost) {
+    msg = "Live sync lost — refresh if changes aren't appearing.";
+  } else {
+    msg = '✨ A new version of Peachy Pantry is ready.';
   }
 
   // If banner already exists, update it in place
