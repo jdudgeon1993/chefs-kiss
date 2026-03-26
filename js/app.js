@@ -1483,6 +1483,24 @@ function openDayModal(dateKey) {
   modalRoot.innerHTML = '';
   modalRoot.appendChild(clone);
 
+  // Build multiplier stepper
+  const multiplierSteps = document.getElementById('day-modal-multiplier-steps');
+  const multiplierInput = document.getElementById('day-modal-multiplier-value');
+  if (multiplierSteps) {
+    [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4].forEach(step => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'multiplier-step-btn' + (step === 1 ? ' active' : '');
+      btn.textContent = '\u00d7' + step;
+      btn.addEventListener('click', () => {
+        if (multiplierInput) multiplierInput.value = step;
+        multiplierSteps.querySelectorAll('.multiplier-step-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      multiplierSteps.appendChild(btn);
+    });
+  }
+
   const form = document.getElementById('add-meal-form');
   form.onsubmit = async (e) => {
     e.preventDefault();
@@ -1494,6 +1512,8 @@ function openDayModal(dateKey) {
 async function addMealToDay(dateKey) {
   const recipeId = document.getElementById('meal-recipe').value;
   const mealType = document.getElementById('meal-type').value;
+  const multiplierEl = document.getElementById('day-modal-multiplier-value');
+  const servingMultiplier = multiplierEl ? parseFloat(multiplierEl.value) || 1 : 1;
 
   if (!recipeId) {
     showError('Please select a recipe');
@@ -1507,7 +1527,7 @@ async function addMealToDay(dateKey) {
   if (localStorage.getItem('demo-mode') === 'true') {
     const planner = JSON.parse(localStorage.getItem('planner') || '{}');
     const meals = planner[dateKey] || [];
-    meals.push({ id: 'demo-meal-' + Date.now(), recipeId, mealType, cooked: false });
+    meals.push({ id: 'demo-meal-' + Date.now(), recipeId, mealType, cooked: false, servingMultiplier });
     planner[dateKey] = meals;
     localStorage.setItem('planner', JSON.stringify(planner));
     window.planner = planner;
@@ -1522,7 +1542,7 @@ async function addMealToDay(dateKey) {
   try {
     await API.call('/meal-plans/', {
       method: 'POST',
-      body: JSON.stringify({ date: dateKey, recipe_id: recipeId, serving_multiplier: 1 })
+      body: JSON.stringify({ date: dateKey, recipe_id: recipeId, serving_multiplier: servingMultiplier })
     });
     closeModal();
     await Promise.all([loadMealPlans(), loadShoppingList()]);
@@ -1555,15 +1575,30 @@ function openCookNowModal(recipe, dateKey, mealId) {
   const tpl = document.getElementById('tpl-cook-now-modal');
   if (!modalRoot || !tpl) return;
 
+  // Find the meal's serving multiplier
+  const allMeals = Object.values(window.planner || {}).flat();
+  const planMeal = allMeals.find(m => m.id === mealId);
+  const multiplier = (planMeal && planMeal.servingMultiplier) || 1;
+
   const clone = tpl.content.cloneNode(true);
   clone.querySelector('[data-field="recipeName"]').textContent = recipe.name;
 
   const list = clone.querySelector('[data-field="ingredientsList"]');
   (recipe.ingredients || []).forEach(ing => {
+    const qty = parseFloat(ing.qty || ing.quantity || 0);
+    const scaled = qty * multiplier;
+    const displayQty = scaled === 0 ? '' : (Number.isInteger(scaled) ? String(scaled) : parseFloat(scaled.toFixed(2)).toString());
     const li = document.createElement('li');
-    li.textContent = `${ing.qty || ing.quantity} ${ing.unit} ${ing.name}`;
+    li.textContent = `${displayQty} ${ing.unit} ${ing.name}`;
     list.appendChild(li);
   });
+
+  if (multiplier !== 1) {
+    const note = document.createElement('p');
+    note.style.cssText = 'font-size:0.8rem;opacity:0.6;margin-top:0.5rem;';
+    note.textContent = `Scaled \u00d7${multiplier} (base recipe serves ${recipe.servings || 4})`;
+    list.after(note);
+  }
 
   clone.querySelector('[data-action="cook"]').onclick = () => markMealCooked(dateKey, mealId);
 
@@ -2259,8 +2294,16 @@ window.demoExitClean = function () {
 let _swRegistration = null;
 let _swUpdatePending = false;
 let _connectionLost = false;
+let _realtimeLost = false;
 let _offlineTimer = null;
 let _bannerDismissed = false;
+
+// Called by realtime.js when WebSocket exhausts reconnect attempts (lost=true)
+// or successfully reconnects (lost=false).
+window._notifyRealtimeState = function(lost) {
+  _realtimeLost = lost;
+  _syncSmartBanner();
+};
 
 // Renders (or updates/removes) the single smart banner based on current state.
 // Only one banner ever exists; its message and dismiss availability adapt to
@@ -2268,8 +2311,8 @@ let _bannerDismissed = false;
 function _syncSmartBanner() {
   const existing = document.getElementById('update-banner');
 
-  // Neither condition active — hide the banner if it's showing
-  if (!_swUpdatePending && !_connectionLost) {
+  // No active conditions — hide the banner if it's showing
+  if (!_swUpdatePending && !_connectionLost && !_realtimeLost) {
     if (existing) {
       existing.classList.add('update-banner-hiding');
       setTimeout(() => existing.remove(), 350);
@@ -2277,19 +2320,23 @@ function _syncSmartBanner() {
     return;
   }
 
-  // User dismissed the update-only banner — don't re-show unless connection drops
+  // User dismissed — don't re-show unless a non-dismissable condition is active
   if (_bannerDismissed && !_connectionLost) return;
 
-  // Dismiss is only allowed when there is no connection problem
+  // Offline is undismissable (changes won't save); realtime lost alone can be dismissed
   const canDismiss = !_connectionLost;
 
   let msg;
-  if (_swUpdatePending && _connectionLost) {
+  if (_connectionLost && _swUpdatePending) {
     msg = "You're offline and a new update is available. Refresh to reconnect.";
-  } else if (_swUpdatePending) {
-    msg = '✨ A new version of Peachy Pantry is ready.';
-  } else {
+  } else if (_connectionLost) {
     msg = "You're offline — changes won't save. Refresh to reconnect.";
+  } else if (_realtimeLost && _swUpdatePending) {
+    msg = "Live sync lost and a new version is ready. Refresh to apply.";
+  } else if (_realtimeLost) {
+    msg = "Live sync lost — refresh if changes aren't appearing.";
+  } else {
+    msg = '✨ A new version of Peachy Pantry is ready.';
   }
 
   // If banner already exists, update it in place

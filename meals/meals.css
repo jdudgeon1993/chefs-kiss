@@ -6,12 +6,7 @@
 .meal-planning-section {
   display: flex;
   flex-direction: column;
-  padding: var(--layout-padding);
   max-width: var(--layout-max-width);
-  margin: 0 auto;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden; /* Prevent horizontal bleed from calendar grid */
 }
 
@@ -21,8 +16,6 @@
 
 .meal-planning-header h2 {
   font-size: 1.5rem;
-  color: var(--color-text-primary);
-  font-family: "Libre Baskerville", Georgia, serif;
   margin: 0;
 }
 
@@ -715,4 +708,45 @@
     min-height: 110px;
     padding: 1rem;
   }
+}
+
+/* ── Scheduled meal multiplier badge ────────────────────────────── */
+.scheduled-recipe-multiplier {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(139,147,118,0.15);
+  border: 1px solid rgba(139,147,118,0.35);
+  border-radius: 5px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 0.15rem 0.4rem;
+  transition: background 0.15s;
+  user-select: none;
+  white-space: nowrap;
+}
+.scheduled-recipe-multiplier:hover {
+  background: rgba(139,147,118,0.3);
+  color: var(--color-text-primary);
+}
+
+/* ── Multiplier inline stepper (inside scheduled card) ─────────── */
+.multiplier-inline-stepper {
+  background: var(--color-card-bg);
+  border: 1.5px solid var(--color-recipe-border);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  left: 0;
+  margin-top: 0.5rem;
+  padding: 0.6rem;
+  position: absolute;
+  z-index: 50;
+}
+.scheduled-recipe-meta {
+  position: relative;
 }

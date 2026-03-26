@@ -225,9 +225,23 @@
     const esc = typeof escapeHTML === 'function' ? escapeHTML : (s) => String(s);
     const safeId = esc(String(recipe.id));
 
-    const ingredientsHTML = recipe.ingredients && recipe.ingredients.length > 0
-      ? recipe.ingredients.map(ing => `<li>${esc(String(ing.qty || ''))} ${esc(ing.unit || '')} ${esc(ing.name || '')}</li>`).join('')
-      : '<li style="opacity: 0.6;">No ingredients listed</li>';
+    const MULTIPLIER_STEPS = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4];
+    let detailMultiplier = 1;
+
+    function renderDetailIngredients(mult) {
+      const ul = recipeDetailModal.querySelector('#detail-ingredients-ul');
+      if (!ul) return;
+      if (!recipe.ingredients || recipe.ingredients.length === 0) {
+        ul.innerHTML = '<li style="opacity: 0.6;">No ingredients listed</li>';
+        return;
+      }
+      ul.innerHTML = recipe.ingredients.map(ing => {
+        const qty = parseFloat(ing.qty || ing.quantity || 0);
+        const scaled = qty * mult;
+        const displayQty = scaled === 0 ? '' : (Number.isInteger(scaled) ? String(scaled) : parseFloat(scaled.toFixed(2)).toString());
+        return `<li>${esc(displayQty)} ${esc(ing.unit || '')} ${esc(ing.name || '')}</li>`;
+      }).join('');
+    }
 
     const instructionsHTML = esc(recipe.instructions || recipe.method || 'No instructions provided');
     const servings = recipe.servings || recipe.yield || '4';
@@ -261,6 +275,11 @@
             <span><strong>TIME:</strong> ${esc(String(time))}</span>
           </div>
 
+          <div class="recipe-multiplier-row">
+            <span class="recipe-multiplier-label">Scale</span>
+            <div class="recipe-multiplier-steps" id="detail-multiplier-steps"></div>
+          </div>
+
           <div class="recipe-tags-section">
             <div class="recipe-tags-header">
               <span class="recipe-tags-label">Tags:</span>
@@ -277,7 +296,7 @@
           <div class="recipe-vintage-card-columns">
             <div class="recipe-vintage-card-column">
               <h3>Ingredients</h3>
-              <ul>${ingredientsHTML}</ul>
+              <ul id="detail-ingredients-ul"></ul>
             </div>
             <div class="recipe-vintage-card-column">
               <h3>Preparation</h3>
@@ -338,6 +357,25 @@
     document.addEventListener('keydown', handleEsc);
 
     document.body.appendChild(recipeDetailModal);
+
+    // Build multiplier stepper
+    const stepperEl = recipeDetailModal.querySelector('#detail-multiplier-steps');
+    if (stepperEl) {
+      MULTIPLIER_STEPS.forEach(step => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'multiplier-step-btn' + (step === detailMultiplier ? ' active' : '');
+        btn.textContent = '\u00d7' + step;
+        btn.addEventListener('click', () => {
+          detailMultiplier = step;
+          stepperEl.querySelectorAll('.multiplier-step-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          renderDetailIngredients(detailMultiplier);
+        });
+        stepperEl.appendChild(btn);
+      });
+    }
+    renderDetailIngredients(detailMultiplier);
   }
 
   // Toggle favorite status
@@ -474,7 +512,7 @@
       }
     }, 1000);
     // Clean up if page unloads
-    window.addEventListener('unload', () => clearInterval(interval));
+    window.addEventListener('pagehide', () => clearInterval(interval));
   }
 
   // Expose for app.js to call directly after data updates (avoids 1s watcher delay)

@@ -17,6 +17,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the entire project (backend + frontend files)
 COPY . .
 
+# Minify CSS and JS assets in-place
+RUN python build.py
+
 # Bust browser JS/CSS cache on every deploy.
 # Replaces every ?v=<anything> query param in HTML files with the build
 # timestamp so browsers always fetch the latest scripts after a deploy.

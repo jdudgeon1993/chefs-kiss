@@ -7,12 +7,7 @@
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: var(--layout-padding);
   max-width: var(--layout-max-width);
-  margin: 0 auto;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .recipes-header {
@@ -21,8 +16,6 @@
 
 .recipes-header h2 {
   font-size: 1.75rem;
-  color: var(--color-text-primary);
-  font-family: "Libre Baskerville", Georgia, serif;
   margin: 0;
 }
 
@@ -108,7 +101,7 @@
 .recipe-filter-pill {
   background: white;
   border: 2px solid var(--color-accent-olive);
-  color: var(--color-accent-olive);
+  color: #5a6147; /* darkened from #8b9376 — meets WCAG AA 4.5:1 on white */
   padding: 0.5rem 1.25rem;
   font-size: 0.85rem;
   font-weight: 600;
@@ -1094,4 +1087,36 @@
   z-index: 10;
   max-width: 750px;
   margin: 0 auto;
+}
+
+/* ── Recipe Detail — Multiplier Row ─────────────────────────────── */
+.recipe-multiplier-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.recipe-multiplier-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.recipe-multiplier-steps {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+/* Day modal — multiplier label */
+.multiplier-group-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.4rem;
+  display: block;
 }

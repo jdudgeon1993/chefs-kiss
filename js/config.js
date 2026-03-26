@@ -2,7 +2,11 @@
  * Peachy Pantry Configuration
  */
 
-const RAW_BACKEND_URL = 'https://chefs-kiss-production.up.railway.app';
+// When served directly from Railway, the backend is same-origin.
+// When served from GitHub Pages, point to the production Railway backend.
+const RAW_BACKEND_URL = window.location.hostname.endsWith('github.io')
+  ? 'https://chefs-kiss-production.up.railway.app'
+  : window.location.origin;
 
 // Normalize: force https and strip trailing slash
 const BACKEND_URL = RAW_BACKEND_URL.replace(/^http:/, 'https:').replace(/\/+$/, '');
