@@ -365,7 +365,7 @@
 
           try {
             await API.call('/meal-plans/' + meal.id, {
-              method: 'PATCH',
+              method: 'PUT',
               body: JSON.stringify({ serving_multiplier: step })
             });
             await Promise.all([window.loadMealPlans(), window.loadShoppingList()]);
