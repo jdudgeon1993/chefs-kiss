@@ -1088,3 +1088,35 @@
   max-width: 750px;
   margin: 0 auto;
 }
+
+/* ── Recipe Detail — Multiplier Row ─────────────────────────────── */
+.recipe-multiplier-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.recipe-multiplier-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.recipe-multiplier-steps {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+/* Day modal — multiplier label */
+.multiplier-group-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.4rem;
+  display: block;
+}

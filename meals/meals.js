@@ -47,7 +47,8 @@
           recipeId: meal.recipeId,
           recipeName: recipeName,
           mealType: meal.mealType || 'Dinner',
-          cooked: meal.cooked || false
+          cooked: meal.cooked || false,
+          servingMultiplier: meal.servingMultiplier || 1
         };
       });
     });
@@ -321,8 +322,76 @@
     typeBadge.className = 'scheduled-recipe-type';
     typeBadge.textContent = meal.mealType;
 
+    const multiplier = meal.servingMultiplier || 1;
+    const multBadge = document.createElement('span');
+    multBadge.className = 'scheduled-recipe-multiplier';
+    multBadge.textContent = '\u00d7' + multiplier;
+    multBadge.title = 'Tap to change serving scale';
+
+    multBadge.addEventListener('click', function(e) {
+      e.stopPropagation();
+      // Remove any existing popover
+      const existing = meta.querySelector('.multiplier-inline-stepper');
+      if (existing) { existing.remove(); return; }
+
+      const stepper = document.createElement('div');
+      stepper.className = 'multiplier-inline-stepper';
+
+      [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4].forEach(function(step) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'multiplier-step-btn' + (step === multiplier ? ' active' : '');
+        btn.textContent = '\u00d7' + step;
+        btn.addEventListener('click', async function(ev) {
+          ev.stopPropagation();
+          stepper.remove();
+          multBadge.textContent = '\u00d7' + step;
+
+          // Demo mode
+          if (localStorage.getItem('demo-mode') === 'true') {
+            const planner = JSON.parse(localStorage.getItem('planner') || '{}');
+            for (const dateStr of Object.keys(planner)) {
+              const m = (planner[dateStr] || []).find(function(x) { return x.id === meal.id; });
+              if (m) { m.servingMultiplier = step; break; }
+            }
+            localStorage.setItem('planner', JSON.stringify(planner));
+            for (const dateStr of Object.keys(window.planner || {})) {
+              const m = (window.planner[dateStr] || []).find(function(x) { return x.id === meal.id; });
+              if (m) { m.servingMultiplier = step; break; }
+            }
+            if (typeof window.reloadCalendar === 'function') window.reloadCalendar();
+            return;
+          }
+
+          try {
+            await API.call('/meal-plans/' + meal.id, {
+              method: 'PATCH',
+              body: JSON.stringify({ serving_multiplier: step })
+            });
+            await Promise.all([window.loadMealPlans(), window.loadShoppingList()]);
+            if (typeof window.reloadCalendar === 'function') window.reloadCalendar();
+          } catch (err) {
+            console.error('Error updating multiplier:', err);
+          }
+        });
+        stepper.appendChild(btn);
+      });
+
+      meta.appendChild(stepper);
+
+      // Close on outside click
+      function onOutside(ev) {
+        if (!stepper.contains(ev.target) && ev.target !== multBadge) {
+          stepper.remove();
+          document.removeEventListener('click', onOutside);
+        }
+      }
+      document.addEventListener('click', onOutside);
+    });
+
     meta.appendChild(dateDiv);
     meta.appendChild(typeBadge);
+    meta.appendChild(multBadge);
     details.appendChild(name);
     details.appendChild(meta);
 

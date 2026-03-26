@@ -2677,3 +2677,28 @@ body[data-section] .sidebar-nav {
     padding: 1.25rem 1.25rem 1.5rem;
   }
 }
+
+/* ── Serving Multiplier Stepper ──────────────────────────────────── */
+.multiplier-step-btn {
+  background: rgba(139,147,118,0.12);
+  border: 1px solid rgba(139,147,118,0.3);
+  border-radius: 6px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.3rem 0.55rem;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  min-height: 36px;
+}
+.multiplier-step-btn:hover {
+  background: rgba(139,147,118,0.25);
+  border-color: var(--color-accent-olive);
+}
+.multiplier-step-btn.active {
+  background: var(--color-accent-olive);
+  border-color: var(--color-accent-olive);
+  color: white;
+}
