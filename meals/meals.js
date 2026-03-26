@@ -360,18 +360,22 @@
               if (m) { m.servingMultiplier = step; break; }
             }
             if (typeof window.reloadCalendar === 'function') window.reloadCalendar();
+            if (typeof showToast === 'function') showToast('Scale updated', 'success', 2500);
             return;
           }
 
           try {
+            if (typeof markLocalWrite === 'function') markLocalWrite();
             await API.call('/meal-plans/' + meal.id, {
               method: 'PUT',
               body: JSON.stringify({ serving_multiplier: step })
             });
             await Promise.all([window.loadMealPlans(), window.loadShoppingList()]);
             if (typeof window.reloadCalendar === 'function') window.reloadCalendar();
+            if (typeof showToast === 'function') showToast('Scale updated', 'success', 2500);
           } catch (err) {
             console.error('Error updating multiplier:', err);
+            if (typeof showError === 'function') showError('Failed to update scale');
           }
         });
         stepper.appendChild(btn);

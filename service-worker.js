@@ -16,22 +16,16 @@
  * - SW skips waiting, activates, controllerchange fires, app reloads cleanly
  */
 
-const CACHE_NAME = 'peachy-pantry-v8';
+const CACHE_NAME = 'peachy-pantry-v9';
 const API_CACHE = 'peachy-pantry-api-v3';
 
-// Static assets to pre-cache on install.
-// HTML files are intentionally excluded — always fetched fresh so
-// updated JS/CSS version strings take effect immediately.
+// Only cache assets required for the Shopping List offline/Focus Mode experience.
+// App JS and shared CSS are intentionally excluded — they deploy frequently and
+// should always be fetched fresh. Browser HTTP cache handles short-lived caching
+// of those files based on their Cache-Control headers.
 const STATIC_ASSETS = [
-  '/css/shared.css',
   '/css/shopping-focus-mode.css',
-  '/js/app.js',
-  '/js/api.js',
-  '/js/utils.js',
-  '/js/config.js',
-  '/js/settings.js',
   '/js/shopping-focus-mode.js',
-  '/js/faq.js',
   '/shopping/shopping.css'
 ];
 
