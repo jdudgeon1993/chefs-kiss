@@ -243,7 +243,8 @@
           recipeId: meal.recipeId,
           recipeName: meal.recipeName,
           mealType: meal.mealType,
-          cooked: meal.cooked
+          cooked: meal.cooked,
+          servingMultiplier: meal.servingMultiplier || 1
         });
       });
     });

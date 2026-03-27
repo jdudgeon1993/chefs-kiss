@@ -2112,9 +2112,10 @@ function calcDemoReservedIngredients() {
       if (meal.cooked) continue;
       const recipe = recipes.find(r => String(r.id) === String(meal.recipeId));
       if (!recipe) continue;
+      const mult = meal.servingMultiplier || 1;
       for (const ing of (recipe.ingredients || [])) {
         const key = `${(ing.name || '').trim().toLowerCase()}|${(ing.unit || '').trim().toLowerCase()}`;
-        reserved[key] = (reserved[key] || 0) + (ing.qty || ing.quantity || 0);
+        reserved[key] = (reserved[key] || 0) + (ing.qty || ing.quantity || 0) * mult;
       }
     }
   }
@@ -2177,12 +2178,13 @@ function recalcDemoShoppingList() {
       if (meal.cooked) continue;
       const recipe = recipes.find(r => String(r.id) === String(meal.recipeId));
       if (!recipe) continue;
+      const mult = meal.servingMultiplier || 1;
       for (const ing of (recipe.ingredients || [])) {
         const key = `${ing.name}|${ing.unit}`;
         if (!totalNeeds[key]) {
           totalNeeds[key] = { name: ing.name, unit: ing.unit, qty: 0, source: recipe.name };
         }
-        totalNeeds[key].qty += ing.qty || ing.quantity || 0;
+        totalNeeds[key].qty += (ing.qty || ing.quantity || 0) * mult;
       }
     }
   }
