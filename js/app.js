@@ -2394,8 +2394,18 @@ function initConnectionMonitor() {
     // 1.5s debounce — ignore brief blips but show quickly
     _offlineTimer = setTimeout(() => {
       _connectionLost = true;
-      _bannerDismissed = false; // connection lost overrides any prior dismiss
-      _syncSmartBanner();
+      _bannerDismissed = false;
+
+      // On the shopping page, auto-enter focus mode so the user gets the full
+      // offline experience (cached list, add/check/edit, merge on reconnect)
+      // without needing to know focus mode exists.
+      const onShoppingPage = document.body.dataset.section === 'shopping';
+      const focusAlreadyActive = window.shoppingFocus?.isActive;
+      if (onShoppingPage && !focusAlreadyActive && window.shoppingFocus) {
+        window.shoppingFocus.enter();
+      } else {
+        _syncSmartBanner();
+      }
     }, 1500);
   }
 
@@ -2404,6 +2414,12 @@ function initConnectionMonitor() {
     if (_connectionLost) {
       _connectionLost = false;
       _syncSmartBanner();
+      // If focus mode isn't active but there are queued offline changes,
+      // show the page-level merge banner so the user can sync
+      const focusAlreadyActive = window.shoppingFocus?.isActive;
+      if (!focusAlreadyActive && window.shoppingFocus?._hasPendingOfflineData?.()) {
+        window.shoppingFocus._showMergePageBanner();
+      }
     }
   }
 
