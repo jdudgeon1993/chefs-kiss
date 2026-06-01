@@ -1,0 +1,17 @@
+{
+  "name": "Peachy Pantry",
+  "short_name": "Pantry",
+  "description": "Smart pantry management and shopping lists",
+  "start_url": "/shopping/",
+  "display": "standalone",
+  "background_color": "#2A241E",
+  "theme_color": "#2A241E",
+  "icons": [
+    {
+      "src": "/assets/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

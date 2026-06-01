@@ -21,8 +21,188 @@ class ShoppingFocusMode {
     this._updateHandler = null;
     this.groupMode = 'category'; // 'category' or 'store'
     this._offline = !navigator.onLine;
-    this._onlineHandler = () => { this._offline = false; this._updateOfflineBanner(); };
+    this._onlineHandler = () => {
+      this._offline = false;
+      this._updateOfflineBanner();
+      this._checkPendingOfflineItems();
+    };
     this._offlineHandler = () => { this._offline = true; this._updateOfflineBanner(); };
+  }
+
+  // ── Offline queue helpers ────────────────────────────────────────────────
+
+  static OFFLINE_ADDS_KEY = 'peachy_offline_adds';
+  static OFFLINE_CHECKS_KEY = 'peachy_offline_checks';
+
+  _getPendingAdds() {
+    try { return JSON.parse(localStorage.getItem(ShoppingFocusMode.OFFLINE_ADDS_KEY) || '[]'); }
+    catch { return []; }
+  }
+
+  _queueOfflineAdd(item) {
+    const q = this._getPendingAdds();
+    q.push({ ...item, _queued_at: Date.now() });
+    localStorage.setItem(ShoppingFocusMode.OFFLINE_ADDS_KEY, JSON.stringify(q));
+  }
+
+  _getPendingChecks() {
+    try { return JSON.parse(localStorage.getItem(ShoppingFocusMode.OFFLINE_CHECKS_KEY) || '{}'); }
+    catch { return {}; }
+  }
+
+  _queueOfflineCheck(itemId, checked) {
+    const q = this._getPendingChecks();
+    q[itemId] = checked;
+    localStorage.setItem(ShoppingFocusMode.OFFLINE_CHECKS_KEY, JSON.stringify(q));
+  }
+
+  _clearOfflineQueues() {
+    localStorage.removeItem(ShoppingFocusMode.OFFLINE_ADDS_KEY);
+    localStorage.removeItem(ShoppingFocusMode.OFFLINE_CHECKS_KEY);
+  }
+
+  _hasPendingOfflineData() {
+    return this._getPendingAdds().length > 0 || Object.keys(this._getPendingChecks()).length > 0;
+  }
+
+  /**
+   * Called when connectivity is restored. Shows merge prompt if there's queued data.
+   */
+  _checkPendingOfflineItems() {
+    if (!this._hasPendingOfflineData()) return;
+    if (this.isActive) {
+      this._showMergeModal();
+    } else {
+      this._showMergePageBanner();
+    }
+  }
+
+  /**
+   * Inline merge modal inside focus mode overlay
+   */
+  _showMergeModal() {
+    if (!this.overlay) return;
+    if (this.overlay.querySelector('.focus-merge-modal')) return;
+
+    const adds = this._getPendingAdds();
+    const checks = this._getPendingChecks();
+    const checkCount = Object.keys(checks).length;
+
+    const itemList = adds.map(i => `<li>${escapeHTML(i.name)}</li>`).join('');
+    const checkLine = checkCount > 0
+      ? `<p class="merge-checks-note">${checkCount} checked item${checkCount !== 1 ? 's' : ''} will also sync.</p>`
+      : '';
+
+    const modal = document.createElement('div');
+    modal.className = 'focus-modal-overlay focus-merge-modal';
+    modal.innerHTML = `
+      <div class="focus-modal">
+        <h3>📡 Back Online — Sync Offline Changes?</h3>
+        ${adds.length > 0 ? `
+          <p>You added <strong>${adds.length} item${adds.length !== 1 ? 's' : ''}</strong> while offline:</p>
+          <ul class="merge-item-list">${itemList}</ul>
+        ` : ''}
+        ${checkLine}
+        <div class="focus-modal-actions">
+          <button class="focus-btn secondary" onclick="window.shoppingFocus._discardOfflineData()">Discard</button>
+          <button class="focus-btn primary" onclick="window.shoppingFocus._mergeOfflineData()">Merge to List</button>
+        </div>
+      </div>
+    `;
+
+    this.overlay.appendChild(modal);
+  }
+
+  /**
+   * Dismissible banner on the shopping page when focus mode is not active
+   */
+  _showMergePageBanner() {
+    if (document.getElementById('offline-merge-banner')) return;
+    const adds = this._getPendingAdds();
+    const checks = this._getPendingChecks();
+    const checkCount = Object.keys(checks).length;
+
+    const parts = [];
+    if (adds.length) parts.push(`${adds.length} item${adds.length !== 1 ? 's' : ''} added`);
+    if (checkCount) parts.push(`${checkCount} checked`);
+    const summary = parts.join(', ');
+
+    const banner = document.createElement('div');
+    banner.id = 'offline-merge-banner';
+    banner.className = 'offline-merge-banner';
+    banner.innerHTML = `
+      <span>📡 Back online — <strong>${summary} offline</strong>.</span>
+      <div class="merge-banner-actions">
+        <button onclick="window.shoppingFocus._mergeOfflineData()">Merge to List</button>
+        <button onclick="window.shoppingFocus._discardOfflineData()">Discard</button>
+      </div>
+    `;
+    document.body.prepend(banner);
+  }
+
+  _removeMergePageBanner() {
+    const b = document.getElementById('offline-merge-banner');
+    if (b) b.remove();
+  }
+
+  async _mergeOfflineData() {
+    const adds = this._getPendingAdds();
+    const checks = this._getPendingChecks();
+
+    try {
+      // Replay queued adds
+      for (const item of adds) {
+        const { _queued_at, ...payload } = item;
+        await API.call('/shopping-list/items', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+      }
+
+      // Replay queued check state for manual items
+      for (const [itemId, checked] of Object.entries(checks)) {
+        await API.call(`/shopping-list/items/${itemId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ checked })
+        });
+      }
+
+      this._clearOfflineQueues();
+      this._removeMergePageBanner();
+
+      if (this.isActive) {
+        const modal = this.overlay?.querySelector('.focus-merge-modal');
+        if (modal) modal.remove();
+        await this.loadShoppingList();
+        this.render();
+        this._notifyMainApp();
+      } else if (window.loadShoppingList) {
+        window.loadShoppingList();
+      }
+
+      const n = adds.length;
+      if (window.showToast) window.showToast(
+        n > 0 ? `${n} offline item${n !== 1 ? 's' : ''} merged to your list.` : 'Offline changes synced.',
+        'success', 3000
+      );
+
+    } catch (err) {
+      console.error('Merge failed:', err);
+      if (window.showToast) window.showToast('Sync failed — will retry when online.', 'error');
+    }
+  }
+
+  _discardOfflineData() {
+    this._clearOfflineQueues();
+    this._removeMergePageBanner();
+    // Remove offline-added items from local list
+    this.shoppingList = this.shoppingList.filter(i => !i._offline);
+    if (this.isActive) {
+      const modal = this.overlay?.querySelector('.focus-merge-modal');
+      if (modal) modal.remove();
+      this.render();
+    }
+    if (window.showToast) window.showToast('Offline changes discarded.', 'info', 2000);
   }
 
   /**
@@ -52,6 +232,11 @@ class ShoppingFocusMode {
     this._offline = !navigator.onLine;
     window.addEventListener('online', this._onlineHandler);
     window.addEventListener('offline', this._offlineHandler);
+
+    // If we're online and have queued offline data from a prior session, prompt now
+    if (!this._offline && this._hasPendingOfflineData()) {
+      setTimeout(() => this._showMergeModal(), 500);
+    }
 
     if (window.showToast) {
       window.showToast('Focus mode active', 'info', 2000);
@@ -405,14 +590,17 @@ class ShoppingFocusMode {
       if (window.markLocalWrite) window.markLocalWrite();
 
       if (item.id) {
-        // Manual item with ID — update backend
-        await API.call(`/shopping-list/items/${item.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ checked })
-        });
+        if (this._offline) {
+          // Queue for sync when back online
+          this._queueOfflineCheck(item.id, checked);
+        } else {
+          await API.call(`/shopping-list/items/${item.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ checked })
+          });
+        }
       } else {
         // Auto-generated item — use localStorage only (no manual override)
-        // Creating a manual item for auto-generated ones causes duplicates
         if (typeof setLocalCheckedItem === 'function') {
           setLocalCheckedItem(itemKey, checked);
         }
@@ -440,22 +628,26 @@ class ShoppingFocusMode {
     const name = input.value.trim();
     if (!name) return;
 
+    const payload = { name, quantity: 1, unit: 'unit', category: 'Other' };
+
+    if (this._offline) {
+      this._queueOfflineAdd(payload);
+      this.shoppingList.push({ ...payload, checked: false, _offline: true });
+      input.value = '';
+      this.render();
+      if (window.showToast) window.showToast(`${name} saved offline — will sync when back online.`, 'info', 3000);
+      return;
+    }
+
     try {
       await API.call('/shopping-list/items', {
         method: 'POST',
-        body: JSON.stringify({
-          name,
-          quantity: 1,
-          unit: 'unit',
-          category: 'Other'
-        })
+        body: JSON.stringify(payload)
       });
 
       input.value = '';
       await this.loadShoppingList();
       this.render();
-
-      // Notify main app so it stays in sync
       this._notifyMainApp();
 
       if (window.showToast) window.showToast(`${name} added to your list.`, 'success', 2000);
