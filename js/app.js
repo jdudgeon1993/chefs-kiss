@@ -2396,7 +2396,7 @@ function initConnectionMonitor() {
       _connectionLost = true;
       _bannerDismissed = false; // connection lost overrides any prior dismiss
       _syncSmartBanner();
-    }, 6000);
+    }, 1500);
   }
 
   function handleOnline() {

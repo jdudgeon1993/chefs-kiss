@@ -21,6 +21,8 @@
 const CACHE_NAME = 'peachy-pantry-v9';
 const API_CACHE = 'peachy-pantry-api-v3';
 
+const BASE_PATH = self.location.pathname.replace(/\/[^/]*$/, '');
+
 // Static assets to pre-cache on install
 const STATIC_ASSETS = [
   '/css/shared.css',
@@ -40,13 +42,13 @@ const STATIC_ASSETS = [
   '/shopping/shopping.css',
   '/assets/favicon.png',
   '/manifest.json'
-];
+].map(p => BASE_PATH + p);
 
 // Shopping page HTML — cached on every successful load so it's available offline
 const SHOPPING_HTML_PATHS = [
   '/shopping/',
   '/shopping/index.html'
-];
+].map(p => BASE_PATH + p);
 
 // API paths that should be cached for offline use
 const CACHEABLE_API_PATHS = [
@@ -118,7 +120,7 @@ async function networkFirstCacheHtml(request) {
     }
     return response;
   } catch (err) {
-    const cached = await caches.match(request);
+    const cached = await caches.match(request, { ignoreSearch: true });
     if (cached) return cached;
     // No cached copy yet — user has never visited while online
     return new Response(
@@ -129,7 +131,7 @@ async function networkFirstCacheHtml(request) {
       a{color:#F1C338;text-decoration:none;font-weight:600}</style></head>
       <body><div class="card"><div class="emoji">📡</div>
       <h1>You're offline</h1>
-      <p>To use Peachy Pantry offline, visit your <a href="/shopping/">shopping list</a> at least once while connected to WiFi or mobile data. The app will remember your list for next time.</p>
+      <p>To use Peachy Pantry offline, visit your <a href="${BASE_PATH}/shopping/">shopping list</a> at least once while connected to WiFi or mobile data. The app will remember your list for next time.</p>
       </div></body></html>`,
       { status: 200, headers: { 'Content-Type': 'text/html' } }
     );
