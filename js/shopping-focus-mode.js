@@ -139,18 +139,70 @@ class ShoppingFocusMode {
     this._mergeOfflineData();
   }
 
+  // ── Sync banner helpers ──────────────────────────────────────────────────
+
+  _getBannerEl() {
+    return this.overlay?.querySelector('#focus-offline-banner');
+  }
+
+  _setSyncBanner(current, total, label) {
+    const el = this._getBannerEl();
+    if (!el) return;
+    const pct = Math.round((current / total) * 100);
+    el.innerHTML = `
+      <div class="offline-banner-top">
+        <span class="offline-badge syncing-badge">⟳ SYNCING</span>
+        <span class="offline-banner-title">Syncing your offline changes…</span>
+      </div>
+      <div class="sync-progress-bar-wrap">
+        <div class="sync-progress-bar" style="width:${pct}%"></div>
+      </div>
+      <div class="sync-progress-label">
+        <span class="sync-current-op">${escapeHTML(label)}</span>
+        <span class="sync-count">${current} of ${total}</span>
+      </div>`;
+  }
+
+  _setSyncCompleteBanner(totalAttempted, totalFailed) {
+    const el = this._getBannerEl();
+    if (!el) return;
+    if (totalFailed > 0) {
+      el.innerHTML = `
+        <div class="offline-banner-top">
+          <span class="offline-badge error-badge">✗ PARTIAL</span>
+          <span class="offline-banner-title">${totalAttempted - totalFailed} of ${totalAttempted} changes synced. ${totalFailed} will retry next time.</span>
+        </div>`;
+      setTimeout(() => { if (el.parentNode) el.remove(); }, 5000);
+    } else {
+      el.innerHTML = `
+        <div class="offline-banner-top">
+          <span class="offline-badge synced-badge">✓ SYNCED</span>
+          <span class="offline-banner-title">All ${totalAttempted} change${totalAttempted !== 1 ? 's' : ''} synced successfully.</span>
+        </div>`;
+      setTimeout(() => { if (el.parentNode) el.remove(); }, 2500);
+    }
+  }
+
   async _mergeOfflineData() {
     const adds    = this._getPendingAdds();
     const checks  = this._getPendingChecks();
     const edits   = this._getPendingEdits();
     const deletes = this._getPendingDeletes();
 
+    const total = adds.length + Object.keys(edits).length + deletes.length + Object.keys(checks).length;
+    let current = 0;
+
     const failedAdds    = [];
     const failedChecks  = {};
     const failedEdits   = {};
     const failedDeletes = [];
 
+    // Build a name lookup for edits/deletes so the banner shows item names
+    const nameLookup = {};
+    this.shoppingList.forEach(i => { if (i.id) nameLookup[String(i.id)] = i.name; });
+
     for (const item of adds) {
+      this._setSyncBanner(current, total, `Adding "${item.name}"…`);
       const { _queued_at, _offline, ...payload } = item;
       try {
         await API.call('/shopping-list/items', { method: 'POST', body: JSON.stringify(payload) });
@@ -158,40 +210,56 @@ class ShoppingFocusMode {
         console.error('Offline sync — add failed:', item.name, err);
         failedAdds.push(item);
       }
+      this._setSyncBanner(++current, total, `Added "${item.name}"`);
     }
 
     for (const [itemId, fields] of Object.entries(edits)) {
+      const label = nameLookup[itemId] ? `"${nameLookup[itemId]}"` : 'item';
+      this._setSyncBanner(current, total, `Saving edits to ${label}…`);
       try {
         await API.call(`/shopping-list/items/${itemId}`, { method: 'PATCH', body: JSON.stringify(fields) });
       } catch (err) {
         console.error('Offline sync — edit failed:', itemId, err);
         failedEdits[itemId] = fields;
       }
+      this._setSyncBanner(++current, total, `Saved ${label}`);
     }
 
     for (const itemId of deletes) {
+      const label = nameLookup[itemId] ? `"${nameLookup[itemId]}"` : 'item';
+      this._setSyncBanner(current, total, `Removing ${label}…`);
       try {
         await API.call(`/shopping-list/items/${itemId}`, { method: 'DELETE' });
       } catch (err) {
         console.error('Offline sync — delete failed:', itemId, err);
         failedDeletes.push(itemId);
       }
+      this._setSyncBanner(++current, total, `Removed ${label}`);
     }
 
     for (const [itemId, checked] of Object.entries(checks)) {
+      const label = nameLookup[itemId] ? `"${nameLookup[itemId]}"` : 'item';
+      this._setSyncBanner(current, total, `${checked ? 'Checking' : 'Unchecking'} ${label}…`);
       try {
         await API.call(`/shopping-list/items/${itemId}`, { method: 'PATCH', body: JSON.stringify({ checked }) });
       } catch (err) {
         console.error('Offline sync — check failed:', itemId, err);
         failedChecks[itemId] = checked;
       }
+      this._setSyncBanner(++current, total, `${checked ? 'Checked' : 'Unchecked'} ${label}`);
     }
 
     // Persist only failures — clear successes
-    failedAdds.length    ? localStorage.setItem(ShoppingFocusMode.OFFLINE_ADDS_KEY,    JSON.stringify(failedAdds))    : localStorage.removeItem(ShoppingFocusMode.OFFLINE_ADDS_KEY);
-    Object.keys(failedEdits).length   ? localStorage.setItem(ShoppingFocusMode.OFFLINE_EDITS_KEY,   JSON.stringify(failedEdits))   : localStorage.removeItem(ShoppingFocusMode.OFFLINE_EDITS_KEY);
-    failedDeletes.length ? localStorage.setItem(ShoppingFocusMode.OFFLINE_DELETES_KEY, JSON.stringify(failedDeletes)) : localStorage.removeItem(ShoppingFocusMode.OFFLINE_DELETES_KEY);
-    Object.keys(failedChecks).length  ? localStorage.setItem(ShoppingFocusMode.OFFLINE_CHECKS_KEY,  JSON.stringify(failedChecks))  : localStorage.removeItem(ShoppingFocusMode.OFFLINE_CHECKS_KEY);
+    failedAdds.length                  ? localStorage.setItem(ShoppingFocusMode.OFFLINE_ADDS_KEY,    JSON.stringify(failedAdds))    : localStorage.removeItem(ShoppingFocusMode.OFFLINE_ADDS_KEY);
+    Object.keys(failedEdits).length    ? localStorage.setItem(ShoppingFocusMode.OFFLINE_EDITS_KEY,   JSON.stringify(failedEdits))   : localStorage.removeItem(ShoppingFocusMode.OFFLINE_EDITS_KEY);
+    failedDeletes.length               ? localStorage.setItem(ShoppingFocusMode.OFFLINE_DELETES_KEY, JSON.stringify(failedDeletes)) : localStorage.removeItem(ShoppingFocusMode.OFFLINE_DELETES_KEY);
+    Object.keys(failedChecks).length   ? localStorage.setItem(ShoppingFocusMode.OFFLINE_CHECKS_KEY,  JSON.stringify(failedChecks))  : localStorage.removeItem(ShoppingFocusMode.OFFLINE_CHECKS_KEY);
+
+    const totalFailed = failedAdds.length + Object.keys(failedEdits).length + failedDeletes.length + Object.keys(failedChecks).length;
+    this._setSyncCompleteBanner(total, totalFailed);
+
+    // Wait for the user to read the complete banner before re-rendering the list
+    await new Promise(r => setTimeout(r, totalFailed > 0 ? 2000 : 1500));
 
     if (this.isActive) {
       await this.loadShoppingList();
@@ -199,19 +267,6 @@ class ShoppingFocusMode {
       this._notifyMainApp();
     } else if (window.loadShoppingList) {
       window.loadShoppingList();
-    }
-
-    const totalFailed    = failedAdds.length + Object.keys(failedEdits).length + failedDeletes.length + Object.keys(failedChecks).length;
-    const totalAttempted = adds.length + Object.keys(edits).length + deletes.length + Object.keys(checks).length;
-
-    if (totalFailed > 0) {
-      if (window.showToast) window.showToast(
-        `Synced ${totalAttempted - totalFailed} of ${totalAttempted} offline changes. ${totalFailed} will retry.`, 'error'
-      );
-    } else if (totalAttempted > 0) {
-      if (window.showToast) window.showToast('Offline changes synced.', 'success', 3000);
-    } else {
-      if (window.showToast) window.showToast('Back online!', 'success', 2000);
     }
   }
 
