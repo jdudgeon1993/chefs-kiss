@@ -80,6 +80,19 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+        # CSP: allow self + Supabase realtime/auth + jsdelivr CDN for Supabase JS client
+        csp = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net; "
+            "img-src 'self' data: blob:; "
+            "manifest-src 'self'; "
+            "worker-src 'self';"
+        )
+        response.headers["Content-Security-Policy"] = csp
         if os.getenv("ENVIRONMENT") != "development":
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
