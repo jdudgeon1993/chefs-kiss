@@ -27,15 +27,66 @@
 
 /* Offline Banner */
 .focus-offline-banner {
-  background: #FFF3CD;
-  color: #856404;
-  text-align: center;
-  padding: 10px 16px;
-  border-radius: 8px;
+  background: #1a0505;
+  border-left: 4px solid #e03131;
+  border-bottom: 1px solid rgba(224,49,49,0.25);
+  padding: 14px 16px 12px;
+  margin-bottom: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.offline-banner-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.offline-badge {
+  background: #e03131;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  animation: offline-pulse 2s ease-in-out infinite;
+}
+
+@keyframes offline-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.offline-banner-title {
+  color: rgba(255,255,255,0.85);
   font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.offline-banner-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-bottom: 10px;
+}
+
+.offline-banner-item {
+  color: #6fcf97;
+  font-size: 0.8rem;
   font-weight: 500;
-  margin-bottom: 12px;
-  border: 1px solid #FFEEBA;
+}
+
+.offline-banner-queue {
+  display: block;
+  color: rgba(255,255,255,0.5);
+  font-size: 0.78rem;
+  font-style: italic;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 8px;
 }
 
 /* Header */

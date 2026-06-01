@@ -291,18 +291,45 @@ class ShoppingFocusMode {
   }
 
   /**
+   * Build the offline banner HTML, including live queued-item count.
+   */
+  _renderOfflineBanner() {
+    const adds = this._getPendingAdds();
+    const checks = Object.keys(this._getPendingChecks());
+    const parts = [];
+    if (adds.length) parts.push(`${adds.length} item${adds.length !== 1 ? 's' : ''} added`);
+    if (checks.length) parts.push(`${checks.length} check${checks.length !== 1 ? 's' : ''} saved`);
+    const queueLine = parts.length
+      ? `<span class="offline-banner-queue">Saved offline: ${parts.join(' · ')} — will sync when back online.</span>`
+      : `<span class="offline-banner-queue">Keep shopping — your changes will sync automatically when back online.</span>`;
+
+    return `
+      <div class="focus-offline-banner" id="focus-offline-banner">
+        <div class="offline-banner-top">
+          <span class="offline-badge">● OFFLINE</span>
+          <span class="offline-banner-title">You're working from your cached list.</span>
+        </div>
+        <div class="offline-banner-body">
+          <span class="offline-banner-item">✓ Check items off as normal</span>
+          <span class="offline-banner-item">✓ Add items with the field below</span>
+          <span class="offline-banner-item">✓ Edit or delete any item</span>
+        </div>
+        ${queueLine}
+      </div>`;
+  }
+
+  /**
    * Update offline banner without full re-render (avoids losing scroll position)
    */
   _updateOfflineBanner() {
     if (!this.overlay) return;
     const existing = this.overlay.querySelector('#focus-offline-banner');
     if (this._offline && !existing) {
-      const banner = document.createElement('div');
-      banner.className = 'focus-offline-banner';
-      banner.id = 'focus-offline-banner';
-      banner.textContent = "📡 You're offline — showing cached list. Changes will sync when back online.";
       const container = this.overlay.querySelector('.focus-container');
-      if (container) container.prepend(banner);
+      if (container) container.insertAdjacentHTML('afterbegin', this._renderOfflineBanner());
+    } else if (this._offline && existing) {
+      // Refresh queue count in-place
+      existing.outerHTML = this._renderOfflineBanner();
     } else if (!this._offline && existing) {
       existing.remove();
       if (window.showToast) window.showToast('Back online!', 'success', 2000);
@@ -402,11 +429,7 @@ class ShoppingFocusMode {
     this.overlay.innerHTML = `
       <div class="focus-container">
         <!-- Offline Banner -->
-        ${this._offline ? `
-          <div class="focus-offline-banner" id="focus-offline-banner">
-            📡 You're offline — showing cached list. Changes will sync when back online.
-          </div>
-        ` : ''}
+        ${this._offline ? this._renderOfflineBanner() : ''}
 
         <!-- Header -->
         <div class="focus-header">
@@ -591,8 +614,8 @@ class ShoppingFocusMode {
 
       if (item.id) {
         if (this._offline) {
-          // Queue for sync when back online
           this._queueOfflineCheck(item.id, checked);
+          this._updateOfflineBanner(); // refresh queued-check count in banner
         } else {
           await API.call(`/shopping-list/items/${item.id}`, {
             method: 'PATCH',
