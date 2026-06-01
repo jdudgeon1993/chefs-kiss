@@ -45,6 +45,15 @@ class ShoppingFocusMode {
     localStorage.setItem(ShoppingFocusMode.OFFLINE_ADDS_KEY, JSON.stringify(q));
   }
 
+  _togglePendingAddCheck(name, unit, checked) {
+    const q = this._getPendingAdds();
+    const item = q.find(i => i.name === name && i.unit === unit);
+    if (item) {
+      item.checked = checked;
+      localStorage.setItem(ShoppingFocusMode.OFFLINE_ADDS_KEY, JSON.stringify(q));
+    }
+  }
+
   _getPendingChecks() {
     try { return JSON.parse(localStorage.getItem(ShoppingFocusMode.OFFLINE_CHECKS_KEY) || '{}'); }
     catch { return {}; }
@@ -149,46 +158,70 @@ class ShoppingFocusMode {
     const adds = this._getPendingAdds();
     const checks = this._getPendingChecks();
 
-    try {
-      // Replay queued adds
-      for (const item of adds) {
-        const { _queued_at, ...payload } = item;
+    const failedAdds = [];
+    const failedChecks = {};
+
+    for (const item of adds) {
+      const { _queued_at, ...payload } = item;
+      try {
         await API.call('/shopping-list/items', {
           method: 'POST',
           body: JSON.stringify(payload)
         });
+      } catch (err) {
+        console.error('Failed to sync added item:', item, err);
+        failedAdds.push(item);
       }
+    }
 
-      // Replay queued check state for manual items
-      for (const [itemId, checked] of Object.entries(checks)) {
+    for (const [itemId, checked] of Object.entries(checks)) {
+      try {
         await API.call(`/shopping-list/items/${itemId}`, {
           method: 'PATCH',
           body: JSON.stringify({ checked })
         });
+      } catch (err) {
+        console.error('Failed to sync checked item:', itemId, err);
+        failedChecks[itemId] = checked;
       }
+    }
 
-      this._clearOfflineQueues();
-      this._removeMergePageBanner();
+    // Persist only what failed — clear the rest
+    if (failedAdds.length > 0) {
+      localStorage.setItem(ShoppingFocusMode.OFFLINE_ADDS_KEY, JSON.stringify(failedAdds));
+    } else {
+      localStorage.removeItem(ShoppingFocusMode.OFFLINE_ADDS_KEY);
+    }
+    if (Object.keys(failedChecks).length > 0) {
+      localStorage.setItem(ShoppingFocusMode.OFFLINE_CHECKS_KEY, JSON.stringify(failedChecks));
+    } else {
+      localStorage.removeItem(ShoppingFocusMode.OFFLINE_CHECKS_KEY);
+    }
 
-      if (this.isActive) {
-        const modal = this.overlay?.querySelector('.focus-merge-modal');
-        if (modal) modal.remove();
-        await this.loadShoppingList();
-        this.render();
-        this._notifyMainApp();
-      } else if (window.loadShoppingList) {
-        window.loadShoppingList();
-      }
+    this._removeMergePageBanner();
 
+    if (this.isActive) {
+      const modal = this.overlay?.querySelector('.focus-merge-modal');
+      if (modal) modal.remove();
+      await this.loadShoppingList();
+      this.render();
+      this._notifyMainApp();
+    } else if (window.loadShoppingList) {
+      window.loadShoppingList();
+    }
+
+    const totalFailed = failedAdds.length + Object.keys(failedChecks).length;
+    const totalAttempted = adds.length + Object.keys(checks).length;
+    if (totalFailed > 0) {
+      if (window.showToast) window.showToast(
+        `Synced ${totalAttempted - totalFailed} changes. ${totalFailed} failed and will retry.`, 'error'
+      );
+    } else {
       const n = adds.length;
       if (window.showToast) window.showToast(
         n > 0 ? `${n} offline item${n !== 1 ? 's' : ''} merged to your list.` : 'Offline changes synced.',
         'success', 3000
       );
-
-    } catch (err) {
-      console.error('Merge failed:', err);
-      if (window.showToast) window.showToast('Sync failed — will retry when online.', 'error');
     }
   }
 
@@ -294,8 +327,10 @@ class ShoppingFocusMode {
    * Build the offline banner HTML, including live queued-item count.
    */
   _renderOfflineBanner() {
-    const adds = this._getPendingAdds();
-    const checks = Object.keys(this._getPendingChecks());
+    const pendingAdds = this._getPendingAdds();
+    const adds = Array.isArray(pendingAdds) ? pendingAdds : [];
+    const pendingChecks = this._getPendingChecks();
+    const checks = (pendingChecks && typeof pendingChecks === 'object') ? Object.keys(pendingChecks) : [];
     const parts = [];
     if (adds.length) parts.push(`${adds.length} item${adds.length !== 1 ? 's' : ''} added`);
     if (checks.length) parts.push(`${checks.length} check${checks.length !== 1 ? 's' : ''} saved`);
@@ -615,7 +650,6 @@ class ShoppingFocusMode {
       if (item.id) {
         if (this._offline) {
           this._queueOfflineCheck(item.id, checked);
-          this._updateOfflineBanner(); // refresh queued-check count in banner
         } else {
           await API.call(`/shopping-list/items/${item.id}`, {
             method: 'PATCH',
@@ -623,7 +657,10 @@ class ShoppingFocusMode {
           });
         }
       } else {
-        // Auto-generated item — use localStorage only (no manual override)
+        if (this._offline && item._offline) {
+          // Item was added offline — update its queued payload's checked state
+          this._togglePendingAddCheck(item.name, item.unit, checked);
+        }
         if (typeof setLocalCheckedItem === 'function') {
           setLocalCheckedItem(itemKey, checked);
         }
@@ -651,7 +688,7 @@ class ShoppingFocusMode {
     const name = input.value.trim();
     if (!name) return;
 
-    const payload = { name, quantity: 1, unit: 'unit', category: 'Other' };
+    const payload = { name, quantity: 1, unit: 'unit', category: 'Other', checked: false };
 
     if (this._offline) {
       this._queueOfflineAdd(payload);

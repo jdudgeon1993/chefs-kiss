@@ -87,7 +87,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
-            "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net; "
+            "connect-src 'self' https://*.supabase.co wss://*.supabase.co; "
             "img-src 'self' data: blob:; "
             "manifest-src 'self'; "
             "worker-src 'self';"
