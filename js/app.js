@@ -2328,9 +2328,9 @@ function _syncSmartBanner() {
 
   let msg;
   if (_connectionLost && _swUpdatePending) {
-    msg = "You're offline and a new update is available. Refresh to reconnect.";
+    msg = "📡 You're offline — your list is available and changes will sync when back online.";
   } else if (_connectionLost) {
-    msg = "You're offline — changes won't save. Refresh to reconnect.";
+    msg = "📡 You're offline — your shopping list is cached and ready. Add items as normal, they'll sync when you reconnect.";
   } else if (_realtimeLost && _swUpdatePending) {
     msg = "Live sync lost and a new version is ready. Refresh to apply.";
   } else if (_realtimeLost) {
@@ -2391,7 +2391,7 @@ function _syncSmartBanner() {
 function initConnectionMonitor() {
   function handleOffline() {
     clearTimeout(_offlineTimer);
-    // 6s debounce — ignore brief blips
+    // 1.5s debounce — ignore brief blips but show quickly
     _offlineTimer = setTimeout(() => {
       _connectionLost = true;
       _bannerDismissed = false; // connection lost overrides any prior dismiss
