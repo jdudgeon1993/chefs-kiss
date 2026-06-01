@@ -38,6 +38,70 @@
   position: sticky;
   top: 0;
   z-index: 10;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+/* Syncing state */
+.syncing-badge {
+  background: #1971c2 !important;
+  animation: sync-spin-badge 1.2s linear infinite !important;
+}
+
+@keyframes sync-spin-badge {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.sync-progress-bar-wrap {
+  height: 4px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 10px 0 8px;
+}
+
+.sync-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #1971c2, #74c0fc);
+  border-radius: 2px;
+  transition: width 0.35s ease;
+}
+
+.sync-progress-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+}
+
+.sync-current-op {
+  color: rgba(255,255,255,0.7);
+  font-style: italic;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 12px;
+}
+
+.sync-count {
+  color: #74c0fc;
+  font-weight: 700;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+/* Synced state */
+.synced-badge {
+  background: #2f9e44 !important;
+  animation: none !important;
+}
+
+/* Error/partial state */
+.error-badge {
+  background: #c92a2a !important;
+  animation: none !important;
 }
 
 .offline-banner-top {

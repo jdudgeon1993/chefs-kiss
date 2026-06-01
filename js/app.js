@@ -2414,12 +2414,8 @@ function initConnectionMonitor() {
     if (_connectionLost) {
       _connectionLost = false;
       _syncSmartBanner();
-      // If focus mode isn't active but there are queued offline changes,
-      // show the page-level merge banner so the user can sync
-      const focusAlreadyActive = window.shoppingFocus?.isActive;
-      if (!focusAlreadyActive && window.shoppingFocus?._hasPendingOfflineData?.()) {
-        window.shoppingFocus._showMergePageBanner();
-      }
+      // Auto-merge any queued offline changes
+      if (window.shoppingFocus) window.shoppingFocus._checkPendingOfflineItems();
     }
   }
 
